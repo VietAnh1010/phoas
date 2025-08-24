@@ -1,6 +1,6 @@
 Inductive type : Type :=
-| TyPure : Type -> type
-| TyFunc : type -> type -> type -> type -> type.
+| TyLift : Type -> type
+| TyFun : type -> type -> type -> type -> type.
 
 (* Notation "t / a --> s / b" := (Func t s a b) (at level 40, a at next level, s at next level). *)
 
@@ -9,31 +9,33 @@ Section Syntax.
 
   Inductive expr : type -> type -> type -> Type :=
   | Var : forall (t a : type), var t -> expr t a a
-  | Const : forall (t : Type) (a : type), t -> expr (TyPure t) a a
-  | Abs : forall (dom ran a b c : type), (var dom -> expr ran a b) -> expr (TyFunc dom ran a b) c c
-  | App : forall (dom ran a b c d : type), expr (TyFunc dom ran a b) c d -> expr dom b c -> expr ran a d
-  | Lift : forall (s t : Type) (a b : type), (s -> t) -> expr (TyPure s) a b -> expr (TyPure t) a b
-  | Lift2 : forall (r s t : Type) (a b c : type), (r -> s -> t) -> expr (TyPure r) b c -> expr (TyPure s) a b -> expr (TyPure t) a c
-  | Bind : forall (s t a b c : type), expr s b c -> (var s -> expr t a b) -> expr t a c
-  | Shift : forall (t a b c d : type), (var (TyFunc t a d d) -> expr c c b) -> expr t a b
+  | Const : forall (t : Type) (a : type), t -> expr (TyLift t) a a
+  | Fun : forall (dom ran a b c : type), (var dom -> expr ran a b) -> expr (TyFun dom ran a b) c c
+  | App : forall (dom ran a b c d : type), expr (TyFun dom ran a b) c d -> expr dom b c -> expr ran a d
+  | Lift : forall (s t : Type) (a b : type), (s -> t) -> expr (TyLift s) a b -> expr (TyLift t) a b
+  | Lift2 : forall (r s t : Type) (a b c : type), (r -> s -> t) -> expr (TyLift r) b c -> expr (TyLift s) a b -> expr (TyLift t) a c
+  | Let : forall (s t a b c : type), expr s b c -> (var s -> expr t a b) -> expr t a c
+  | Seq : forall (s t a b c : type), expr s b c -> expr t a b -> expr t a c
+  | If : forall (t a b c : type), expr (TyLift bool) b c -> expr t a b -> expr t a b -> expr t a c
+  | Shift : forall (t a b c d : type), (var (TyFun t a d d) -> expr c c b) -> expr t a b
   | Reset : forall (t a b : type), expr a a t -> expr t b b.
 End Syntax.
 
 Fixpoint type_denote (t : type) : Type :=
   match t with
-  | TyPure t => t
-  | TyFunc dom ran a b => type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b
+  | TyLift t => t
+  | TyFun dom ran a b => type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b
   end.
 
-Lemma fold_unfold_type_denote_TyPure :
+Lemma fold_unfold_type_denote_TyLift :
   forall (t : Type),
-    type_denote (TyPure t) =
+    type_denote (TyLift t) =
     t.
 Proof. auto. Qed.
 
-Lemma fold_unfold_type_denote_TyFunc :
+Lemma fold_unfold_type_denote_TyFun :
   forall (dom ran a b : type),
-    type_denote (TyFunc dom ran a b) =
+    type_denote (TyFun dom ran a b) =
     (type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b).
 Proof. auto. Qed.
 
@@ -50,6 +52,8 @@ Proof.
     | s t' a' b' f e' Eq_t Eq_a Eq_b
     | r s t' a' b' c f e1 e2 Eq_t Eq_a Eq_b
     | s t' a' b' c e' f Eq_t Eq_a Eq_b
+    | s t' a' b' c e1 e2 Eq_t Eq_a Eq_b
+    | t' a' b' c eb e1 e2 Eq_t Eq_a Eq_b
     | t' a' b' c d f Eq_t Eq_a Eq_b
     | t' a' b' e' Eq_t Eq_a Eq_b]; clear e.
   - rewrite <- Eq_b.
@@ -60,12 +64,14 @@ Proof.
   - rewrite <- Eq_t in k.
     rewrite <- Eq_b.
     exact (k (fun x => interpret_aux ran a' b' (f x))).
-  - exact (interpret_aux (TyFunc dom t a b') c b e1 (fun f => interpret_aux dom b' c e2 (fun x => f x k))).
+  - exact (interpret_aux (TyFun dom t a b') c b e1 (fun f => interpret_aux dom b' c e2 (fun x => f x k))).
   - rewrite <- Eq_t in k.
-    exact (interpret_aux (TyPure s) a b e' (fun x => k (f x))).
+    exact (interpret_aux (TyLift s) a b e' (fun x => k (f x))).
   - rewrite <- Eq_t in k.
-    exact (interpret_aux (TyPure r) b' b e1 (fun x => interpret_aux (TyPure s) a b' e2 (fun y => k (f x y)))).
+    exact (interpret_aux (TyLift r) b' b e1 (fun x => interpret_aux (TyLift s) a b' e2 (fun y => k (f x y)))).
   - exact (interpret_aux s b' b e' (fun x => interpret_aux t a b' (f x) k)).
+  - exact (interpret_aux s b' b e1 (fun _ => interpret_aux t a b' e2 k)).
+  - exact (interpret_aux (TyLift bool) b' b eb (fun x => interpret_aux t a b' (if x then e1 else e2) k)).
   - exact (interpret_aux c c b (f (fun x k' => k' (k x))) (fun x => x)).
   - rewrite <- Eq_b.
     exact (k (interpret_aux a' a' t e' (fun x => x))).
@@ -87,55 +93,73 @@ Lemma fold_unfold_interpret_aux_Const :
          (a : type)
          (v : t)
          (k : t -> type_denote a),
-    interpret_aux (TyPure t) a a (Const type_denote t a v) k =
+    interpret_aux (TyLift t) a a (Const type_denote t a v) k =
     k v.
 Proof. auto. Qed.
 
-Lemma fold_unfold_interpret_aux_Abs :
+Lemma fold_unfold_interpret_aux_Fun :
   forall (dom ran a b c : type)
          (f : type_denote dom -> expr type_denote ran a b)
          (k : (type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b) -> type_denote c),
-    interpret_aux (TyFunc dom ran a b) c c (Abs type_denote dom ran a b c f) k =
+    interpret_aux (TyFun dom ran a b) c c (Fun type_denote dom ran a b c f) k =
     k (fun x => interpret_aux ran a b (f x)).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_App :
   forall (dom ran a b c d : type)
-         (e1 : expr type_denote (TyFunc dom ran a b) c d)
+         (e1 : expr type_denote (TyFun dom ran a b) c d)
          (e2 : expr type_denote dom b c)
          (k : type_denote ran -> type_denote a),
     interpret_aux ran a d (App type_denote dom ran a b c d e1 e2) k =
-    interpret_aux (TyFunc dom ran a b) c d e1 (fun f => interpret_aux dom b c e2 (fun x => f x k)).
+    interpret_aux (TyFun dom ran a b) c d e1 (fun f => interpret_aux dom b c e2 (fun x => f x k)).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Lift :
   forall (s t : Type)
          (a b : type)
          (f : s -> t)
-         (e : expr type_denote (TyPure s) a b)
+         (e : expr type_denote (TyLift s) a b)
          (k : t -> type_denote a),
-    interpret_aux (TyPure t) a b (Lift type_denote s t a b f e) k =
-    interpret_aux (TyPure s) a b e (fun x => k (f x)).
+    interpret_aux (TyLift t) a b (Lift type_denote s t a b f e) k =
+    interpret_aux (TyLift s) a b e (fun x => k (f x)).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Lift2 :
   forall (r s t : Type)
          (a b c : type)
          (f : r -> s -> t)
-         (e1 : expr type_denote (TyPure r) b c)
-         (e2 : expr type_denote (TyPure s) a b)
+         (e1 : expr type_denote (TyLift r) b c)
+         (e2 : expr type_denote (TyLift s) a b)
          (k : t -> type_denote a),
-    interpret_aux (TyPure t) a c (Lift2 type_denote r s t a b c f e1 e2) k =
-    interpret_aux (TyPure r) b c e1 (fun x => interpret_aux (TyPure s) a b e2 (fun y => k (f x y))).
+    interpret_aux (TyLift t) a c (Lift2 type_denote r s t a b c f e1 e2) k =
+    interpret_aux (TyLift r) b c e1 (fun x => interpret_aux (TyLift s) a b e2 (fun y => k (f x y))).
 Proof. auto. Qed.
 
-Lemma fold_unfold_interpret_aux_Bind :
+Lemma fold_unfold_interpret_aux_Let :
   forall (s t a b c : type)
          (e : expr type_denote s b c)
          (f : type_denote s -> expr type_denote t a b)
          (k : type_denote t -> type_denote a),
-    interpret_aux t a c (Bind type_denote s t a b c e f) k =
+    interpret_aux t a c (Let type_denote s t a b c e f) k =
     interpret_aux s b c e (fun x => interpret_aux t a b (f x) k).
+Proof. auto. Qed.
+
+Lemma fold_unfold_interpret_aux_Seq :
+  forall (s t a b c : type)
+         (e1 : expr type_denote s b c)
+         (e2 : expr type_denote t a b)
+         (k : type_denote t -> type_denote a),
+    interpret_aux t a c (Seq type_denote s t a b c e1 e2) k =
+    interpret_aux s b c e1 (fun _ => interpret_aux t a b e2 k).
+Proof. auto. Qed.
+
+Lemma fold_unfold_interpret_aux_If :
+  forall (t a b c : type)
+         (eb : expr type_denote (TyLift bool) b c)
+         (e1 e2 : expr type_denote t a b)
+         (k : type_denote t -> type_denote a),
+    interpret_aux t a c (If type_denote t a b c eb e1 e2) k =
+    interpret_aux (TyLift bool) b c eb (fun x => interpret_aux t a b (if x then e1 else e2) k).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Shift :
@@ -159,9 +183,9 @@ Import ListNotations.
 
 Fixpoint append_delim_aux (A : Type) (xs : list A) :
   expr type_denote
-    (TyPure (list A))
-    (TyPure (list A))
-    (TyFunc (TyPure (list A)) (TyPure (list A)) (TyPure (list A)) (TyPure (list A))) :=
+    (TyLift (list A))
+    (TyLift (list A))
+    (TyFun (TyLift (list A)) (TyLift (list A)) (TyLift (list A)) (TyLift (list A))) :=
   match xs with
   | [] => Shift _ _ _ _ _ _ (fun k => Var _ _ _ k)
   | x :: xs' => Lift _ _ _ _ _ (cons x) (append_delim_aux A xs')
@@ -183,9 +207,9 @@ Proof. auto. Qed.
 
 Definition append_delim (A : Type) (xs ys : list A) :
   expr type_denote
-    (TyPure (list A))
-    (TyPure (list A))
-    (TyPure (list A)) :=
+    (TyLift (list A))
+    (TyLift (list A))
+    (TyLift (list A)) :=
   App _ _ _ _ _ _ _ (Reset _ _ _ _ (append_delim_aux A xs)) (Const _ _ _ ys).
 
 Definition append_delim_unit_tests : bool :=
@@ -220,9 +244,9 @@ Lemma append_delim_is_equivalence_to_append_aux :
          (xs ys : list A)
          (k : list A -> list A),
     interpret_aux
-      (TyPure (list A))
-      (TyPure (list A))
-      (TyFunc (TyPure (list A)) (TyPure (list A)) (TyPure (list A)) (TyPure (list A)))
+      (TyLift (list A))
+      (TyLift (list A))
+      (TyFun (TyLift (list A)) (TyLift (list A)) (TyLift (list A)) (TyLift (list A)))
       (append_delim_aux A xs) k ys (fun x => x) =
     k (xs ++ ys).
 Proof.
@@ -236,14 +260,14 @@ Proof.
   - rewrite -> fold_unfold_append_delim_aux_cons.
     rewrite -> fold_unfold_interpret_aux_Lift.
     rewrite -> fold_unfold_app_cons.
-    rewrite -> (IHxs' (fun r : type_denote (TyPure (list A)) => k (x :: r))).
+    rewrite -> (IHxs' (fun r : type_denote (TyLift (list A)) => k (x :: r))).
     reflexivity.
 Qed.
 
 Theorem append_delim_is_equivalence_to_append :
   forall (A : Type)
          (xs ys : list A),
-    interpret (TyPure (list A)) (append_delim A xs ys) =
+    interpret (TyLift (list A)) (append_delim A xs ys) =
     xs ++ ys.
 Proof.
   intros A xs ys.
@@ -256,22 +280,22 @@ Qed.
 
 Fixpoint times_delim_aux (xs : list nat) :
   expr type_denote
-    (TyPure nat)
-    (TyPure nat)
-    (TyPure nat) :=
+    (TyLift nat)
+    (TyLift nat)
+    (TyLift nat) :=
   match xs with
   | [] => Const _ _ _ 1
   | x :: xs' => match x with
-                | O => Shift _ _ _ _ _ (TyPure nat) (fun _ => Const _ _ _ 0)
+                | O => Shift _ _ _ _ _ (TyLift nat) (fun _ => Const _ _ _ 0)
                 | _ => Lift _ _ _ _ _ (Nat.mul x) (times_delim_aux xs')
                 end
   end.
 
 Definition times_delim (xs : list nat) :
   expr type_denote
-    (TyPure nat)
-    (TyPure nat)
-    (TyPure nat) :=
+    (TyLift nat)
+    (TyLift nat)
+    (TyLift nat) :=
   Reset _ _ _ _ (times_delim_aux xs).
 
 Lemma fold_unfold_times_delim_aux_nil :
@@ -284,7 +308,7 @@ Lemma fold_unfold_times_delim_aux_cons :
          (xs' : list nat),
     times_delim_aux (x :: xs') =
     match x with
-    | O => Shift _ _ _ _ _ (TyPure nat) (fun _ => Const _ _ _ 0)
+    | O => Shift _ _ _ _ _ (TyLift nat) (fun _ => Const _ _ _ 0)
     | _ => Lift _ _ _ _ _ (Nat.mul x) (times_delim_aux xs')
     end.
 Proof. auto. Qed.
@@ -308,7 +332,7 @@ Proof. auto. Qed.
 Lemma times_delim_is_equivalence_to_times_aux :
   forall (xs : list nat)
          (k : nat -> nat),
-    interpret_aux (TyPure nat) (TyPure nat) (TyPure nat) (times_delim_aux xs) k =
+    interpret_aux (TyLift nat) (TyLift nat) (TyLift nat) (times_delim_aux xs) k =
     match times xs with
     | O => O
     | S r' => k (S r')
@@ -327,7 +351,7 @@ Proof.
       rewrite -> fold_unfold_interpret_aux_Const.
       reflexivity.
     + rewrite -> fold_unfold_interpret_aux_Lift.
-      rewrite -> (IHxs' (fun r : type_denote (TyPure nat) => k (S x' * r))).
+      rewrite -> (IHxs' (fun r : type_denote (TyLift nat) => k (S x' * r))).
       destruct (times xs') as [| r'].
       * rewrite -> Nat.mul_0_r.
         reflexivity.
@@ -336,7 +360,7 @@ Qed.
 
 Theorem times_delim_is_equivalence_to_times :
   forall (xs : list nat),
-    interpret (TyPure nat) (times_delim xs) =
+    interpret (TyLift nat) (times_delim xs) =
     times xs.
 Proof.
   intros xs.
@@ -348,18 +372,18 @@ Proof.
   - exact ly.
 Qed.
 
-Definition either (A B : Type) (x y : A) (f : B -> B -> B) : expr type_denote (TyPure A) (TyPure B) (TyPure B) :=
+Definition either (A B : Type) (x y : A) (f : B -> B -> B) : expr type_denote (TyLift A) (TyLift B) (TyLift B) :=
   Shift _ _ _ _ _ _ (fun k => Lift2 _ _ _ _ _ _ _ f
                                 (App _ _ _ _ _ _ _ (Var _ _ _ k) (Const _ _ _ x))
                                 (App _ _ _ _ _ _ _ (Var _ _ _ k) (Const _ _ _ y))).
 
-Fixpoint mul_pow2_delim_aux (n : nat) : expr type_denote (TyPure unit) (TyPure nat) (TyPure nat) :=
+Fixpoint mul_pow2_delim_aux (n : nat) : expr type_denote (TyLift unit) (TyLift nat) (TyLift nat) :=
   match n with
   | O => Const _ _ _ tt
-  | S n' => Bind _ _ _ _ _ _ (either unit nat tt tt Nat.add) (fun _ => mul_pow2_delim_aux n')
+  | S n' => Seq _ _ _ _ _ _ (either unit nat tt tt Nat.add) (mul_pow2_delim_aux n')
   end.
 
-Definition mul_pow2_delim (m n : nat) : expr type_denote (TyPure nat) (TyPure nat) (TyPure nat) :=
+Definition mul_pow2_delim (m n : nat) : expr type_denote (TyLift nat) (TyLift nat) (TyLift nat) :=
   Reset _ _ _ _ (Lift _ _ _ _ _ (fun _ => m) (mul_pow2_delim_aux n)).
 
 Lemma fold_unfold_mul_pow2_delim_aux_O :
@@ -370,21 +394,21 @@ Proof. auto. Qed.
 Lemma fold_unfold_mul_pow2_delim_aux_S :
   forall (n' : nat),
     mul_pow2_delim_aux (S n') =
-    Bind _ _ _ _ _ _ (either unit nat tt tt Nat.add) (fun _ => mul_pow2_delim_aux n').
+    Seq _ _ _ _ _ _ (either unit nat tt tt Nat.add) (mul_pow2_delim_aux n').
 Proof. auto. Qed.
 
 Lemma mul_pow2_delim_is_sound_aux :
   forall (m n : nat),
-    interpret_aux (TyPure unit) (TyPure nat) (TyPure nat) (mul_pow2_delim_aux n) (fun _ => m) =
+    interpret_aux (TyLift unit) (TyLift nat) (TyLift nat) (mul_pow2_delim_aux n) (fun _ => m) =
     m * 2 ^ n.
 Proof.
   intros m n.
   induction n as [| n' IHn'].
   - rewrite -> fold_unfold_mul_pow2_delim_aux_O.
     rewrite -> fold_unfold_interpret_aux_Const.
-    simpl. ring.
+    cbn. ring.
   - rewrite -> fold_unfold_mul_pow2_delim_aux_S.
-    rewrite -> fold_unfold_interpret_aux_Bind.
+    rewrite -> fold_unfold_interpret_aux_Seq.
     unfold either.
     rewrite -> fold_unfold_interpret_aux_Shift.
     rewrite -> fold_unfold_interpret_aux_Lift2.
@@ -395,12 +419,12 @@ Proof.
     rewrite -> fold_unfold_interpret_aux_Var.
     rewrite -> fold_unfold_interpret_aux_Const.
     rewrite -> IHn'.
-    simpl. ring.
+    cbn. ring.
 Qed.
 
 Theorem mul_pow2_delim_is_sound :
   forall (m n : nat),
-    interpret (TyPure nat) (mul_pow2_delim m n) =
+    interpret (TyLift nat) (mul_pow2_delim m n) =
     m * 2 ^ n.
 Proof.
   intros m n.
@@ -408,4 +432,20 @@ Proof.
   rewrite -> fold_unfold_interpret_aux_Reset.
   rewrite -> fold_unfold_interpret_aux_Lift.
   exact (mul_pow2_delim_is_sound_aux m n).
+Qed.
+
+Theorem interpret_aux_Let_assoc :
+  forall (r s t a b c d : type)
+         (e : expr type_denote r c d)
+         (f : type_denote r -> expr type_denote s b c)
+         (g : type_denote s -> expr type_denote t a b)
+         (k : type_denote t -> type_denote a),
+    interpret_aux _ _ _ (Let _ _ _ _ _ _ (Let _ _ _ _ _ _ e f) g) k =
+    interpret_aux _ _ _ (Let _ _ _ _ _ _ e (fun x => Let _ _ _ _ _ _ (f x) g)) k.
+Proof.
+  intros r s t a b c d e f g k.
+  (* Using only fold-unfold lemma will not work here, as we
+     cannot rewrite under a binder. But reduction (cbn) still
+     works under a binder, and thus we can still prove this. *)
+  cbn. reflexivity.
 Qed.

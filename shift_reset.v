@@ -498,3 +498,64 @@ Proof.
   rewrite -> fold_unfold_interpret_aux_Const.
   reflexivity.
 Qed.
+
+Module CopyDelimExample.
+
+  Parameter copy_delim_aux :
+    forall (A : Type),
+      list A ->
+      expr type_denote (TyLift (list A)) (TyLift (list A)) (TyLift (list A)).
+
+  Axiom fold_unfold_copy_delim_aux_nil :
+    forall (A : Type),
+      copy_delim_aux A [] =
+      Const _ _ _ [].
+
+  Axiom fold_unfold_copy_delim_aux_cons :
+    forall (A : Type)
+           (x : A)
+           (xs' : list A),
+      copy_delim_aux A (x :: xs') =
+      Let _ _ _ _ _ _
+        (Shift _ _ _ _ _ _ (fun k => Lift _ _ _ _ _ (cons x) (App _ _ _ _ _ _ _ (Var _ _ _ k) (Const _ _ _ xs'))))
+        (copy_delim_aux A).
+
+  Definition copy_delim (A : Type) (xs : list A) (c : type) : expr type_denote (TyLift (list A)) c c :=
+    Reset _ _ _ _ (copy_delim_aux A xs).
+
+  Lemma copy_delim_is_sound_aux :
+    forall (A : Type)
+           (xs : list A),
+      interpret_aux (TyLift (list A)) (TyLift (list A)) (TyLift (list A)) (copy_delim_aux A xs) (fun x => x) =
+      xs.
+  Proof.
+    intros A xs.
+    induction xs as [| x xs' IHxs'].
+    - rewrite -> fold_unfold_copy_delim_aux_nil.
+      rewrite -> fold_unfold_interpret_aux_Const.
+      reflexivity.
+    - rewrite -> fold_unfold_copy_delim_aux_cons.
+      rewrite -> fold_unfold_interpret_aux_Let.
+      rewrite -> fold_unfold_interpret_aux_Shift.
+      rewrite -> fold_unfold_interpret_aux_Lift.
+      rewrite -> fold_unfold_interpret_aux_App.
+      rewrite -> fold_unfold_interpret_aux_Var.
+      rewrite -> fold_unfold_interpret_aux_Const.
+      rewrite -> IHxs'.
+      reflexivity.
+  Qed.
+
+  Theorem copy_delim_is_sound :
+    forall (A : Type)
+           (xs : list A),
+      interpret (TyLift (list A)) (copy_delim A xs (TyLift (list A))) =
+      xs.
+  Proof.
+    intros A xs.
+    unfold interpret, copy_delim.
+    rewrite -> fold_unfold_interpret_aux_Reset.
+    exact (copy_delim_is_sound_aux A xs).
+  Qed.
+
+End CopyDelimExample.
+'

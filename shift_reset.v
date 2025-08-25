@@ -2,7 +2,8 @@ Inductive type : Type :=
 | TyLift : Type -> type
 | TyFun : type -> type -> type -> type -> type.
 
-(* Notation "t / a --> s / b" := (Func t s a b) (at level 40, a at next level, s at next level). *)
+Notation "t \ a -> s \ b" := (TyFun t s a b) (at level 40).
+Notation "` t" := (TyLift t) (at level 30).
 
 Section Syntax.
   Variable var : type -> Type.
@@ -453,35 +454,32 @@ Qed.
 (* An example which illustrates that continuation may take
    an ATM function as argument. *)
 
-Definition TyNat := TyLift nat.
-Definition TyUnit := TyLift unit.
-
 Example e0 :=
   (fun var dom ran c d =>
      Shift _ _ _ _ _ _
-       (fun k : var (TyFun (TyFun dom ran TyUnit TyNat) _ _ _) =>
+       (fun k : var (TyFun (TyFun dom ran (TyLift unit) (TyLift nat)) c c c) =>
           App _ _ _ _ _ _ _
             (Var _ _ _ k)
             (Fun _ _ _ _ _ _
                (fun _ =>
                   Shift _ _ _ _ _ d
                     (fun _ => Const _ _ _ 1)))) :
-     expr var (TyFun dom ran TyUnit TyNat) c c).
+     expr var (TyFun dom ran (TyLift unit) (TyLift nat)) c c).
 
 Example e1 :=
   (fun var dom ran c d =>
      Reset _ _ _ _ (e0 _ _ _ _ d) :
-     expr var (TyFun dom ran TyUnit TyNat) c c).
+     expr var (TyFun dom ran (TyLift unit) (TyLift nat)) c c).
 
 Example e2 :=
   (fun var ran d =>
      App _ _ _ _ _ _ _ (e1 _ _ _ _ d) (Const _ _ _ tt) :
-     expr var ran TyUnit TyNat).
+     expr var ran (TyLift unit) (TyLift nat)).
 
 Example e3 :=
   (fun var c d =>
      Reset _ _ _ _ (e2 _ _ d) :
-     expr var TyNat c c).
+     expr var (TyLift nat) c c).
 
 Goal forall d, interpret _ (e3 _ _ d) = 1.
 Proof.

@@ -449,3 +449,54 @@ Proof.
      works under a binder, and thus we can still prove this. *)
   cbn. reflexivity.
 Qed.
+
+(* An example which illustrates that continuation may take
+   an ATM function as argument. *)
+
+Definition TyNat := TyLift nat.
+Definition TyUnit := TyLift unit.
+
+Example e0 :=
+  (fun var dom ran c d =>
+     Shift _ _ _ _ _ _
+       (fun k : var (TyFun (TyFun dom ran TyUnit TyNat) _ _ _) =>
+          App _ _ _ _ _ _ _
+            (Var _ _ _ k)
+            (Fun _ _ _ _ _ _
+               (fun _ =>
+                  Shift _ _ _ _ _ d
+                    (fun _ => Const _ _ _ 1)))) :
+     expr var (TyFun dom ran TyUnit TyNat) c c).
+
+Example e1 :=
+  (fun var dom ran c d =>
+     Reset _ _ _ _ (e0 _ _ _ _ d) :
+     expr var (TyFun dom ran TyUnit TyNat) c c).
+
+Example e2 :=
+  (fun var ran d =>
+     App _ _ _ _ _ _ _ (e1 _ _ _ _ d) (Const _ _ _ tt) :
+     expr var ran TyUnit TyNat).
+
+Example e3 :=
+  (fun var c d =>
+     Reset _ _ _ _ (e2 _ _ d) :
+     expr var TyNat c c).
+
+Goal forall d, interpret _ (e3 _ _ d) = 1.
+Proof.
+  intros d.
+  unfold interpret.
+  unfold e3, e2, e1, e0.
+  rewrite -> fold_unfold_interpret_aux_Reset.
+  rewrite -> fold_unfold_interpret_aux_App.
+  rewrite -> fold_unfold_interpret_aux_Reset.
+  rewrite -> fold_unfold_interpret_aux_Shift.
+  rewrite -> fold_unfold_interpret_aux_App.
+  rewrite -> fold_unfold_interpret_aux_Var.
+  rewrite -> fold_unfold_interpret_aux_Const.
+  rewrite -> fold_unfold_interpret_aux_Fun.
+  rewrite -> fold_unfold_interpret_aux_Shift.
+  rewrite -> fold_unfold_interpret_aux_Const.
+  reflexivity.
+Qed.

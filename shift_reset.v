@@ -653,3 +653,54 @@ Module PrefixesExample.
   Compute prefixes_delim_unit_tests.
 
 End PrefixesExample.
+
+Require String.
+
+Module PrintfExample.
+
+  Import String.
+  Local Open Scope string_scope.
+
+  Definition TyString : type := TyLift string.
+  Definition TyNat : type := TyLift nat.
+
+  Definition of_string (s : string) : string := s.
+  Definition of_nat (n : nat) : string := "10".
+
+  Definition get (a : type) (A : Type) (to_string : A -> string) :
+    expr type_denote TyString a (TyFun (TyLift A) a TyString TyString) :=
+    Shift _ _ _ _ _ (fun k => Fun _ _ _ _ _ _ (fun x => App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Lift _ _ _ _ _ to_string (Var _ _ _ x)))).
+
+  Example ex_fmt1 :
+    expr type_denote TyString TyString TyString :=
+    Const _ _ _ "Hello world!".
+
+  Example ex_fmt2 :
+    expr type_denote
+      TyString
+      TyString
+      (TyFun TyString TyString TyString TyString) :=
+    Lift2 _ _ _ _ _ _ _ append (Const _ _ _ "Hello ") (Lift2 _ _ _ _ _ _ _ append (get _ _ of_string) (Const _ _ _ "!")).
+
+  Example ex_fmt3 :
+    expr type_denote
+      TyString
+      TyString
+      (TyFun
+         TyString
+         (TyFun TyNat TyString TyString TyString)
+         TyString
+         TyString) :=
+    Lift2 _ _ _ _ _ _ _ append
+      (Const _ _ _ "The value of ")
+      (Lift2 _ _ _ _ _ _ _ append (get _ _ of_string) (Lift2 _ _ _ _ _ _ _ append (Const _ _ _ " is ") (get _ _ of_nat))).
+
+  Definition sprintf (a : type) (fmt : expr type_denote TyString TyString a) :
+    expr type_denote a TyString TyString :=
+    Reset _ _ _ _ fmt.
+
+  Compute (interpret _ (sprintf _ ex_fmt1)).
+  Compute (interpret _ (App _ _ _ _ _ _ _ (sprintf _ ex_fmt2) (Const _ _ _ "world"))).
+  Compute (interpret _ (App _ _ _ _ _ _ _ (App _ _ _ _ _ _ _ (sprintf _ ex_fmt3) (Const _ _ _ "x")) (Const _ _ _ 10))).
+
+End PrintfExample.

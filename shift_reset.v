@@ -236,8 +236,8 @@ Proof. auto. Qed.
 Lemma fold_unfold_app_cons :
   forall (A : Type)
          (x : A)
-         (xs ys : list A),
-    (x :: xs) ++ ys = x :: xs ++ ys.
+         (xs' ys : list A),
+    (x :: xs') ++ ys = x :: xs' ++ ys.
 Proof. auto. Qed.
 
 Lemma append_delim_is_equivalence_to_append_aux :
@@ -565,20 +565,91 @@ Module PrefixesExample.
       (TyLift (list A))
       (TyLift (list A))
       (TyLift (list (list A))) :=
-    match xs with
-    | [] =>
-        Shift _ _ _ _ _ (fun _ => Const _ _ _ [])
-    | x :: xs' =>
-        Lift _ _ _ _ _
-          (cons x)
-          (Shift _ _ _ _ _
-             (fun k => Lift2 _ _ _ _ _ _ _
-                         cons
-                         (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
-                         (Reset _ _ _ _ (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (prefixes_delim_aux A xs')))))
-    end.
+    Shift _ _ _ _ _
+      (fun k => Lift2 _ _ _ _ _ _ _ cons
+                  (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
+                  match xs with
+                  | [] => Const _ _ _ []
+                  | x :: xs' => Reset _ _ _ _ (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Lift _ _ _ _ _ (cons x) (prefixes_delim_aux A xs')))
+                  end).
 
   Definition prefixes_delim (A : Type) (xs : list A) (c : type) : expr type_denote (TyLift (list (list A))) c c :=
     Reset _ _ _ _ (prefixes_delim_aux A xs).
+
+  Lemma fold_unfold_prefixes_delim_aux_nil :
+    forall (A : Type),
+      prefixes_delim_aux A [] =
+      Shift _ _ _ _ _
+        (fun k => Lift2 _ _ _ _ _ _ _ cons
+                    (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
+                    (Const _ _ _ [])).
+  Proof. auto. Qed.
+
+  Lemma fold_unfold_prefixes_delim_aux_cons :
+    forall (A : Type)
+           (x : A)
+           (xs' : list A),
+      prefixes_delim_aux A (x :: xs') =
+      Shift _ _ _ _ _
+        (fun k => Lift2 _ _ _ _ _ _ _ cons
+                    (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
+                    (Reset _ _ _ _ (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Lift _ _ _ _ _ (cons x) (prefixes_delim_aux A xs'))))).
+  Proof. auto. Qed.
+
+  Lemma fold_unfold_rev_nil :
+    forall (A : Type),
+      @rev A [] = [].
+  Proof. auto. Qed.
+
+  Lemma fold_unfold_rev_cons :
+    forall (A : Type)
+           (x : A)
+           (xs' : list A),
+      rev (x :: xs') = rev xs' ++ [x].
+  Proof. auto. Qed.
+
+  Fixpoint fo_prefixes_aux (A : Type) (xs acc : list A) : list (list A) :=
+    rev acc ::
+      match xs with
+      | [] => []
+      | x :: xs' => fo_prefixes_aux A xs' (x :: acc)
+      end.
+
+  Definition fo_prefixes (A : Type) (xs : list A) : list (list A) :=
+    fo_prefixes_aux A xs [].
+
+  Lemma fold_unfold_fo_prefixes_aux_nil :
+    forall (A : Type)
+           (acc : list A),
+      fo_prefixes_aux A [] acc =
+      [rev acc].
+  Proof. auto. Qed.
+
+  Lemma fold_unfold_fo_prefixes_aux_cons :
+    forall (A : Type)
+           (x : A)
+           (xs' acc : list A),
+      fo_prefixes_aux A (x :: xs') acc =
+      rev acc :: fo_prefixes_aux A xs' (x :: acc).
+  Proof. auto. Qed.
+
+  Definition prefixes_delim_unit_tests : bool :=
+    let unit_test xs :=
+      if list_eq_dec
+           (list_eq_dec Nat.eq_dec)
+           (interpret _ (prefixes_delim nat xs _))
+           (fo_prefixes nat xs)
+      then true
+      else false
+    in
+    unit_test []
+    && unit_test [0]
+    && unit_test [0; 1]
+    && unit_test [0; 1; 2]
+    && unit_test [0; 1; 2; 3]
+    && unit_test [0; 1; 2; 3; 4]
+    && unit_test [0; 1; 2; 3; 4; 5].
+
+  Compute prefixes_delim_unit_tests.
 
 End PrefixesExample.

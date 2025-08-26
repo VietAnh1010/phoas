@@ -31,13 +31,13 @@ Fixpoint type_denote (t : type) : Type :=
 Lemma fold_unfold_type_denote_TyLift :
   forall (t : Type),
     type_denote (TyLift t) =
-      t.
+    t.
 Proof. auto. Qed.
 
 Lemma fold_unfold_type_denote_TyFun :
   forall (dom ran a b : type),
     type_denote (TyFun dom ran a b) =
-      (type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b).
+    (type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b).
 Proof. auto. Qed.
 
 (** [x : Expr t a b] means that the term [x] has type [t] and evaluation of it changes the answer type from [a] to [b]. *)
@@ -86,7 +86,7 @@ Lemma fold_unfold_interpret_aux_Var :
          (x : type_denote t)
          (k : type_denote t -> type_denote a),
     interpret_aux t a a (Var type_denote t a x) k =
-      k x.
+    k x.
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Const :
@@ -95,7 +95,7 @@ Lemma fold_unfold_interpret_aux_Const :
          (v : t)
          (k : t -> type_denote a),
     interpret_aux (TyLift t) a a (Const type_denote t a v) k =
-      k v.
+    k v.
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Fun :
@@ -103,7 +103,7 @@ Lemma fold_unfold_interpret_aux_Fun :
          (f : type_denote dom -> expr type_denote ran a b)
          (k : (type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b) -> type_denote c),
     interpret_aux (TyFun dom ran a b) c c (Fun type_denote dom ran a b c f) k =
-      k (fun x => interpret_aux ran a b (f x)).
+    k (fun x => interpret_aux ran a b (f x)).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_App :
@@ -112,7 +112,7 @@ Lemma fold_unfold_interpret_aux_App :
          (e2 : expr type_denote dom b c)
          (k : type_denote ran -> type_denote a),
     interpret_aux ran a d (App type_denote dom ran a b c d e1 e2) k =
-      interpret_aux (TyFun dom ran a b) c d e1 (fun f => interpret_aux dom b c e2 (fun x => f x k)).
+    interpret_aux (TyFun dom ran a b) c d e1 (fun f => interpret_aux dom b c e2 (fun x => f x k)).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Lift :
@@ -122,7 +122,7 @@ Lemma fold_unfold_interpret_aux_Lift :
          (e : expr type_denote (TyLift s) a b)
          (k : t -> type_denote a),
     interpret_aux (TyLift t) a b (Lift type_denote s t a b f e) k =
-      interpret_aux (TyLift s) a b e (fun x => k (f x)).
+    interpret_aux (TyLift s) a b e (fun x => k (f x)).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Lift2 :
@@ -133,7 +133,7 @@ Lemma fold_unfold_interpret_aux_Lift2 :
          (e2 : expr type_denote (TyLift s) a b)
          (k : t -> type_denote a),
     interpret_aux (TyLift t) a c (Lift2 type_denote r s t a b c f e1 e2) k =
-      interpret_aux (TyLift r) b c e1 (fun x => interpret_aux (TyLift s) a b e2 (fun y => k (f x y))).
+    interpret_aux (TyLift r) b c e1 (fun x => interpret_aux (TyLift s) a b e2 (fun y => k (f x y))).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Let :
@@ -142,7 +142,7 @@ Lemma fold_unfold_interpret_aux_Let :
          (f : type_denote s -> expr type_denote t a b)
          (k : type_denote t -> type_denote a),
     interpret_aux t a c (Let type_denote s t a b c e f) k =
-      interpret_aux s b c e (fun x => interpret_aux t a b (f x) k).
+    interpret_aux s b c e (fun x => interpret_aux t a b (f x) k).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Seq :
@@ -151,7 +151,7 @@ Lemma fold_unfold_interpret_aux_Seq :
          (e2 : expr type_denote t a b)
          (k : type_denote t -> type_denote a),
     interpret_aux t a c (Seq type_denote s t a b c e1 e2) k =
-      interpret_aux s b c e1 (fun _ => interpret_aux t a b e2 k).
+    interpret_aux s b c e1 (fun _ => interpret_aux t a b e2 k).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_If :
@@ -160,7 +160,7 @@ Lemma fold_unfold_interpret_aux_If :
          (e1 e2 : expr type_denote t a b)
          (k : type_denote t -> type_denote a),
     interpret_aux t a c (If type_denote t a b c eb e1 e2) k =
-      interpret_aux (TyLift bool) b c eb (fun x => interpret_aux t a b (if x then e1 else e2) k).
+    interpret_aux (TyLift bool) b c eb (fun x => interpret_aux t a b (if x then e1 else e2) k).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Shift :
@@ -168,7 +168,7 @@ Lemma fold_unfold_interpret_aux_Shift :
          (f : (forall (d : type), type_denote t -> (type_denote a -> type_denote d) -> type_denote d) -> expr type_denote c c b)
          (k : type_denote t -> type_denote a),
     interpret_aux t a b (Shift type_denote t a b c f) k =
-      interpret_aux c c b (f (fun _ x k' => k' (k x))) (fun x => x).
+    interpret_aux c c b (f (fun _ x k' => k' (k x))) (fun x => x).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Reset :
@@ -176,7 +176,7 @@ Lemma fold_unfold_interpret_aux_Reset :
          (e : expr type_denote a a t)
          (k : type_denote t -> type_denote b),
     interpret_aux t b b (Reset type_denote t a b e) k =
-      k (interpret_aux a a t e (fun x => x)).
+    k (interpret_aux a a t e (fun x => x)).
 Proof. auto. Qed.
 
 Require String List Arith.
@@ -234,7 +234,7 @@ Module AppendExample.
   Lemma fold_unfold_append_delim_aux_nil :
     forall (A : Type),
       append_delim_aux A [] =
-        Shift _ _ _ _ _ (fun k => Var _ _ _ (k _)).
+      Shift _ _ _ _ _ (fun k => Var _ _ _ (k _)).
   Proof. auto. Qed.
 
   Lemma fold_unfold_append_delim_aux_cons :
@@ -242,7 +242,7 @@ Module AppendExample.
            (x : A)
            (xs' : list A),
       append_delim_aux A (x :: xs') =
-        Lift _ _ _ _ _ (cons x) (append_delim_aux A xs').
+      Lift _ _ _ _ _ (cons x) (append_delim_aux A xs').
   Proof. auto. Qed.
 
   Definition append_delim (A : Type) (xs ys : list A) :
@@ -275,7 +275,7 @@ Module AppendExample.
         (TyLift (list A))
         (TyFun (TyLift (list A)) (TyLift (list A)) (TyLift (list A)) (TyLift (list A)))
         (append_delim_aux A xs) k ys (fun x => x) =
-        k (xs ++ ys).
+      k (xs ++ ys).
   Proof.
     intros A xs ys.
     induction xs as [| x xs' IHxs']; intros k.
@@ -295,7 +295,7 @@ Module AppendExample.
     forall (A : Type)
            (xs ys : list A),
       interpret (TyLift (list A)) (append_delim A xs ys) =
-        xs ++ ys.
+      xs ++ ys.
   Proof.
     intros A xs ys.
     unfold interpret, append_delim.
@@ -333,17 +333,17 @@ Module TimesExample.
 
   Lemma fold_unfold_times_delim_aux_nil :
     times_delim_aux [] =
-      Const _ _ _ 1.
+    Const _ _ _ 1.
   Proof. auto. Qed.
 
   Lemma fold_unfold_times_delim_aux_cons :
     forall (x : nat)
            (xs' : list nat),
       times_delim_aux (x :: xs') =
-        match x with
-        | O => Shift _ _ _ _ _ (fun _ => Const _ _ _ 0)
-        | _ => Lift _ _ _ _ _ (Nat.mul x) (times_delim_aux xs')
-        end.
+      match x with
+      | O => Shift _ _ _ _ _ (fun _ => Const _ _ _ 0)
+      | _ => Lift _ _ _ _ _ (Nat.mul x) (times_delim_aux xs')
+      end.
   Proof. auto. Qed.
 
   Fixpoint times (xs : list nat) : nat :=
@@ -366,10 +366,10 @@ Module TimesExample.
     forall (xs : list nat)
            (k : nat -> nat),
       interpret_aux (TyLift nat) (TyLift nat) (TyLift nat) (times_delim_aux xs) k =
-        match times xs with
-        | O => O
-        | S r' => k (S r')
-        end.
+      match times xs with
+      | O => O
+      | S r' => k (S r')
+      end.
   Proof.
     intros xs.
     induction xs as [| x xs' IHxs']; intros k.
@@ -394,7 +394,7 @@ Module TimesExample.
   Theorem times_delim_is_equivalence_to_times :
     forall (xs : list nat),
       interpret (TyLift nat) (times_delim xs) =
-        times xs.
+      times xs.
   Proof.
     intros xs.
     unfold interpret, times_delim.
@@ -427,19 +427,19 @@ Module MulPow2Example.
 
   Lemma fold_unfold_mul_pow2_delim_aux_O :
     mul_pow2_delim_aux O =
-      Const _ _ _ tt.
+    Const _ _ _ tt.
   Proof. auto. Qed.
 
   Lemma fold_unfold_mul_pow2_delim_aux_S :
     forall (n' : nat),
       mul_pow2_delim_aux (S n') =
-        Seq _ _ _ _ _ _ (either unit nat tt tt Nat.add) (mul_pow2_delim_aux n').
+      Seq _ _ _ _ _ _ (either unit nat tt tt Nat.add) (mul_pow2_delim_aux n').
   Proof. auto. Qed.
 
   Lemma mul_pow2_delim_is_sound_aux :
     forall (m n : nat),
       interpret_aux (TyLift unit) (TyLift nat) (TyLift nat) (mul_pow2_delim_aux n) (fun _ => m) =
-        m * 2 ^ n.
+      m * 2 ^ n.
   Proof.
     intros m n.
     induction n as [| n' IHn'].
@@ -464,7 +464,7 @@ Module MulPow2Example.
   Theorem mul_pow2_delim_is_sound :
     forall (m n : nat),
       interpret (TyLift nat) (mul_pow2_delim m n) =
-        m * 2 ^ n.
+      m * 2 ^ n.
   Proof.
     intros m n.
     unfold interpret, mul_pow2_delim.
@@ -482,7 +482,7 @@ Theorem interpret_aux_Let_assoc :
          (g : type_denote s -> expr type_denote t a b)
          (k : type_denote t -> type_denote a),
     interpret_aux _ _ _ (Let _ _ _ _ _ _ (Let _ _ _ _ _ _ e f) g) k =
-      interpret_aux _ _ _ (Let _ _ _ _ _ _ e (fun x => Let _ _ _ _ _ _ (f x) g)) k.
+    interpret_aux _ _ _ (Let _ _ _ _ _ _ e (fun x => Let _ _ _ _ _ _ (f x) g)) k.
 Proof.
   intros r s t a b c d e f g k.
   (* Using only fold-unfold lemma will not work here, as we
@@ -548,16 +548,16 @@ Module CopyExample.
   Axiom fold_unfold_copy_delim_aux_nil :
     forall (A : Type),
       copy_delim_aux A [] =
-        Const _ _ _ [].
+      Const _ _ _ [].
 
   Axiom fold_unfold_copy_delim_aux_cons :
     forall (A : Type)
            (x : A)
            (xs' : list A),
       copy_delim_aux A (x :: xs') =
-        Let _ _ _ _ _ _
-          (Shift _ _ _ _ _ (fun k => Lift _ _ _ _ _ (cons x) (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ xs'))))
-          (copy_delim_aux A).
+      Let _ _ _ _ _ _
+        (Shift _ _ _ _ _ (fun k => Lift _ _ _ _ _ (cons x) (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ xs'))))
+        (copy_delim_aux A).
 
   Definition copy_delim (A : Type) (xs : list A) (c : type) : expr type_denote (TyLift (list A)) c c :=
     Reset _ _ _ _ (copy_delim_aux A xs).
@@ -566,7 +566,7 @@ Module CopyExample.
     forall (A : Type)
            (xs : list A),
       interpret_aux (TyLift (list A)) (TyLift (list A)) (TyLift (list A)) (copy_delim_aux A xs) (fun x => x) =
-        xs.
+      xs.
   Proof.
     intros A xs.
     induction xs as [| x xs' IHxs'].
@@ -588,7 +588,7 @@ Module CopyExample.
     forall (A : Type)
            (xs : list A),
       interpret (TyLift (list A)) (copy_delim A xs (TyLift (list A))) =
-        xs.
+      xs.
   Proof.
     intros A xs.
     unfold interpret, copy_delim.
@@ -625,10 +625,10 @@ Module PrefixesExample.
   Lemma fold_unfold_prefixes_delim_aux_nil :
     forall (A : Type),
       prefixes_delim_aux A [] =
-        Shift _ _ _ _ _
-          (fun k => Lift2 _ _ _ _ _ _ _ cons
-                      (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
-                      (Const _ _ _ [])).
+      Shift _ _ _ _ _
+        (fun k => Lift2 _ _ _ _ _ _ _ cons
+                    (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
+                    (Const _ _ _ [])).
   Proof. auto. Qed.
 
   Lemma fold_unfold_prefixes_delim_aux_cons :
@@ -636,10 +636,10 @@ Module PrefixesExample.
            (x : A)
            (xs' : list A),
       prefixes_delim_aux A (x :: xs') =
-        Shift _ _ _ _ _
-          (fun k => Lift2 _ _ _ _ _ _ _ cons
-                      (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
-                      (Reset _ _ _ _ (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Lift _ _ _ _ _ (cons x) (prefixes_delim_aux A xs'))))).
+      Shift _ _ _ _ _
+        (fun k => Lift2 _ _ _ _ _ _ _ cons
+                    (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
+                    (Reset _ _ _ _ (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Lift _ _ _ _ _ (cons x) (prefixes_delim_aux A xs'))))).
   Proof. auto. Qed.
 
   Fixpoint fo_prefixes_aux (A : Type) (xs acc : list A) : list (list A) :=
@@ -656,7 +656,7 @@ Module PrefixesExample.
     forall (A : Type)
            (acc : list A),
       fo_prefixes_aux A [] acc =
-        [rev_append acc []].
+      [rev_append acc []].
   Proof. auto. Qed.
 
   Lemma fold_unfold_fo_prefixes_aux_cons :
@@ -664,7 +664,7 @@ Module PrefixesExample.
            (x : A)
            (xs' acc : list A),
       fo_prefixes_aux A (x :: xs') acc =
-        rev_append acc [] :: fo_prefixes_aux A xs' (x :: acc).
+      rev_append acc [] :: fo_prefixes_aux A xs' (x :: acc).
   Proof. auto. Qed.
 
   Definition prefixes_delim_unit_tests : bool :=
@@ -693,7 +693,7 @@ Module PrefixesExample.
            (acc : list A),
       (forall (ys : list A), k ys = rev_append acc ys) ->
       interpret_aux (TyLift (list A)) (TyLift (list A)) (TyLift (list (list A))) (prefixes_delim_aux A xs) k =
-        fo_prefixes_aux A xs acc.
+      fo_prefixes_aux A xs acc.
   Proof.
     intros A xs.
     induction xs as [| x xs' IHxs']; intros k acc H_eq.
@@ -732,7 +732,7 @@ Module PrefixesExample.
     forall (A : Type)
            (xs : list A),
       interpret (TyLift (list (list A))) (prefixes_delim A xs) =
-        fo_prefixes A xs.
+      fo_prefixes A xs.
   Proof.
     intros A xs.
     unfold interpret, prefixes_delim, fo_prefixes.

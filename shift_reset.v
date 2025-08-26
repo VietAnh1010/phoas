@@ -18,7 +18,7 @@ Section Syntax.
   | Let : forall (s t a b c : type), expr s b c -> (var s -> expr t a b) -> expr t a c
   | Seq : forall (s t a b c : type), expr s b c -> expr t a b -> expr t a c
   | If : forall (t a b c : type), expr (TyLift bool) b c -> expr t a b -> expr t a b -> expr t a c
-  | Shift : forall (t a b c d : type), (var (TyFun t a d d) -> expr c c b) -> expr t a b
+  | Shift : forall (t a b c : type), ((forall (d : type), var (TyFun t a d d)) -> expr c c b) -> expr t a b
   | Reset : forall (t a b : type), expr a a t -> expr t b b.
 End Syntax.
 
@@ -55,7 +55,7 @@ Proof.
     | s t' a' b' c e' f Eq_t Eq_a Eq_b
     | s t' a' b' c e1 e2 Eq_t Eq_a Eq_b
     | t' a' b' c eb e1 e2 Eq_t Eq_a Eq_b
-    | t' a' b' c d f Eq_t Eq_a Eq_b
+    | t' a' b' c f Eq_t Eq_a Eq_b
     | t' a' b' e' Eq_t Eq_a Eq_b]; clear e.
   - rewrite <- Eq_b.
     exact (k x).
@@ -73,7 +73,7 @@ Proof.
   - exact (interpret_aux s b' b e' (fun x => interpret_aux t a b' (f x) k)).
   - exact (interpret_aux s b' b e1 (fun _ => interpret_aux t a b' e2 k)).
   - exact (interpret_aux (TyLift bool) b' b eb (fun x => interpret_aux t a b' (if x then e1 else e2) k)).
-  - exact (interpret_aux c c b (f (fun x k' => k' (k x))) (fun x => x)).
+  - exact (interpret_aux c c b (f (fun _ x k' => k' (k x))) (fun x => x)).
   - rewrite <- Eq_b.
     exact (k (interpret_aux a' a' t e' (fun x => x))).
 Defined.
@@ -164,11 +164,11 @@ Lemma fold_unfold_interpret_aux_If :
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Shift :
-  forall (t a b c d : type)
-         (f : (type_denote t -> (type_denote a -> type_denote d) -> type_denote d) -> expr type_denote c c b)
+  forall (t a b c : type)
+         (f : (forall (d : type), type_denote t -> (type_denote a -> type_denote d) -> type_denote d) -> expr type_denote c c b)
          (k : type_denote t -> type_denote a),
-    interpret_aux t a b (Shift type_denote t a b c d f) k =
-    interpret_aux c c b (f (fun x k' => k' (k x))) (fun x => x).
+    interpret_aux t a b (Shift type_denote t a b c f) k =
+    interpret_aux c c b (f (fun _ x k' => k' (k x))) (fun x => x).
 Proof. auto. Qed.
 
 Lemma fold_unfold_interpret_aux_Reset :
@@ -188,14 +188,14 @@ Fixpoint append_delim_aux (A : Type) (xs : list A) :
     (TyLift (list A))
     (TyFun (TyLift (list A)) (TyLift (list A)) (TyLift (list A)) (TyLift (list A))) :=
   match xs with
-  | [] => Shift _ _ _ _ _ _ (fun k => Var _ _ _ k)
+  | [] => Shift _ _ _ _ _ (fun k => Var _ _ _ (k _))
   | x :: xs' => Lift _ _ _ _ _ (cons x) (append_delim_aux A xs')
   end.
 
 Lemma fold_unfold_append_delim_aux_nil :
   forall (A : Type),
     append_delim_aux A [] =
-    Shift _ _ _ _ _ _ (fun k => Var _ _ _ k).
+    Shift _ _ _ _ _ (fun k => Var _ _ _ (k _)).
 Proof. auto. Qed.
 
 Lemma fold_unfold_append_delim_aux_cons :
@@ -287,7 +287,7 @@ Fixpoint times_delim_aux (xs : list nat) :
   match xs with
   | [] => Const _ _ _ 1
   | x :: xs' => match x with
-                | O => Shift _ _ _ _ _ (TyLift nat) (fun _ => Const _ _ _ 0)
+                | O => Shift _ _ _ _ _ (fun _ => Const _ _ _ 0)
                 | _ => Lift _ _ _ _ _ (Nat.mul x) (times_delim_aux xs')
                 end
   end.
@@ -309,7 +309,7 @@ Lemma fold_unfold_times_delim_aux_cons :
          (xs' : list nat),
     times_delim_aux (x :: xs') =
     match x with
-    | O => Shift _ _ _ _ _ (TyLift nat) (fun _ => Const _ _ _ 0)
+    | O => Shift _ _ _ _ _ (fun _ => Const _ _ _ 0)
     | _ => Lift _ _ _ _ _ (Nat.mul x) (times_delim_aux xs')
     end.
 Proof. auto. Qed.
@@ -374,9 +374,9 @@ Proof.
 Qed.
 
 Definition either (A B : Type) (x y : A) (f : B -> B -> B) : expr type_denote (TyLift A) (TyLift B) (TyLift B) :=
-  Shift _ _ _ _ _ _ (fun k => Lift2 _ _ _ _ _ _ _ f
-                                (App _ _ _ _ _ _ _ (Var _ _ _ k) (Const _ _ _ x))
-                                (App _ _ _ _ _ _ _ (Var _ _ _ k) (Const _ _ _ y))).
+  Shift _ _ _ _ _ (fun k => Lift2 _ _ _ _ _ _ _ f
+                              (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ x))
+                              (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ y))).
 
 Fixpoint mul_pow2_delim_aux (n : nat) : expr type_denote (TyLift unit) (TyLift nat) (TyLift nat) :=
   match n with
@@ -455,35 +455,34 @@ Qed.
    an ATM function as argument. *)
 
 Example e0 :=
-  (fun var dom ran c d =>
-     Shift _ _ _ _ _ _
-       (fun k : var (TyFun (TyFun dom ran (TyLift unit) (TyLift nat)) c c c) =>
+  (fun var dom ran c =>
+     Shift _ _ _ _ _
+       (fun k =>
           App _ _ _ _ _ _ _
-            (Var _ _ _ k)
+            (Var _ _ _ (k _))
             (Fun _ _ _ _ _ _
                (fun _ =>
-                  Shift _ _ _ _ _ d
+                  Shift _ _ _ _ _
                     (fun _ => Const _ _ _ 1)))) :
      expr var (TyFun dom ran (TyLift unit) (TyLift nat)) c c).
 
 Example e1 :=
-  (fun var dom ran c d =>
-     Reset _ _ _ _ (e0 _ _ _ _ d) :
+  (fun var dom ran c =>
+     Reset _ _ _ _ (e0 _ _ _ _) :
      expr var (TyFun dom ran (TyLift unit) (TyLift nat)) c c).
 
 Example e2 :=
-  (fun var ran d =>
-     App _ _ _ _ _ _ _ (e1 _ _ _ _ d) (Const _ _ _ tt) :
+  (fun var ran =>
+     App _ _ _ _ _ _ _ (e1 _ _ _ _) (Const _ _ _ tt) :
      expr var ran (TyLift unit) (TyLift nat)).
 
 Example e3 :=
-  (fun var c d =>
-     Reset _ _ _ _ (e2 _ _ d) :
+  (fun var c =>
+     Reset _ _ _ _ (e2 _ _) :
      expr var (TyLift nat) c c).
 
-Goal forall d, interpret _ (e3 _ _ d) = 1.
+Goal interpret _ (e3 _ _) = 1.
 Proof.
-  intros d.
   unfold interpret.
   unfold e3, e2, e1, e0.
   rewrite -> fold_unfold_interpret_aux_Reset.
@@ -499,7 +498,7 @@ Proof.
   reflexivity.
 Qed.
 
-Module CopyDelimExample.
+Module CopyExample.
 
   Parameter copy_delim_aux :
     forall (A : Type),
@@ -517,7 +516,7 @@ Module CopyDelimExample.
            (xs' : list A),
       copy_delim_aux A (x :: xs') =
       Let _ _ _ _ _ _
-        (Shift _ _ _ _ _ _ (fun k => Lift _ _ _ _ _ (cons x) (App _ _ _ _ _ _ _ (Var _ _ _ k) (Const _ _ _ xs'))))
+        (Shift _ _ _ _ _ (fun k => Lift _ _ _ _ _ (cons x) (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ xs'))))
         (copy_delim_aux A).
 
   Definition copy_delim (A : Type) (xs : list A) (c : type) : expr type_denote (TyLift (list A)) c c :=
@@ -557,5 +556,29 @@ Module CopyDelimExample.
     exact (copy_delim_is_sound_aux A xs).
   Qed.
 
-End CopyDelimExample.
-'
+End CopyExample.
+
+Module PrefixesExample.
+
+  Fixpoint prefixes_delim_aux (A : Type) (xs : list A) :
+    expr type_denote
+      (TyLift (list A))
+      (TyLift (list A))
+      (TyLift (list (list A))) :=
+    match xs with
+    | [] =>
+        Shift _ _ _ _ _ (fun _ => Const _ _ _ [])
+    | x :: xs' =>
+        Lift _ _ _ _ _
+          (cons x)
+          (Shift _ _ _ _ _
+             (fun k => Lift2 _ _ _ _ _ _ _
+                         cons
+                         (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (Const _ _ _ []))
+                         (Reset _ _ _ _ (App _ _ _ _ _ _ _ (Var _ _ _ (k _)) (prefixes_delim_aux A xs')))))
+    end.
+
+  Definition prefixes_delim (A : Type) (xs : list A) (c : type) : expr type_denote (TyLift (list (list A))) c c :=
+    Reset _ _ _ _ (prefixes_delim_aux A xs).
+
+End PrefixesExample.

@@ -13,27 +13,23 @@ Section Syntax.
 
   Coercion TyMono : mtype >-> ptype.
 
-  Inductive pans_type : Type :=
-  | ABase : mtype -> mtype -> mtype -> pans_type
-  | APoly : (mtype -> pans_type) -> pans_type.
+  Variable var : ptype -> Type.
 
-  Variable var : mtype -> Type.
-
-  Inductive expr : pans_type -> Type :=
-  | Var : forall (t a : mtype), var t -> expr (ABase t a a)
-  | Const : forall (t : Type) (a : mtype), t -> expr (ABase (TyLift t) a a)
-  | Fun : forall (dom ran a b c : mtype), (var dom -> expr (ABase ran a b)) -> expr (ABase (TyFun dom ran a b) c c)
-  | App : forall (dom ran a b c d : mtype), expr (ABase (TyFun dom ran a b) c d) -> expr (ABase dom b c) -> expr (ABase ran a d)
+  Inductive expr : ptype -> ptype -> ptype -> Type :=
+  | Var : forall (t a : ptype), var t -> expr t a a
+  | Const : forall (t : Type) (a : ptype), t -> expr (TyLift t) a a
+  | Fun : forall (dom ran a b : mtype) (c : ptype), (var dom -> expr ran a b) -> expr (TyFun dom ran a b) c c
+  | App : forall (dom ran a b : mtype) (c d : ptype), expr (TyFun dom ran a b) c d -> expr dom b c -> expr ran a d
 (*
   | Lift : forall (s t : Type) (a b : mtype), (s -> t) -> expr (ABase (TyLift s) a b) -> expr (ABase (TyLift t) a b)
   | Lift2 : forall (r s t : Type) (a b c : mtype), (r -> s -> t) -> expr (ABase (TyLift r) b c) -> expr (ABase (TyLift s) a b) -> expr (ABase (TyLift t) a c)
 *)
-  | Let : forall (s t a b c : mtype), expr (ABase s b c) -> (var s -> expr (ABase t a b)) -> expr (ABase t a c)
+  | Let : forall (s t a b c : ptype), expr s b c -> (var s -> expr t a b) -> expr t a c
 (*  | If : forall (t a b c : mtype), expr (ABase (TyLift bool) b c) -> expr t a b -> expr t a b -> expr t a c *)
-  | Shift : forall (t a b c : mtype), ((forall d, var (TyFun t a d d)) -> expr (ABase c c b)) -> expr (ABase t a b)
-  | Reset : forall (t a b : mtype), expr (ABase a a t) -> expr (ABase t b b)
-  | FunT : forall (p : mtype -> pans_type), (forall (t : mtype), expr (p t)) -> expr (APoly p)
-  | AppT : forall (p : mtype -> pans_type), expr (APoly p) -> forall (t : mtype), expr (p t).
+  | Shift : forall (t a : mtype) (b c : ptype), ((forall d, var (TyFun t a d d)) -> expr c c b) -> expr t a b
+  | Reset : forall (t a b : ptype), expr a a t -> expr t b b
+  | FunT : forall (p : mtype -> ptype) (d : ptype), (forall (t : mtype) (c : ptype), expr (p t) c c) -> expr (TyForall p) d d
+  | AppT : forall (p : mtype -> ptype) (a b : ptype), expr (TyForall p) a b -> forall (t : mtype), expr (p t) a b.
 End Syntax.
 
 Fixpoint mtype_denote (t : mtype) : Type :=
@@ -48,12 +44,13 @@ Fixpoint ptype_denote (t : ptype) : Type :=
   | TyForall p => forall (t : mtype), ptype_denote (p t)
   end.
 
+(*
 Fixpoint pans_type_denote (t : pans_type) : Type :=
   match t with
   | ABase r a b => (mtype_denote r -> mtype_denote a) -> mtype_denote b
   | APoly t' => forall (a : mtype), pans_type_denote (t' a)
   end.
-
+*)
 (*
 Lemma fold_unfold_type_denote_TyLift :
   forall (t : Type),
@@ -69,7 +66,7 @@ Proof. auto. Qed.
 (** [x : Expr t a b] means that the term [x] has type [t] and evaluation of it changes the answer type from [a] to [b]. *)
 Definition Expr t a b := forall var, expr var t a b.
 *)
-Fixpoint interpret_aux (t_ans : pans_type) (e : expr mtype_denote t_ans) : pans_type_denote t_ans.
+Fixpoint interpret_aux (t a b : ptype) (e : expr ptype_denote t a b) (k : ptype_denote t -> ptype_denote a) : ptype_denote b.
 Proof.
   inversion e; clear e; subst; cbn in *.
   (* [ t' a' x Eq_t Eq_a Eq_b
@@ -87,24 +84,52 @@ Proof.
     | p a' b' e' t' Eq_t Eq_a Eq_b]; clear e. *)
   - auto.
   - auto.
-  - intro k. exact (k (fun x => interpret_aux _ (X x))).
-  - intro k.
-    exact (interpret_aux _ X (fun f => interpret_aux _ X0 (fun x => f x k))).
-  - intro k.
-    exact (interpret_aux _ X (fun x => interpret_aux _ (X0 x) k)).
-  - intro k.
-    exact (interpret_aux _ (X (fun _ x k' => k' (k x))) (fun x => x)).
-  - intro k.
-    exact (k (interpret_aux _ X (fun x => x))).
-  - intros a.
-    exact (interpret_aux _ (X a)).
-  - assert (r := interpret_aux _ X).
-    cbn in *.
-    exact (r t).
+  - exact (k (fun x => interpret_aux _ _ _ (X x))).
+  - exact (interpret_aux _ _ _ X (fun f => interpret_aux _ _ _ X0 (fun x => f x k))).
+  - exact (interpret_aux _ _ _ X (fun x => interpret_aux _ _ _ (X0 x) k)).
+  - exact (interpret_aux _ _ _ (X (fun _ x k' => k' (k x))) (fun x => x)).
+  - exact (k (interpret_aux _ _ _ X (fun x => x))).
+  - exact (k (fun t => interpret_aux _ _ _ (X t (p t)) (fun x => x))).
+  - exact (interpret_aux _ _ _ X (fun x => k (x t0))).
 Defined.
 
-Definition interpret (t : type) (e : expr type_denote t t t) : type_denote t :=
+Definition interpret (t : ptype) (e : expr ptype_denote t t t) : ptype_denote t :=
   interpret_aux t t t e (fun x => x).
+
+Check
+  (interpret _
+     (Let ptype_denote _ _ _ _ _
+        (FunT _ _ _ (fun a _ => FunT _ _ _ (fun c _ => Fun _ a a c c _ (fun x => Var _ _ _ x))))
+        (fun v => Var _ _ _ v))).
+
+Check
+  (interpret _
+     (Let ptype_denote _ _ _ _ _
+        (Fun _ (TyLift nat) _ _ (TyLift nat) _ (fun x => Var _ _ _ x))
+        (fun v => Var _ _ _ v))).
+
+Goal exists value,
+  (interpret _
+     (Let ptype_denote _ _ _ _ _
+        (Fun _ (TyLift nat) _ _ (TyLift nat) _ (fun x => Var _ _ _ x))
+        (fun v => Var _ _ _ v))) = value.
+Proof.
+  cbn.
+  eexists. reflexivity.
+Qed.
+
+Goal exists value,
+  (interpret _ (Let ptype_denote _ _ _ _ _
+     (FunT _ _ _ (fun a _ => FunT _ _ _ (fun c _ => Fun _ a a c c _ (fun x => Var _ _ _ x))))
+     (fun v => Var _ _ _ v))) = value.
+Proof.
+  simpl ptype_denote.
+  simpl mtype_denote.
+  cbn.
+  eexists. reflexivity.
+Qed.
+
+Check (fun var d => FunT var _ d (fun a ctx' => FunT _ _ _ (fun c ctx'' => (Reset _ _ _ _ (Shift _ a _ _ _ (fun k => Var _ _ _ (k c))))))).
 
 Lemma fold_unfold_interpret_aux_Var :
   forall (t a : type)

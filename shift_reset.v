@@ -1,33 +1,49 @@
-Inductive type : Type :=
-| TyLift : Type -> type
-| TyFun : type -> type -> type -> type -> type.
-
-Notation "t \ a -> s \ b" := (TyFun t s a b) (at level 40).
-Notation "` t" := (TyLift t) (at level 30).
-
 Section Syntax.
-  Variable var : type -> Type.
 
-  Inductive expr : type -> type -> type -> Type :=
-  | Var : forall (t a : type), var t -> expr t a a
-  | Const : forall (t : Type) (a : type), t -> expr (TyLift t) a a
-  | Fun : forall (dom ran a b c : type), (var dom -> expr ran a b) -> expr (TyFun dom ran a b) c c
-  | App : forall (dom ran a b c d : type), expr (TyFun dom ran a b) c d -> expr dom b c -> expr ran a d
-  | Lift : forall (s t : Type) (a b : type), (s -> t) -> expr (TyLift s) a b -> expr (TyLift t) a b
-  | Lift2 : forall (r s t : Type) (a b c : type), (r -> s -> t) -> expr (TyLift r) b c -> expr (TyLift s) a b -> expr (TyLift t) a c
-  | Let : forall (s t a b c : type), expr s b c -> (var s -> expr t a b) -> expr t a c
-  | Seq : forall (s t a b c : type), expr s b c -> expr t a b -> expr t a c
-  | If : forall (t a b c : type), expr (TyLift bool) b c -> expr t a b -> expr t a b -> expr t a c
-  | Shift : forall (t a b c : type), ((forall (d : type), var (TyFun t a d d)) -> expr c c b) -> expr t a b
-  | Reset : forall (t a b : type), expr a a t -> expr t b b.
+  Inductive mtype : Type :=
+  | TyLift : Type -> mtype
+  | TyFun : mtype -> mtype -> mtype -> mtype -> mtype.
+
+  Inductive ptype : Type :=
+  | TyMono : mtype -> ptype
+  | TyForall : (mtype -> ptype) -> ptype.
+
+  Notation "t \ a -> s \ b" := (TyFun t s a b) (at level 40).
+  Notation "` t" := (TyLift t) (at level 30).
+
+  Coercion TyMono : mtype >-> ptype.
+
+  Variable var : ptype -> Type.
+
+  Inductive expr : ptype -> mtype -> mtype -> Type :=
+  | Var : forall (t a : mtype), var t -> expr t a a
+  | Const : forall (t : Type) (a : mtype), t -> expr (TyLift t) a a
+  | Fun : forall (dom ran a b c : mtype), (var dom -> expr ran a b) -> expr (TyFun dom ran a b) c c
+  | App : forall (dom ran a b c d : mtype), expr (TyFun dom ran a b) c d -> expr dom b c -> expr ran a d
+  | Lift : forall (s t : Type) (a b : mtype), (s -> t) -> expr (TyLift s) a b -> expr (TyLift t) a b
+  | Lift2 : forall (r s t : Type) (a b c : mtype), (r -> s -> t) -> expr (TyLift r) b c -> expr (TyLift s) a b -> expr (TyLift t) a c
+  | Let : forall (s t : ptype) (a b c : mtype), expr s b c -> (var s -> expr t a b) -> expr t a c
+  | Seq : forall (s t : ptype) (a b c : mtype), expr s b c -> expr t a b -> expr t a c
+  | If : forall (t a b c : mtype), expr (TyLift bool) b c -> expr t a b -> expr t a b -> expr t a c
+  | Shift : forall (t a b c : mtype), (var (TyForall (fun d => TyFun t a d d)) -> expr c c b) -> expr t a b
+  | Reset : forall (t a b : mtype), expr a a t -> expr t b b
+  | FunT : forall (p : mtype -> ptype) (a b : mtype), (forall (t : mtype), expr (p t) a b) -> expr (TyForall p) a b
+  | AppT : forall (p : mtype -> ptype) (a b : mtype), expr (TyForall p) a b -> forall (t : mtype), expr (p t) a b.
 End Syntax.
 
-Fixpoint type_denote (t : type) : Type :=
+Fixpoint mtype_denote (t : mtype) : Type :=
   match t with
   | TyLift t => t
-  | TyFun dom ran a b => type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b
+  | TyFun dom ran a b => mtype_denote dom -> (mtype_denote ran -> mtype_denote a) -> mtype_denote b
   end.
 
+Fixpoint ptype_denote (t : ptype) : Type :=
+  match t with
+  | TyMono t => mtype_denote t
+  | TyForall p => forall (t : mtype), ptype_denote (p t)
+  end.
+
+(*
 Lemma fold_unfold_type_denote_TyLift :
   forall (t : Type),
     type_denote (TyLift t) =
@@ -39,11 +55,10 @@ Lemma fold_unfold_type_denote_TyFun :
     type_denote (TyFun dom ran a b) =
     (type_denote dom -> (type_denote ran -> type_denote a) -> type_denote b).
 Proof. auto. Qed.
-
 (** [x : Expr t a b] means that the term [x] has type [t] and evaluation of it changes the answer type from [a] to [b]. *)
 Definition Expr t a b := forall var, expr var t a b.
-
-Fixpoint interpret_aux (t a b : type) (e : expr type_denote t a b) (k : type_denote t -> type_denote a) : type_denote b.
+*)
+Fixpoint interpret_aux (t : ptype) (a b : mtype) (e : expr ptype_denote t a b) (k : ptype_denote t -> mtype_denote a) : mtype_denote b.
 Proof.
   inversion e as
     [ t' a' x Eq_t Eq_a Eq_b
@@ -56,8 +71,11 @@ Proof.
     | s t' a' b' c e1 e2 Eq_t Eq_a Eq_b
     | t' a' b' c eb e1 e2 Eq_t Eq_a Eq_b
     | t' a' b' c f Eq_t Eq_a Eq_b
-    | t' a' b' e' Eq_t Eq_a Eq_b]; clear e.
+    | t' a' b' e' Eq_t Eq_a Eq_b
+    | p a' b' f Eq_t Eq_a Eq_b
+    | p a' b' e' t' Eq_t Eq_a Eq_b]; clear e.
   - rewrite <- Eq_b.
+    rewrite <- Eq_t in k.
     exact (k x).
   - rewrite <- Eq_t in k.
     rewrite <- Eq_b.
@@ -65,17 +83,23 @@ Proof.
   - rewrite <- Eq_t in k.
     rewrite <- Eq_b.
     exact (k (fun x => interpret_aux ran a' b' (f x))).
-  - exact (interpret_aux (TyFun dom t a b') c b e1 (fun f => interpret_aux dom b' c e2 (fun x => f x k))).
+  - rewrite <- Eq_t in k.
+    exact (interpret_aux _ _ _ e1 (fun f => interpret_aux _ _ _ e2 (fun x => f x k))).
   - rewrite <- Eq_t in k.
     exact (interpret_aux (TyLift s) a b e' (fun x => k (f x))).
   - rewrite <- Eq_t in k.
     exact (interpret_aux (TyLift r) b' b e1 (fun x => interpret_aux (TyLift s) a b' e2 (fun y => k (f x y)))).
   - exact (interpret_aux s b' b e' (fun x => interpret_aux t a b' (f x) k)).
   - exact (interpret_aux s b' b e1 (fun _ => interpret_aux t a b' e2 k)).
-  - exact (interpret_aux (TyLift bool) b' b eb (fun x => interpret_aux t a b' (if x then e1 else e2) k)).
-  - exact (interpret_aux c c b (f (fun _ x k' => k' (k x))) (fun x => x)).
-  - rewrite <- Eq_b.
-    exact (k (interpret_aux a' a' t e' (fun x => x))).
+  - rewrite <- Eq_t in k.
+    exact (interpret_aux (TyLift bool) b' b eb (fun x => interpret_aux t' a b' (if x then e1 else e2) k)).
+  - rewrite <- Eq_t in k.
+    exact (interpret_aux _ _ _ (f (fun _ x k' => k' (k x))) (fun x => x)).
+  - rewrite <- Eq_t in k.
+    rewrite <- Eq_b.
+    exact (k (interpret_aux a' a' t' e' (fun x => x))).
+  - subst. cbn in *.
+    Check (fun t => interpret_aux _ _ _ (f t)).
 Defined.
 
 Definition interpret (t : type) (e : expr type_denote t t t) : type_denote t :=

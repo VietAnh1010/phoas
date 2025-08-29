@@ -6,7 +6,9 @@ Section Syntax.
 
   Inductive ptype : Type :=
   | TyMono : mtype -> ptype
-  | TyForall : (mtype -> ptype) -> ptype.
+  | TyForall : (mtype -> mtype -> ptype) ->
+               (mtype -> mtype -> ptype) ->
+               (mtype -> mtype -> ptype) -> ptype.
 
   Notation "t \ a -> s \ b" := (TyFun t s a b) (at level 40).
   Notation "` t" := (TyLift t) (at level 30).
@@ -28,8 +30,8 @@ Section Syntax.
 (*  | If : forall (t a b c : mtype), expr (ABase (TyLift bool) b c) -> expr t a b -> expr t a b -> expr t a c *)
   | Shift : forall (t a : mtype) (b c : ptype), ((forall d, var (TyFun t a d d)) -> expr c c b) -> expr t a b
   | Reset : forall (t a b : ptype), expr a a t -> expr t b b
-  | FunT : forall (p : mtype -> ptype) (d : ptype), (forall (t : mtype) (c : ptype), expr (p t) c c) -> expr (TyForall p) d d
-  | AppT : forall (p : mtype -> ptype) (a b : ptype), expr (TyForall p) a b -> forall (t : mtype), expr (p t) a b.
+  | FunT : forall (p a b : mtype -> mtype -> ptype) (d : ptype), (forall (t c : mtype), expr (p t c) (a t c) (b t c)) -> expr (TyForall p a b) d d
+  | AppT : forall (p a b : mtype -> mtype -> ptype) (d : ptype) (t c : mtype), expr (TyForall p a b) (b t c) d -> expr (p t c) (a t c) d.
 End Syntax.
 
 Fixpoint mtype_denote (t : mtype) : Type :=
@@ -41,7 +43,7 @@ Fixpoint mtype_denote (t : mtype) : Type :=
 Fixpoint ptype_denote (t : ptype) : Type :=
   match t with
   | TyMono t => mtype_denote t
-  | TyForall p => forall (t : mtype), ptype_denote (p t)
+  | TyForall p a b => forall (t c : mtype), (ptype_denote (p t c) -> ptype_denote (a t c)) -> ptype_denote (b t c)
   end.
 
 (*
@@ -89,17 +91,26 @@ Proof.
   - exact (interpret_aux _ _ _ X (fun x => interpret_aux _ _ _ (X0 x) k)).
   - exact (interpret_aux _ _ _ (X (fun _ x k' => k' (k x))) (fun x => x)).
   - exact (k (interpret_aux _ _ _ X (fun x => x))).
-  - exact (k (fun t => interpret_aux _ _ _ (X t (p t)) (fun x => x))).
-  - exact (interpret_aux _ _ _ X (fun x => k (x t0))).
+  - Check (fun t c => interpret_aux _ _ _ (X t c)).
+    Check (k (fun t c => interpret_aux _ _ _ (X t c))).
+    exact (k (fun t c => interpret_aux _ _ _ (X t c))).
+    (* exact (k (fun t => interpret_aux _ _ _ (X t) (fun x => x))). *)
+  - Check (interpret_aux _ _ _ X).
+    Check (interpret_aux _ _ _ X (fun f => f t0 c k)).
+    exact (interpret_aux _ _ _ X (fun f => f t0 c k)).
 Defined.
 
 Definition interpret (t : ptype) (e : expr ptype_denote t t t) : ptype_denote t :=
   interpret_aux t t t e (fun x => x).
 
+Check (FunT _ _ _ _ _).
+
+Definition TyUnit := TyLift unit.
+
 Check
   (interpret _
      (Let ptype_denote _ _ _ _ _
-        (FunT _ _ _ (fun a _ => FunT _ _ _ (fun c _ => Fun _ a a c c _ (fun x => Var _ _ _ x))))
+        (FunT _ _ _ _ _ (fun a ctx => FunT _ _ _ _ ctx (fun c ctx' => Fun _ a a c c ctx' (fun x => Var _ _ _ x))))
         (fun v => Var _ _ _ v))).
 
 Check
@@ -119,17 +130,23 @@ Proof.
 Qed.
 
 Goal exists value,
-  (interpret _ (Let ptype_denote _ _ _ _ _
-     (FunT _ _ _ (fun a _ => FunT _ _ _ (fun c _ => Fun _ a a c c _ (fun x => Var _ _ _ x))))
-     (fun v => Var _ _ _ v))) = value.
+  (interpret _
+     (Let ptype_denote _ _ _ _ _
+        (FunT _ _ _ _ _ (fun a ctx => FunT _ _ _ _ ctx (fun c ctx' => Fun _ a a c c ctx' (fun x => Var _ _ _ x))))
+        (fun v => Var _ _ _ v))) = value.
 Proof.
-  simpl ptype_denote.
-  simpl mtype_denote.
   cbn.
   eexists. reflexivity.
 Qed.
 
-Check (fun var d => FunT var _ d (fun a ctx' => FunT _ _ _ (fun c ctx'' => (Reset _ _ _ _ (Shift _ a _ _ _ (fun k => Var _ _ _ (k c))))))).
+Check (fun var d => FunT var _ _ _ d (fun a ctx => FunT _ _ _ _ ctx (fun c ctx' => (Reset _ _ _ ctx' (Shift _ a _ _ _ (fun k => Var _ _ _ (k c))))))).
+
+Goal exists value,
+ (interpret _ (FunT _ _ _ _ _ (fun a t => (Shift _ t a _ _ (fun k => Const _ _ _ false))))) = value.
+Proof.
+  cbn.
+  eexists. reflexivity.
+Qed.
 
 Lemma fold_unfold_interpret_aux_Var :
   forall (t a : type)

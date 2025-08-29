@@ -6,9 +6,9 @@ Section Syntax.
 
   Inductive ptype : Type :=
   | TyMono : mtype -> ptype
-  | TyForall : (mtype -> mtype -> ptype) ->
-               (mtype -> mtype -> ptype) ->
-               (mtype -> mtype -> ptype) -> ptype.
+  | TyForall : (mtype -> ptype) ->
+               (mtype -> ptype) ->
+               (mtype -> ptype) -> ptype.
 
   Notation "t \ a -> s \ b" := (TyFun t s a b) (at level 40).
   Notation "` t" := (TyLift t) (at level 30).
@@ -22,16 +22,14 @@ Section Syntax.
   | Const : forall (t : Type) (a : ptype), t -> expr (TyLift t) a a
   | Fun : forall (dom ran a b : mtype) (c : ptype), (var dom -> expr ran a b) -> expr (TyFun dom ran a b) c c
   | App : forall (dom ran a b : mtype) (c d : ptype), expr (TyFun dom ran a b) c d -> expr dom b c -> expr ran a d
-(*
-  | Lift : forall (s t : Type) (a b : mtype), (s -> t) -> expr (ABase (TyLift s) a b) -> expr (ABase (TyLift t) a b)
-  | Lift2 : forall (r s t : Type) (a b c : mtype), (r -> s -> t) -> expr (ABase (TyLift r) b c) -> expr (ABase (TyLift s) a b) -> expr (ABase (TyLift t) a c)
-*)
+  | Lift : forall (s t : Type) (a b : ptype), (s -> t) -> expr (TyLift s) a b -> expr (TyLift t) a b
+(*  | Lift2 : forall (r s t : Type) (a b c : mtype), (r -> s -> t) -> expr (ABase (TyLift r) b c) -> expr (ABase (TyLift s) a b) -> expr (ABase (TyLift t) a c) *)
   | Let : forall (s t a b c : ptype), expr s b c -> (var s -> expr t a b) -> expr t a c
 (*  | If : forall (t a b c : mtype), expr (ABase (TyLift bool) b c) -> expr t a b -> expr t a b -> expr t a c *)
   | Shift : forall (t a : mtype) (b c : ptype), ((forall d, var (TyFun t a d d)) -> expr c c b) -> expr t a b
   | Reset : forall (t a b : ptype), expr a a t -> expr t b b
-  | FunT : forall (p a b : mtype -> mtype -> ptype) (d : ptype), (forall (t c : mtype), expr (p t c) (a t c) (b t c)) -> expr (TyForall p a b) d d
-  | AppT : forall (p a b : mtype -> mtype -> ptype) (d : ptype) (t c : mtype), expr (TyForall p a b) (b t c) d -> expr (p t c) (a t c) d.
+  | FunT : forall (p a b : mtype -> ptype) (d : ptype), (forall (t c : mtype), expr (p t) (a c) (b c)) -> expr (TyForall p a b) d d
+  | AppT : forall (p a b : mtype -> ptype) (d : ptype) (t c : mtype), expr (TyForall p a b) (b c) d -> expr (p t) (a c) d.
 End Syntax.
 
 Fixpoint mtype_denote (t : mtype) : Type :=
@@ -43,7 +41,7 @@ Fixpoint mtype_denote (t : mtype) : Type :=
 Fixpoint ptype_denote (t : ptype) : Type :=
   match t with
   | TyMono t => mtype_denote t
-  | TyForall p a b => forall (t c : mtype), (ptype_denote (p t c) -> ptype_denote (a t c)) -> ptype_denote (b t c)
+  | TyForall p a b => forall (t c : mtype), (ptype_denote (p t) -> ptype_denote (a c)) -> ptype_denote (b c)
   end.
 
 (*
@@ -88,6 +86,7 @@ Proof.
   - auto.
   - exact (k (fun x => interpret_aux _ _ _ (X x))).
   - exact (interpret_aux _ _ _ X (fun f => interpret_aux _ _ _ X0 (fun x => f x k))).
+  - exact (interpret_aux _ _ _ X0 (fun x => k (X x))).
   - exact (interpret_aux _ _ _ X (fun x => interpret_aux _ _ _ (X0 x) k)).
   - exact (interpret_aux _ _ _ (X (fun _ x k' => k' (k x))) (fun x => x)).
   - exact (k (interpret_aux _ _ _ X (fun x => x))).
@@ -142,12 +141,13 @@ Qed.
 Check (fun var d => FunT var _ _ _ d (fun a ctx => FunT _ _ _ _ ctx (fun c ctx' => (Reset _ _ _ ctx' (Shift _ a _ _ _ (fun k => Var _ _ _ (k c))))))).
 
 Goal exists value,
- (interpret _ (FunT _ _ _ _ _ (fun a t => (Shift _ t a _ _ (fun k => Const _ _ _ false))))) = value.
+ (interpret _ (FunT _ _ _ _ _ (fun a t => (Shift _ a t _ _ (fun k => Const _ _ _ false))))) = value.
 Proof.
   cbn.
   eexists. reflexivity.
 Qed.
 
+(*
 Lemma fold_unfold_interpret_aux_Var :
   forall (t a : type)
          (x : type_denote t)
@@ -245,7 +245,7 @@ Lemma fold_unfold_interpret_aux_Reset :
     interpret_aux t b b (Reset type_denote t a b e) k =
     k (interpret_aux a a t e (fun x => x)).
 Proof. auto. Qed.
-
+*)
 Require String List Arith.
 Import List.ListNotations.
 
@@ -289,7 +289,7 @@ Module AppendExample.
   Import List Arith Lists.
 
   Fixpoint append_delim_aux (A : Type) (xs : list A) :
-    expr type_denote
+    expr ptype_denote
       (TyLift (list A))
       (TyLift (list A))
       (TyFun (TyLift (list A)) (TyLift (list A)) (TyLift (list A)) (TyLift (list A))) :=
@@ -313,7 +313,7 @@ Module AppendExample.
   Proof. auto. Qed.
 
   Definition append_delim (A : Type) (xs ys : list A) :
-    expr type_denote
+    expr ptype_denote
       (TyLift (list A))
       (TyLift (list A))
       (TyLift (list A)) :=
@@ -347,14 +347,14 @@ Module AppendExample.
     intros A xs ys.
     induction xs as [| x xs' IHxs']; intros k.
     - rewrite -> fold_unfold_append_delim_aux_nil.
-      rewrite -> fold_unfold_interpret_aux_Shift.
+      (*rewrite -> fold_unfold_interpret_aux_Shift.
       rewrite -> fold_unfold_interpret_aux_Var.
-      rewrite -> fold_unfold_app_nil.
+      rewrite -> fold_unfold_app_nil.*) cbn.
       reflexivity.
     - rewrite -> fold_unfold_append_delim_aux_cons.
-      rewrite -> fold_unfold_interpret_aux_Lift.
-      rewrite -> fold_unfold_app_cons.
-      rewrite -> (IHxs' (fun r : type_denote (TyLift (list A)) => k (x :: r))).
+      (* rewrite -> fold_unfold_interpret_aux_Lift. *)
+      rewrite -> fold_unfold_app_cons. cbn.
+      rewrite -> IHxs'.
       reflexivity.
   Qed.
 
@@ -366,9 +366,10 @@ Module AppendExample.
   Proof.
     intros A xs ys.
     unfold interpret, append_delim.
-    rewrite -> fold_unfold_interpret_aux_App.
+    (*rewrite -> fold_unfold_interpret_aux_App.
     rewrite -> fold_unfold_interpret_aux_Reset.
-    rewrite -> fold_unfold_interpret_aux_Const.
+    rewrite -> fold_unfold_interpret_aux_Const.*)
+    cbn.
     exact (append_delim_is_equivalence_to_append_aux A xs ys (fun x => x)).
   Qed.
 

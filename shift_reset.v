@@ -185,7 +185,6 @@ Open Scope list_scope.
 Open Scope string_scope.
 
 Module Lists.
-
   Import List.
 
   Lemma fold_unfold_app_nil :
@@ -213,11 +212,10 @@ Module Lists.
            (xs' ys : list A),
       rev_append (x :: xs') ys = rev_append xs' (x :: ys).
   Proof. auto. Qed.
-
 End Lists.
 
-Module AppendExample.
 
+Module AppendExample.
   Import List Arith Lists.
 
   Fixpoint append_delim_aux (A : Type) (xs : list A) :
@@ -303,11 +301,10 @@ Module AppendExample.
     rewrite -> fold_unfold_interpret_aux_Const.
     exact (append_delim_is_equivalence_to_append_aux A xs ys (fun x => x)).
   Qed.
-
 End AppendExample.
 
-Module TimesExample.
 
+Module TimesExample.
   Import Arith.
 
   Fixpoint times_delim_aux (xs : list nat) :
@@ -403,11 +400,10 @@ Module TimesExample.
     - exact ly.
     - exact ly.
   Qed.
-
 End TimesExample.
 
-Module MulPow2Example.
 
+Module MulPow2Example.
   Import Arith.
 
   Definition either (A B : Type) (x y : A) (f : B -> B -> B) : expr type_denote (TyLift A) (TyLift B) (TyLift B) :=
@@ -471,8 +467,8 @@ Module MulPow2Example.
     rewrite -> fold_unfold_interpret_aux_Lift.
     exact (mul_pow2_delim_is_sound_aux m n).
   Qed.
-
 End MulPow2Example.
+
 
 Theorem interpret_aux_Let_assoc :
   forall (r s t a b c d : type)
@@ -492,7 +488,6 @@ Qed.
 
 (* An example which illustrates that continuation may take
    an ATM function as argument. *)
-
 Example e0 :=
   (fun var dom ran c =>
      Shift _ _ _ _ _
@@ -537,8 +532,8 @@ Proof.
   reflexivity.
 Qed.
 
-Module CopyExample.
 
+Module CopyExample.
   Parameter copy_delim_aux :
     forall (A : Type),
       list A ->
@@ -597,8 +592,8 @@ Module CopyExample.
 
 End CopyExample.
 
-Module PrefixesExample.
 
+Module PrefixesExample.
   Import List Arith Lists.
 
   Fixpoint prefixes_delim_aux (A : Type) (xs : list A) :
@@ -742,11 +737,10 @@ Module PrefixesExample.
       reflexivity. }
     exact (prefixes_delim_is_equivalent_to_fo_prefixes_aux A xs (fun x => x) [] H_eq).
   Qed.
-
 End PrefixesExample.
 
-Module PrintfExample.
 
+Module PrintfExample.
   Import String.
 
   Definition TyString : type := TyLift string.
@@ -790,5 +784,4 @@ Module PrintfExample.
   Compute (interpret _ (sprintf _ ex_fmt1)).
   Compute (interpret _ (App _ _ _ _ _ _ _ (sprintf _ ex_fmt2) (Const _ _ _ "world"))).
   Compute (interpret _ (App _ _ _ _ _ _ _ (App _ _ _ _ _ _ _ (sprintf _ ex_fmt3) (Const _ _ _ "x")) (Const _ _ _ 10))).
-
 End PrintfExample.

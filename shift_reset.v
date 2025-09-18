@@ -30,8 +30,7 @@ Fixpoint type_denote (t : type) : Type :=
 
 Lemma fold_unfold_type_denote_TyLift :
   forall (t : Type),
-    type_denote (TyLift t) =
-    t.
+    type_denote (TyLift t) = t.
 Proof. auto. Qed.
 
 Lemma fold_unfold_type_denote_TyFun :

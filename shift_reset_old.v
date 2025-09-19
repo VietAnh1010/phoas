@@ -1,28 +1,8 @@
-(* remove when https://github.com/coq/coq/pull/19673 is merged *)
-Set Warnings "-notation-incompatible-prefix".
-From Staged Require Import HeapF.
-Set Warnings "notation-incompatible-prefix".
-From Staged Require Import LibFmap.
-
-Local Open Scope string_scope.
-Local Open Scope Z_scope.
-
-Set Implicit Arguments.
-
-Definition Z_eq_dec := Z.eq_dec.
-Definition nat_eq_dec := Nat.eq_dec.
-Definition bool_eq_dec := Bool.bool_dec.
-Definition string_eq_dec := String.string_dec.
-
 Inductive var : Set := var_of : string -> var.
 Definition of_var (v : var) : string := match v with var_of s => s end.
 
 Lemma var_eq_dec : forall (x1 x2 : var), {x1 = x2} + {x1 <> x2}.
 Proof. decide equality. apply string_eq_dec. Defined.
-
-Inductive loc : Set := loc_of : nat -> loc.
-Definition null : loc := loc_of 0.
-Definition of_loc (l : loc) : nat := match l with loc_of n => n end.
 
 Lemma loc_eq_dec : forall (l1 l2 : loc), {l1 = l2} + {l1 <> l2}.
 Proof. decide equality. apply nat_eq_dec. Defined.
@@ -107,6 +87,7 @@ Module CoerceExpr.
   Coercion expr_prim2 : prim2 >-> Funclass.
 End CoerceExpr.
 
+(*
 Module ProgramNotations.
   Declare Custom Entry expr.
   Declare Scope val_scope.
@@ -1627,3 +1608,4 @@ Module ProgramDeterminism.
   Print Assumptions eval_cont_aux_is_cont_of_eval.
 
 End ProgramDeterminism.
+*)

@@ -1,38 +1,32 @@
-From Stdlib Require Import OrderedType Arith.
+From Stdlib Require Import NArith.
+From shift_reset Require gmap.
 
-Inductive loc : Type := Loc : nat -> loc.
-Definition unloc (l : loc) : nat := match l with Loc n => n end.
+Record loc : Set := Loc { loc_car : N }.
 
-Module LocOrderedType <: OrderedType.
-  Definition t : Type := loc.
+Definition succ (l : loc) : loc :=
+  Loc (N.succ (loc_car l)).
 
-  Definition eq (l1 l2 : loc) : Prop := Nat.eq (unloc l1) (unloc l2).
-  Definition lt (l1 l2 : loc) : Prop := Nat.lt (unloc l1) (unloc l2).
+Module IsoPositiveLoc <: gmap.IsoPositiveType.
+  Definition t := loc.
+  Definition encode x := N.succ_pos (loc_car x).
+  Definition decode x := Loc (Pos.pred_N x).
 
-  Theorem eq_refl : forall x : t, eq x x.
-  Proof. intros [x]. apply Nat.eq_refl. Qed.
-
-  Theorem eq_sym : forall x y : t, eq x y -> eq y x.
-  Proof. intros [x] [y]. apply Nat.eq_sym. Qed.
-
-  Theorem eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z.
-  Proof. intros [x] [y] [z]. apply Nat.eq_trans. Qed.
-
-  Theorem lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
-  Proof. intros [x] [y] [z]. apply Nat.lt_trans. Qed.
-
-  Theorem lt_not_eq : forall x y : t, lt x y -> ~ eq x y.
-  Proof. intros [x] [y]. apply Nat.lt_neq. Qed.
-
-  Theorem compare : forall x y : t, OrderedType.Compare lt eq x y.
+  Lemma decode_encode : forall x, decode (encode x) = x.
   Proof.
-    intros [x] [y].
-    destruct (lt_eq_lt_dec x y) as [[H_lt | H_eq] | H_gt].
-    - apply LT. exact H_lt.
-    - apply EQ. exact H_eq.
-    - apply GT. exact H_gt.
-  Defined.
+    intros [x].
+    unfold decode, encode, loc_car.
+    exact (f_equal Loc (N.pos_pred_succ x)).
+  Qed.
 
-  Theorem eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
-  Proof. intros [x] [y]. apply Nat.eq_dec. Defined.
-End LocOrderedType.
+  Lemma encode_decode : forall x, encode (decode x) = x.
+  Proof.
+    intros x.
+    unfold encode, decode, loc_car.
+    destruct x as [x' | x' |].
+    - simpl. reflexivity.
+    - simpl. exact (Pos.succ_pred_double x').
+    - simpl. reflexivity.
+  Qed.
+End IsoPositiveLoc.
+
+Module LocMap := gmap.Make (IsoPositiveLoc).

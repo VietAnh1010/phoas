@@ -1,14 +1,32 @@
-From Stdlib Require Import FMapAVL.
-From shift_reset Require Import loc syntax.
+From Stdlib Require Import NArith.
+From shift_reset Require Import loc syntax option.
 
-Module M := Make(LocOrderedType).
+Local Open Scope N_scope.
 
-Definition heap : Type := M.t val.
+Record heap : Type := Heap { heap_car : LocMap.t val }.
 
-Print M.
+Definition empty : heap := Heap LocMap.empty.
 
-Definition empty : heap := @M.empty val.
-Definition get (l : loc) (h : heap) : option val := M.find l h.
-Definition set (l : loc) (v : val) (h : heap) : heap := M.add l v h.
+Definition singleton (l : loc) (v : val) : heap :=
+  Heap (LocMap.singleton l v).
 
-Compute (set (Loc 1) (val_loc (Loc 2)) (set (Loc 1) val_unit empty)).
+Definition get (l : loc) (h : heap) : option val :=
+  LocMap.lookup l (heap_car h).
+
+Definition mem (l : loc) (h : heap) : bool :=
+  LocMap.member l (heap_car h).
+
+Definition unsafe_put (l : loc) (v : val) (h : heap) : heap :=
+  Heap (LocMap.insert l v (heap_car h)).
+
+Definition unsafe_del (l : loc) (h : heap) : heap :=
+  Heap (LocMap.remove l (heap_car h)).
+
+Definition ref (l : loc) (v : val) (h : heap) : option heap :=
+  if mem l h then None else Some (unsafe_put l v h).
+
+Definition set (l : loc) (v : val) (h : heap) : option heap :=
+  if mem l h then Some (unsafe_put l v h) else None.
+
+Definition free (l : loc) (h : heap) : option heap :=
+  if mem l h then Some (unsafe_del l h) else None.

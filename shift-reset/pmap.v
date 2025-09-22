@@ -2,6 +2,9 @@ From Stdlib Require Import PArith.
 
 Local Open Scope positive_scope.
 
+Local Unset Elimination Schemes.
+Local Unset Case Analysis Schemes.
+
 Inductive pmap_ne (A : Type) :=
 | PNode001 : pmap_ne A -> pmap_ne A
 | PNode010 : A -> pmap_ne A
@@ -11,6 +14,10 @@ Inductive pmap_ne (A : Type) :=
 | PNode110 : pmap_ne A -> A -> pmap_ne A
 | PNode111 : pmap_ne A -> A -> pmap_ne A -> pmap_ne A.
 
+Inductive pmap (A : Type) :=
+| PEmpty : pmap A
+| PNodes : pmap_ne A -> pmap A.
+
 Arguments PNode001 {A} _.
 Arguments PNode010 {A} _.
 Arguments PNode011 {A} _ _.
@@ -18,10 +25,6 @@ Arguments PNode100 {A} _.
 Arguments PNode101 {A} _ _.
 Arguments PNode110 {A} _ _.
 Arguments PNode111 {A} _ _ _.
-
-Variant pmap (A : Type) :=
-| PEmpty : pmap A
-| PNodes : pmap_ne A -> pmap A.
 
 Arguments PEmpty {A}.
 Arguments PNodes {A} _.
@@ -51,13 +54,18 @@ Definition ne_case {A B} (t : pmap_ne A) (f : pmap A -> option A -> pmap A -> B)
 
 Definition empty {A} : pmap A := PEmpty.
 
-Fixpoint ne_get {A} (i : positive) (t : pmap_ne A) : option A.
-Admitted.
+Fixpoint ne_lookup {A} (i : positive) (t : pmap_ne A) {struct t} : option A :=
+  match t, i with
+  | (PNode010 x | PNode011 x _ | PNode110 _ x | PNode111 _ x _), 1 => Some x
+  | (PNode100 l | PNode110 l _ | PNode101 l _ | PNode111 l _ _), i~0 => ne_lookup i l
+  | (PNode001 r | PNode011 _ r | PNode101 _ r | PNode111 _ _ r), i~1 => ne_lookup i r
+  | _, _ => None
+  end.
 
-Definition get {A} (i : positive) (mt : pmap A) : option A :=
+Definition lookup {A} (i : positive) (mt : pmap A) : option A :=
   match mt with
   | PEmpty => None
-  | PNodes t => ne_get i t
+  | PNodes t => ne_lookup i t
   end.
 
 Fixpoint ne_singleton {A} (i : positive) (x : A) : pmap_ne A :=
@@ -66,3 +74,26 @@ Fixpoint ne_singleton {A} (i : positive) (x : A) : pmap_ne A :=
   | i~0 => PNode100 (ne_singleton i x)
   | i~1 => PNode001 (ne_singleton i x)
   end.
+
+Definition singleton {A} (i : positive) (x : A) : pmap A :=
+  PNodes (ne_singleton i x).
+
+Definition alter_aux {A} (go : positive -> pmap_ne A -> pmap A) (f : option A -> option A) (i : positive) (mt : pmap A) : pmap A :=
+  match mt with
+  | PEmpty => match f None with
+              | None => PEmpty
+              | Some x => singleton i x
+              end
+  | PNodes t => go i t
+  end.
+
+Definition ne_alter {A} (f : option A -> option A) : positive -> pmap_ne A -> pmap A :=
+  fix go i t {struct t} :=
+    ne_case t (fun ml mx mr => match i with
+                               | 1 => PNode ml (f mx) mr
+                               | i~0 => PNode (alter_aux go f i ml) mx mr
+                               | i~1 => PNode ml mx (alter_aux go f i mr)
+                               end).
+
+Definition alter {A} (f : option A -> option A) : positive -> pmap A -> pmap A :=
+  alter_aux (ne_alter f) f.

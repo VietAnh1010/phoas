@@ -1,7 +1,7 @@
 From Stdlib Require Import NArith.
 From shift_reset Require gmap.
 
-Record loc : Set := Loc { loc_car : N }.
+Record loc : Type := Loc { loc_car : N }.
 
 Definition succ (l : loc) : loc :=
   Loc (N.succ (loc_car l)).

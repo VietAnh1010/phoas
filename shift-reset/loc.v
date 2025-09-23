@@ -3,6 +3,9 @@ From shift_reset Require gmap.
 
 Record loc : Type := Loc { loc_car : N }.
 
+Definition loc_eq_dec : forall (l1 l2 : loc), {l1 = l2} + {l1 <> l2}.
+Proof. decide equality; auto using N.eq_dec. Defined.
+
 Definition succ (l : loc) : loc :=
   Loc (N.succ (loc_car l)).
 

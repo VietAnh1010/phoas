@@ -1,49 +1,96 @@
-From Stdlib Require Import ZArith String.
+From Stdlib Require Import Bool ZArith.
 From shift_reset Require Import loc var.
 
 Inductive prim1 : Type :=
-| prim1_neg : prim1
-| prim1_ref : prim1
-| prim1_get : prim1
-| prim1_free : prim1
-| prim1_fst : prim1
-| prim1_snd : prim1.
-
-Definition prim1_eq_dec : forall (op1 op2 : prim1), {op1 = op2} + {op1 <> op2}.
-Proof. decide equality. Defined.
+| P1Neg : prim1
+| P1Not : prim1.
 
 Inductive prim2 : Type :=
-| prim2_add : prim2
-| prim2_sub : prim2
-| prim2_mul : prim2
-| prim2_eq : prim2
-| prim2_lt : prim2
-| prim2_set : prim2
-| prim2_cat : prim2 (* string *)
-| prim2_pair : prim2.
+| P2Add : prim2
+| P2Sub : prim2
+| P2Mul : prim2
+| P2Div : prim2
+| P2Rem : prim2
+| P2And : prim2
+| P2Or : prim2
+| P2Xor : prim2
+| P2Eq : prim2
+| P2Lt : prim2
+| P2Le : prim2.
 
-Definition prim2_eq_dec : forall (op1 op2 : prim2), {op1 = op2} + {op1 <> op2}.
-Proof. decide equality. Defined.
+Inductive binder : Type :=
+| BAnon : binder
+| BVar : var -> binder.
 
 Inductive val : Type :=
-| val_unit : val
-| val_bool : bool -> val
-| val_int : Z -> val
-| val_loc : loc -> val
-| val_fun : var -> expr -> val
-| val_fix : var -> var -> expr -> val
-| val_str : string -> val
-| val_pair : val -> val -> val
+| VUnit : val
+| VBool : bool -> val
+| VInt : Z -> val
+| VFun : venv -> expr1 -> val
+| VFix : venv -> expr2 -> val
+| VPair : val -> val -> val
+| VInl : val -> val
+| VInr : val -> val
+| VLoc : loc -> val
 with atom : Type :=
-| atom_val : val -> atom
-| atom_var : var -> atom
+| AVal : val -> atom
+| AVar : var -> atom
 with expr : Type :=
-| expr_atom : atom -> expr
-| expr_app : atom -> atom -> expr
-| expr_let : var -> expr -> expr -> expr
-| expr_if : atom -> expr -> expr -> expr
-| expr_prim1 : prim1 -> atom -> expr
-| expr_prim2 : prim2 -> atom -> atom -> expr
-| expr_shift : var -> expr -> expr
-| expr_reset : expr -> expr
-| expr_cont : expr -> var -> expr -> expr.
+| EAtom : atom -> expr
+| ELet : expr -> expr1 -> expr
+| EIf : atom -> expr -> expr -> expr
+| EPrim1 : prim1 -> atom -> expr
+| EPrim2 : prim2 -> atom -> atom -> expr
+| EFun : expr1 -> expr
+| EFix : expr2 -> expr
+| EApp : atom -> atom -> expr
+| EPair : atom -> atom -> expr
+| EFst : atom -> expr
+| ESnd : atom -> expr
+| EInl : atom -> expr
+| EInr : atom -> expr
+| ECase : atom -> expr1 -> expr1 -> expr
+| EShift : expr1 -> expr
+| EReset : expr -> expr
+| ECont : expr -> expr1 -> expr
+with expr1 : Type :=
+| E1Bind : binder -> expr -> expr1
+with expr2 : Type :=
+| E2Bind : binder -> expr1 -> expr2
+with venv : Type :=
+| VENil : venv
+| VECons : var -> val -> venv -> venv.
+
+Definition prim1_eq_dec : forall (p1 p2 : prim1), {p1 = p2} + {p1 <> p2}.
+Proof. decide equality. Defined.
+
+Definition prim2_eq_dec : forall (p1 p2 : prim2), {p1 = p2} + {p1 <> p2}.
+Proof. decide equality. Defined.
+
+Definition binder_eq_dec : forall (b1 b2 : binder), {b1 = b2} + {b1 <> b2}.
+Proof. decide equality; auto using var_eq_dec. Defined.
+
+Fixpoint val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
+with atom_eq_dec : forall (a1 a2 : atom), {a1 = a2} + {a1 <> a2}
+with expr_eq_dec : forall (e1 e2 : expr), {e1 = e2} + {e1 <> e2}
+with expr1_eq_dec : forall (e1 e2 : expr1), {e1 = e2} + {e1 <> e2}
+with expr2_eq_dec : forall (e1 e2 : expr2), {e1 = e2} + {e1 <> e2}
+with venv_eq_dec : forall (ve1 ve2 : venv), {ve1 = ve2} + {ve1 <> ve2}.
+Proof.
+  { decide equality; auto using bool_dec, Z.eq_dec, loc_eq_dec. }
+  { decide equality; auto using var_eq_dec. }
+  { decide equality; auto using prim1_eq_dec, prim2_eq_dec. }
+  { decide equality; auto using binder_eq_dec. }
+  { decide equality; auto using binder_eq_dec. }
+  { decide equality; auto using var_eq_dec. }
+Defined.
+
+Module Coerce.
+  Coercion BVar : var >-> binder.
+  Coercion VBool : bool >-> val.
+  Coercion VInt : Z >-> val.
+  Coercion VLoc : loc >-> val.
+  Coercion AVal : val >-> atom.
+  Coercion AVar : var >-> atom.
+  Coercion EAtom : atom >-> expr.
+End Coerce.

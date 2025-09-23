@@ -1,2 +1,7 @@
--Q shift-reset shift_reset
-shift-reset
+-Q shift-reset/lib shift_reset.lib
+-Q shift-reset/core shift_reset.core
+-Q shift-reset/interpreter shift_reset.interpreter
+
+shift-reset/lib
+shift-reset/core
+shift-reset/interpreter

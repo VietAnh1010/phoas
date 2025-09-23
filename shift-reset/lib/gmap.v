@@ -1,5 +1,5 @@
 From Stdlib Require Import PArith.
-From shift_reset Require pmap.
+From shift_reset.lib Require pmap.
 
 Module Type IsoPositiveType.
   Parameter t : Type.

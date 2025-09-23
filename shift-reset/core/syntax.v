@@ -1,5 +1,5 @@
 From Stdlib Require Import Bool ZArith.
-From shift_reset Require Import loc var.
+From shift_reset.core Require Import loc var.
 
 Inductive prim1 : Type :=
 | P1Neg : prim1

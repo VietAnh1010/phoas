@@ -50,6 +50,10 @@ with expr : Type :=
 | EInl : atom -> expr
 | EInr : atom -> expr
 | ECase : atom -> expr1 -> expr1 -> expr
+| ERef : atom -> expr
+| EGet : atom -> expr
+| ESet : atom -> atom -> expr
+| EFree : atom -> expr
 | EShift : expr1 -> expr
 | EReset : expr -> expr
 | ECont : expr -> expr1 -> expr

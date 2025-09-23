@@ -53,3 +53,11 @@ Definition imonad_bind {A B} (m : imonad A) (f : A -> imonad B) : imonad B :=
     | inl e => (inl e, s)
     | inr x => f x ve s
     end.
+
+Definition imonad_then {A B} (m1 : imonad A) (m2 : imonad B) : imonad B :=
+  fun ve s =>
+    let (r, s) := m1 ve s in
+    match r with
+    | inl e => (inl e, s)
+    | inr _ => m2 ve s
+    end.

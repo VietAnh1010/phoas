@@ -26,8 +26,8 @@ Inductive val : Type :=
 | VUnit : val
 | VBool : bool -> val
 | VInt : Z -> val
-| VFun : venv -> expr1 -> val
-| VFix : venv -> expr2 -> val
+| VFun : expr1 -> venv -> val
+| VFix : expr2 -> venv -> val
 | VPair : val -> val -> val
 | VInl : val -> val
 | VInr : val -> val
@@ -58,9 +58,9 @@ with expr : Type :=
 | EReset : expr -> expr
 | ECont : expr -> expr1 -> expr
 with expr1 : Type :=
-| E1Bind : binder -> expr -> expr1
+| E1 : binder -> expr -> expr1
 with expr2 : Type :=
-| E2Bind : binder -> expr1 -> expr2
+| E2 : binder -> expr1 -> expr2
 with venv : Type :=
 | VENil : venv
 | VECons : var -> val -> venv -> venv.
@@ -89,6 +89,9 @@ Proof.
   { decide equality; auto using var_eq_dec. }
 Defined.
 
+Definition val_eqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then true else false.
+Definition expr_eqb (e1 e2 : expr) : bool := if expr_eq_dec e1 e2 then true else false.
+
 Module Coerce.
   Coercion BVar : var >-> binder.
   Coercion VBool : bool >-> val.
@@ -98,3 +101,8 @@ Module Coerce.
   Coercion AVar : var >-> atom.
   Coercion EAtom : atom >-> expr.
 End Coerce.
+
+Definition e1_binder (e : expr1) : binder := let (b, _) := e in b.
+Definition e2_binder (e : expr2) : binder := let (b, _) := e in b.
+Definition e1_expr (e : expr1) : expr := let (_, e') := e in e'.
+Definition e2_expr1 (e : expr2) : expr1 := let (_, e') := e in e'.

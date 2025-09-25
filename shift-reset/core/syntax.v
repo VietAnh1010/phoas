@@ -26,44 +26,52 @@ Inductive val : Type :=
 | VUnit : val
 | VBool : bool -> val
 | VInt : Z -> val
-| VFun : expr1 -> venv -> val
-| VFix : expr2 -> venv -> val
+| VFun : clo1 -> val
+| VFix : clo2 -> val
 | VPair : val -> val -> val
 | VInl : val -> val
 | VInr : val -> val
 | VLoc : loc -> val
+| VKont : kont -> val
 with atom : Type :=
 | AVal : val -> atom
 | AVar : var -> atom
-with expr : Type :=
-| EAtom : atom -> expr
-| ELet : expr -> expr1 -> expr
-| EIf : atom -> expr -> expr -> expr
-| EPrim1 : prim1 -> atom -> expr
-| EPrim2 : prim2 -> atom -> atom -> expr
-| EFun : expr1 -> expr
-| EFix : expr2 -> expr
-| EApp : atom -> atom -> expr
-| EPair : atom -> atom -> expr
-| EFst : atom -> expr
-| ESnd : atom -> expr
-| EInl : atom -> expr
-| EInr : atom -> expr
-| ECase : atom -> expr1 -> expr1 -> expr
-| ERef : atom -> expr
-| EGet : atom -> expr
-| ESet : atom -> atom -> expr
-| EFree : atom -> expr
-| EShift : expr1 -> expr
-| EReset : expr -> expr
-| ECont : expr -> expr1 -> expr
-with expr1 : Type :=
-| E1 : binder -> expr -> expr1
-with expr2 : Type :=
-| E2 : binder -> expr1 -> expr2
-with venv : Type :=
-| VENil : venv
-| VECons : var -> val -> venv -> venv.
+with term : Type :=
+| TAtom : atom -> term
+| TLet : term -> term1 -> term
+| TIf : atom -> term -> term -> term
+| TPrim1 : prim1 -> atom -> term
+| TPrim2 : prim2 -> atom -> atom -> term
+| TFun : term1 -> term
+| TFix : term2 -> term
+| TApp : atom -> atom -> term
+| TPair : atom -> atom -> term
+| TFst : atom -> term
+| TSnd : atom -> term
+| TInl : atom -> term
+| TInr : atom -> term
+| TCase : atom -> term1 -> term1 -> term
+| TRef : atom -> term
+| TGet : atom -> term
+| TSet : atom -> atom -> term
+| TFree : atom -> term
+| TShift : term1 -> term
+| TReset : term -> term
+| TCont : term -> clo1 -> term
+with term1 : Type :=
+| T1 : binder -> term -> term1
+with term2 : Type :=
+| T2 : binder -> term1 -> term2
+with clo1 : Type :=
+| C1 : term1 -> env -> clo1
+with clo2 : Type :=
+| C2 : term2 -> env -> clo2
+with kont : Type :=
+| KNil : kont
+| KCons : clo1 -> kont -> kont
+with env : Type :=
+| ENil : env
+| ECons : var -> val -> env -> env.
 
 Definition prim1_eq_dec : forall (p1 p2 : prim1), {p1 = p2} + {p1 <> p2}.
 Proof. decide equality. Defined.
@@ -76,21 +84,27 @@ Proof. decide equality; auto using var_eq_dec. Defined.
 
 Fixpoint val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with atom_eq_dec : forall (a1 a2 : atom), {a1 = a2} + {a1 <> a2}
-with expr_eq_dec : forall (e1 e2 : expr), {e1 = e2} + {e1 <> e2}
-with expr1_eq_dec : forall (e1 e2 : expr1), {e1 = e2} + {e1 <> e2}
-with expr2_eq_dec : forall (e1 e2 : expr2), {e1 = e2} + {e1 <> e2}
-with venv_eq_dec : forall (ve1 ve2 : venv), {ve1 = ve2} + {ve1 <> ve2}.
+with term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
+with term1_eq_dec : forall (t1 t2 : term1), {t1 = t2} + {t1 <> t2}
+with term2_eq_dec : forall (t1 t2 : term2), {t1 = t2} + {t1 <> t2}
+with clo1_eq_dec : forall (c1 c2 : clo1), {c1 = c2} + {c1 <> c2}
+with clo2_eq_dec : forall (c1 c2 : clo2), {c1 = c2} + {c1 <> c2}
+with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
+with env_eq_dec : forall (env1 env2 : env), {env1 = env2} + {env1 <> env2}.
 Proof.
   { decide equality; auto using bool_dec, Z.eq_dec, loc_eq_dec. }
   { decide equality; auto using var_eq_dec. }
   { decide equality; auto using prim1_eq_dec, prim2_eq_dec. }
   { decide equality; auto using binder_eq_dec. }
   { decide equality; auto using binder_eq_dec. }
+  { decide equality. }
+  { decide equality. }
+  { decide equality. }
   { decide equality; auto using var_eq_dec. }
 Defined.
 
 Definition val_eqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then true else false.
-Definition expr_eqb (e1 e2 : expr) : bool := if expr_eq_dec e1 e2 then true else false.
+Definition term_eqb (t1 t2 : term) : bool := if term_eq_dec t1 t2 then true else false.
 
 Module Coerce.
   Coercion BVar : var >-> binder.
@@ -99,10 +113,5 @@ Module Coerce.
   Coercion VLoc : loc >-> val.
   Coercion AVal : val >-> atom.
   Coercion AVar : var >-> atom.
-  Coercion EAtom : atom >-> expr.
+  Coercion TAtom : atom >-> term.
 End Coerce.
-
-Definition e1_binder (e : expr1) : binder := let (b, _) := e in b.
-Definition e2_binder (e : expr2) : binder := let (b, _) := e in b.
-Definition e1_expr (e : expr1) : expr := let (_, e') := e in e'.
-Definition e2_expr1 (e : expr2) : expr1 := let (_, e') := e in e'.

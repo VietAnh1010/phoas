@@ -12,16 +12,17 @@ Definition interpret_atom (a : atom) : imonad val :=
   | AVar x =>
       imonad_bind imonad_ask_env
         (fun env => match env_lookup x env with
-                    | None => imonad_throw (NameError "")
+                    | None => imonad_throw (NameError (var_car x))
                     | Some v => imonad_pure v
                     end)
   end.
 
 Definition interpret_term1_aux (go : term -> imonad val) (t : term1) (v : val) : imonad val :=
   let (b, t') := t in
+  let m := go t' in
   match b with
-  | BAnon => go t'
-  | BVar x => imonad_local_env (ECons x v) (go t')
+  | BAnon => m
+  | BVar x => imonad_local_env (ECons x v) m
   end.
 
 Definition interpret_term2_aux (go : term -> imonad val) (t : term2) (v1 v2 : val) : imonad val :=
@@ -220,27 +221,7 @@ Definition interpret_free (a : atom) : imonad val :=
        | _ => imonad_throw (TypeError "")
        end).
 
-Fixpoint term_size (t : term) : nat :=
-  match t with
-  | TLet t1 t2 => S (term_size t1 + term1_size t2)
-  | TIf _ t1 t2 => S (Nat.max (term_size t1) (term_size t2))
-  | TShift t' => S (term1_size t')
-  | TReset t' => S (term_size t')
-  | TCase _ t1 t2 => S (Nat.max (term1_size t1) (term1_size t2))
-  | _ => 1
-  end
-with term1_size (t : term1) : nat := let (_, t') := t in term_size t'.
-
-Definition clo1_size (c : clo1) : nat := let (_, t) := c in term1_size t.
-
-Fixpoint kont_size (k : kont) : nat :=
-  match k with
-  | KNil => 0
-  | KCons c k' => clo1_size c + kont_size k'
-  end.
-
-Local Open Scope nat_scope.
-
+(*
 Section interpret_kont.
   Context (go : forall (t : term) (k : kont), Acc lt (term_size t + kont_size k) -> imonad val).
 
@@ -265,6 +246,7 @@ Section interpret_kont.
     | KCons c k' => fun H_acc => imonad_bind m (interpret_clo1_kont_aux c k' H_acc)
     end H_acc.
 End interpret_kont.
+*)
 
 Definition interpret_kont (go : term -> kont -> imonad val) (k : kont) (m : imonad val) : imonad val :=
   match k with
@@ -272,232 +254,92 @@ Definition interpret_kont (go : term -> kont -> imonad val) (k : kont) (m : imon
   | KCons c k' => imonad_bind m (interpret_clo1_aux (fun t => go t k') c)
   end.
 
-Lemma Acc_inv_succ (n : nat) (H_acc : Acc lt (S n)) : Acc lt n.
-Proof.
-  apply (Acc_inv H_acc).
-  exact (Nat.lt_succ_diag_r n).
-Defined.
+Definition interpret_term1_aux'
+  (go : term -> kont -> (imonad val -> imonad val) -> imonad val)
+  (t : term1)
+  (k : kont)
+  (k_meta : imonad val -> imonad val)
+  (env : env)
+  (m : imonad val) :=
+  imonad_bind m (fun v =>
+                   let (b, t') := t in
+                   let m := go t' k k_meta in
+                   match b with
+                   | BAnon => imonad_local_env (fun _ => env) m
+                   | BVar x => imonad_local_env (fun _ => ECons x v env) m
+                   end).
 
-Lemma Acc_inv_succ_add (m n : nat) (H_acc : Acc lt (S (m + n))) : Acc lt n.
-Proof.
-  apply (Acc_inv H_acc).
-  rewrite -> Nat.lt_succ_r.
-  exact (Nat.le_add_l n m).
-Defined.
-
-Lemma Acc_inv_succ_add_max_l (n m p : nat) (H_acc : Acc lt (S (Nat.max n m + p))) : Acc lt (n + p).
-Proof.
-  apply (Acc_inv H_acc).
-  rewrite -> Nat.lt_succ_r.
-  rewrite <- Nat.add_le_mono_r.
-  exact (Nat.le_max_l _ _).
-Defined.
-
-Lemma Acc_inv_succ_add_max_r (n m p : nat) (H_acc : Acc lt (S (Nat.max n m + p))) : Acc lt (m + p).
-Proof.
-  apply (Acc_inv H_acc).
-  rewrite -> Nat.lt_succ_r.
-  rewrite <- Nat.add_le_mono_r.
-  exact (Nat.le_max_r _ _).
-Defined.
-
-Lemma Acc_inv_succ_add0 (m n : nat) (H_acc : Acc lt (S (m + n))) : Acc lt (m + 0).
-Proof.
-  apply (Acc_inv H_acc).
-  rewrite -> Nat.add_0_r.
-  rewrite -> Nat.lt_succ_r.
-  exact (Nat.le_add_r m n).
-Defined.
-
-(*
-Definition interpret_term_kont_aux (go : term -> kont -> imonad val) (t : term) (k : kont) : imonad val.
-  refine
-    ((fix go' t k (H_acc : Acc lt (term_size t + kont_size k)) {struct H_acc} : imonad val :=
-        match t return Acc lt (term_size t + kont_size k) -> imonad val with
-        | TAtom a => fun H_acc => interpret_kont_aux go' k _ (interpret_atom a)
-        | TLet t1 t2 => fun H_acc => imonad_bind imonad_ask_env (fun env => go' t1 (KCons (C1 env t2) k) _)
-        | TIf a t1 t2 => fun H_acc => interpret_if a (go' t1 k _) (go' t2 k _)
-        | TPrim1 p a => fun H_acc => interpret_kont_aux go' k _ (interpret_prim1 p a)
-        | TPrim2 p a1 a2 => fun H_acc => interpret_kont_aux go' k _ (interpret_prim2 p a1 a2)
-        | TFun t' => fun H_acc => interpret_kont_aux go' k _ (interpret_fun t')
-        | TFix t' => fun H_acc => interpret_kont_aux go' k _ (interpret_fix t')
-        | TApp a1 a2 => fun H_acc =>
-                          let m1 := interpret_atom a1 in
-                          let m2 := interpret_atom a2 in
-                          imonad_bind m1
-                            (fun v1 =>
-                               match v1 with
-                               | VFun c => imonad_bind m2 (interpret_clo1_aux (fun t' => go t' k) c)
-                               | VFix c => imonad_bind m2 (interpret_clo2_aux (fun t' => go t' k) c v1)
-                               | VKont k' => interpret_kont_aux go' k _ (interpret_kont go k'  m2)
-                               | _ => imonad_throw (TypeError "")
-                               end)
-        | TPair a1 a2 => fun H_acc => interpret_kont_aux go' k _ (interpret_pair a1 a2)
-        | TFst a => fun H_acc => interpret_kont_aux go' k _ (interpret_fst a)
-        | TSnd a => fun H_acc => interpret_kont_aux go' k _ (interpret_snd a)
-        | TInl a => fun H_acc => interpret_kont_aux go' k _ (interpret_inl a)
-        | TInr a => fun H_acc => interpret_kont_aux go' k _ (interpret_inr a)
-        | TCase a t1 t2 => fun H_acc => interpret_case a (interpret_term1_kont_aux go' t1 k _) (interpret_term1_kont_aux go' t2 k _)
-        | TRef a => fun H_acc => interpret_kont_aux go' k _ (interpret_ref a)
-        | TGet a => fun H_acc => interpret_kont_aux go' k _ (interpret_get a)
-        | TSet a1 a2 => fun H_acc => interpret_kont_aux go' k _ (interpret_set a1 a2)
-        | TFree a => fun H_acc => interpret_kont_aux go' k _ (interpret_free a)
-        | TShift t' => fun H_acc => interpret_term1_kont_aux go' t' KNil _ (VKont k)
-        | TReset t' => fun H_acc => interpret_kont_aux go' k _ (go' t' KNil _)
-        end H_acc) t k (lt_wf _)).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. apply (Acc_inv H_acc). lia.
-  - simpl in *. exact (Acc_inv_succ_add_max_l _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add_max_r _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add_max_l _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add_max_r _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add0 _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add0 _ _ H_acc).
-Defined.
-*)
-
-Inductive tree :=
-| Nat : nat -> tree
-| Plus : tree -> tree -> tree.
-
-Fixpoint tree_size' t acc := match t with Nat _ => S acc | Plus t1 t2 => S (tree_size' t1 (tree_size' t2 acc)) end.
-Definition tree_size'' t := tree_size' t 0.
-Fixpoint tree_size t := match t with Nat _ => 1 | Plus t1 t2 => S (tree_size t1 + tree_size t2) end.
-Fixpoint list_size ts := match ts with nil => 0 | cons t ts' => tree_size'' t + list_size ts' end.
-
-Axiom equiv : forall t, tree_size'' t = tree_size t.
-Axiom equiv' : forall t acc, tree_size' t acc = tree_size t + acc.
-
-From Stdlib Require Import FunInd Recdef Program.
-
-Program Fixpoint sum_tree' (ts : list tree) (acc : nat) {measure (list_size ts)} :=
-  match ts with
-  | nil => acc
-  | cons t ts' =>
-      match t with
-      | Nat n => sum_tree' ts' (n + acc)
-      | Plus l r => sum_tree' (cons l (cons r ts')) acc
-      end
-  end.
-Next Obligation.
-  simpl.
-  rewrite ->! equiv.
-  rewrite ->! equiv'.
-  lia.
-Qed.
-
-Definition sum_tree t := sum_tree' (cons t nil) 0.
-
-Fixpoint sum_t' t acc :=
-  match t with
-  | Nat n => n + acc
-  | Plus l r => sum_t' r (sum_t' l acc)
+Definition interpret_term1_kont_aux
+  (go : term -> kont -> (imonad val -> imonad val) -> imonad val)
+  (t : term1)
+  (k : kont)
+  (k_meta : imonad val -> imonad val)
+  (v : val) :=
+  let (b, t') := t in
+  let m := go t' k k_meta in
+  match b with
+  | BAnon => m
+  | BVar x => imonad_local_env (ECons x v) m
   end.
 
-Definition sum_t t := sum_t' t 0.
+Definition interpret_clo1_kont_aux
+  (go : term -> kont -> (imonad val -> imonad val) -> imonad val)
+  (c : clo1)
+  (k : kont)
+  (k_meta : imonad val -> imonad val)
+  (v : val) :=
+  let (env, t) := c in
+  imonad_local_env (fun _ => env) (interpret_term1_kont_aux go t k k_meta v).
 
-Print sum_tree'_func.
+Definition interpret_term_kont_aux (go : term -> kont -> (imonad val -> imonad val) -> imonad val) :
+  term -> kont -> (imonad val -> imonad val) -> imonad val :=
+  fix go' t k k_meta {struct t} :=
+    match t with
+    | TAtom a => k_meta (interpret_atom a)
+    | TLet t1 t2 =>
+        imonad_bind imonad_ask_env
+          (fun env =>
+             let c := C1 env t2 in
+             go' t1 (KCons c k) (fun m => imonad_bind m (interpret_clo1_kont_aux go' c k k_meta)))
+    | TIf a t1 t2 => interpret_if a (go' t1 k k_meta) (go' t2 k k_meta)
+    | TPrim1 p a => k_meta (interpret_prim1 p a)
+    | TPrim2 p a1 a2 => k_meta (interpret_prim2 p a1 a2)
+    | TFun t' => k_meta (interpret_fun t')
+    | TFix t' => k_meta (interpret_fix t')
+    (*| TApp a1 a2 => fun H_acc =>
+                      let m1 := interpret_atom a1 in
+                      let m2 := interpret_atom a2 in
+                      imonad_bind m1
+                        (fun v1 =>
+                           match v1 with
+                           | VFun c => imonad_bind m2 (interpret_clo1_aux (fun t' => go t' k) c)
+                           | VFix c => imonad_bind m2 (interpret_clo2_aux (fun t' => go t' k) c v1)
+                           | VKont k' => interpret_kont_aux go' k _ (interpret_kont go k'  m2)
+                           | _ => imonad_throw (TypeError "")
+                           end)*)
+    | TPair a1 a2 => k_meta (interpret_pair a1 a2)
+    | TFst a => k_meta (interpret_fst a)
+    | TSnd a => k_meta (interpret_snd a)
+    | TInl a => k_meta (interpret_inl a)
+    | TInr a => k_meta (interpret_inr a)
+    (*| TCase a t1 t2 => fun H_acc => interpret_case a (interpret_term1_kont_aux go' t1 k _) (interpret_term1_kont_aux go' t2 k _)*)
+    | TRef a => k_meta (interpret_ref a)
+    | TGet a => k_meta (interpret_get a)
+    | TSet a1 a2 => k_meta (interpret_set a1 a2)
+    | TFree a => k_meta (interpret_free a)
+    | TShift t' => (*fun H_acc => interpret_term1_kont_aux go' t' KNil _ (VKont k)*)
+        interpret_term1_kont_aux go' t' KNil (fun m => m) (VKont k)
+    | TReset t' => k_meta (go' t' KNil (fun m => m))
+    | _ => imonad_throw (ControlError "todo")
+    end.
 
-Fixpoint gen_large_tree (xs : list nat) :=
-  match xs with
-  | nil => Nat 1
-  | cons x xs' => Plus (gen_large_tree xs') (Nat 1)
-  end.
-
-Definition large := gen_large_tree (ListDef.seq 0 2000).
-
-Time Compute (sum_t large).
-Time Compute (sum_tree large).
-
-
-
-(*
-Section foo.
-Context (go : term -> kont -> imonad val).
-
-Program Fixpoint go' (t : term) (k : kont) {measure (term_size t + kont_size k)} : imonad val :=
-  match t with
-  | TAtom a => interpret_kont_aux go' k _ (interpret_atom a)
-  | TLet t1 t2 => fun H_acc => imonad_bind imonad_ask_env (fun env => go' t1 (KCons (C1 env t2) k) _)
-  (*
-  | TIf a t1 t2 => fun H_acc => interpret_if a (go' t1 k _) (go' t2 k _)
-  | TPrim1 p a => fun H_acc => interpret_kont_aux go' k _ (interpret_prim1 p a)
-  | TPrim2 p a1 a2 => fun H_acc => interpret_kont_aux go' k _ (interpret_prim2 p a1 a2)
-  | TFun t' => fun H_acc => interpret_kont_aux go' k _ (interpret_fun t')
-  | TFix t' => fun H_acc => interpret_kont_aux go' k _ (interpret_fix t')
-  | TApp a1 a2 => fun H_acc =>
-                    let m1 := interpret_atom a1 in
-                    let m2 := interpret_atom a2 in
-                    imonad_bind m1
-                      (fun v1 =>
-                         match v1 with
-                         | VFun c => imonad_bind m2 (interpret_clo1_aux (fun t' => go t' k) c)
-                         | VFix c => imonad_bind m2 (interpret_clo2_aux (fun t' => go t' k) c v1)
-                         | VKont k' => interpret_kont_aux go' k _ (interpret_kont go k'  m2)
-                         | _ => imonad_throw (TypeError "")
-                         end)*)
-  | TPair a1 a2 => fun H_acc => interpret_kont_aux go' k _ (interpret_pair a1 a2)
-  | TFst a => fun H_acc => interpret_kont_aux go' k _ (interpret_fst a)
-  | TSnd a => fun H_acc => interpret_kont_aux go' k _ (interpret_snd a)
-  | TInl a => fun H_acc => interpret_kont_aux go' k _ (interpret_inl a)
-  | TInr a => fun H_acc => interpret_kont_aux go' k _ (interpret_inr a)
-  | TCase a t1 t2 => fun H_acc => interpret_case a (interpret_term1_kont_aux go' t1 k _) (interpret_term1_kont_aux go' t2 k _)
-  | TRef a => fun H_acc => interpret_kont_aux go' k _ (interpret_ref a)
-  | TGet a => fun H_acc => interpret_kont_aux go' k _ (interpret_get a)
-  | TSet a1 a2 => fun H_acc => interpret_kont_aux go' k _ (interpret_set a1 a2)
-  | TFree a => fun H_acc => interpret_kont_aux go' k _ (interpret_free a)
-  | TShift t' => fun H_acc => interpret_term1_kont_aux go' t' KNil _ (VKont k)
-  | TReset t' => fun H_acc => interpret_kont_aux go' k _ (go' t' KNil _)
-  end.
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. apply (Acc_inv H_acc). lia.
-  - simpl in *. exact (Acc_inv_succ_add_max_l _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add_max_r _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add_max_l _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add_max_r _ _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add0 _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add _ _ H_acc).
-  - simpl in *. exact (Acc_inv_succ_add0 _ _ H_acc).
-Defined.
-*)
-Local Close Scope nat_scope.
-
-Fixpoint interpret_term_kont (fuel : nat) (t : term) (k : kont) : imonad val :=
+Fixpoint interpret_term_kont (fuel : nat) (t : term) (k : kont) (k_meta : imonad val -> imonad val) : imonad val :=
   match fuel with
   | O => imonad_throw OutOfFuel
-  | S fuel' => interpret_term_kont_aux (interpret_term_kont fuel') t k
+  | S fuel' => interpret_term_kont_aux (interpret_term_kont fuel') t k k_meta
   end.
 
-Definition interpret_term_aux (go : term -> imonad val) (go_kont : term -> kont -> imonad val) : term -> imonad val :=
+Definition interpret_term_aux (go : term -> imonad val) (go_kont : term -> kont -> (imonad val -> imonad val) -> imonad val) : term -> imonad val :=
   fix go' t {struct t} :=
     match t with
     | TAtom a => interpret_atom a
@@ -514,7 +356,7 @@ Definition interpret_term_aux (go : term -> imonad val) (go_kont : term -> kont 
                          match v1 with
                          | VFun c => imonad_bind m2 (interpret_clo1_aux go c)
                          | VFix c => imonad_bind m2 (interpret_clo2_aux go c v1)
-                         | VKont k => interpret_kont go_kont k m2
+                         (*| VKont k => interpret_kont go_kont k m2*)
                          | _ => imonad_throw (TypeError "")
                          end)
     | TPair a1 a2 => interpret_pair a1 a2
@@ -528,7 +370,7 @@ Definition interpret_term_aux (go : term -> imonad val) (go_kont : term -> kont 
     | TSet a1 a2 => interpret_set a1 a2
     | TFree a => interpret_free a
     | TShift _ => imonad_throw (ControlError "shift without enclosing reset")
-    | TReset t' => interpret_term_kont_aux go_kont t' KNil
+    | TReset t' => interpret_term_kont_aux go_kont t' KNil (fun m => m)
     end.
 
 Fixpoint interpret_term (fuel : nat) (t : term) : imonad val :=
@@ -631,10 +473,11 @@ Example append xs ys :=
                    (TLet (TApp (Var "append_aux") (Var "xs"))
                       (T1 (Var "f") (TApp (Var "f") (Var "ys"))))))))).
 
-Definition xs := encode (List.map (fun n => Z.of_nat n) (ListDef.seq 0 1000)).
+Definition xs := encode (List.map (fun n => Z.of_nat n) (ListDef.seq 0 1500)).
 
 Example ex3 := append xs (encode nil).
 
 Compute (eval 10 ex1_aux).
 Time Compute (eval 10 ex1).
-Time Compute (interpret_term 1000 xs ENil istate_empty).
+Time Compute (interpret_term_kont 2000 xs KNil (fun m => m) ENil istate_empty).
+Time Compute (interpret_term 2000 xs ENil istate_empty).

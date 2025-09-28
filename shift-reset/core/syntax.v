@@ -1,4 +1,4 @@
-From Stdlib Require Import Bool ZArith.
+From Stdlib Require Import Bool String ZArith.
 From shift_reset.core Require Import loc var.
 
 Inductive prim1 : Type :=
@@ -114,6 +114,7 @@ Definition val_eqb (v1 v2 : val) : bool := proj1_sig (bool_of_sumbool (val_eq_de
 Definition val_neqb (v1 v2 : val) : bool := negb (val_eqb v1 v2).
 
 Module Coerce.
+  Coercion Var : string >-> var.
   Coercion BVar : var >-> binder.
   Coercion AInt : Z >-> atom.
   Coercion ABool : bool >-> atom.

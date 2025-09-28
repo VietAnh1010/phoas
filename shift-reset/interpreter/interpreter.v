@@ -155,17 +155,17 @@ Definition with_binder (b : binder) (v : val) (m : imonad val) : imonad val :=
 Definition with_env (env : env) : imonad val -> imonad val :=
   imonad_local_env (fun _ => env).
 
-Definition interpret_term1_with (rec : term -> imonad val) (t : term1) (m : imonad val) : imonad val :=
-  imonad_bind m (fun v => let (b, t') := t in with_binder b v (rec t')).
+Definition interpret_term1_with (rec : term -> imonad val) (t : term1) (v : val) : imonad val :=
+  let (b, t') := t in with_binder b v (rec t').
 
-Definition interpret_term2_with (rec : term -> imonad val) (t : term2) (v : val) (m : imonad val) : imonad val :=
-  imonad_bind m (fun v' => let (b1, b2, t') := t in with_binder b1 v (with_binder b2 v' (rec t'))).
+Definition interpret_term2_with (rec : term -> imonad val) (t : term2) (v1 v2 : val) : imonad val :=
+  let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (rec t')).
 
 Definition interpret_clo1_with (rec : term -> imonad val) (c : clo1) (m : imonad val) : imonad val :=
-  let (env, t) := c in with_env env (interpret_term1_with rec t m).
+  imonad_bind m (fun v => let (env, t) := c in with_env env (interpret_term1_with rec t v)).
 
-Definition interpret_clo2_with (rec : term -> imonad val) (c : clo2) (v : val) (m : imonad val) : imonad val :=
-  let (env, t) := c in with_env env (interpret_term2_with rec t v m).
+Definition interpret_clo2_with (rec : term -> imonad val) (c : clo2) (f : val) (m : imonad val) : imonad val :=
+  imonad_bind m (fun v => let (env, t) := c in with_env env (interpret_term2_with rec t f v)).
 
 Definition interpret_kont_with (rec : term -> kont -> imonad val) (k : kont) (m : imonad val) : imonad val :=
   match k with
@@ -319,7 +319,7 @@ Definition compute_clo1_kont_graph_dep (c : clo1) (k : kont) (G : kont_graph k) 
   | C1 env t => GC1 env (compute_term1_kont_graph_dep t G)
   end.
 
-Record irec_kont : Type := IRecKont { app_irec_kont : term -> kont -> imonad val }.
+Record irec_kont : Type := IRecKont { run_irec_kont : term -> kont -> imonad val }.
 
 Fixpoint interpret_term_kont_dep (rec : irec_kont) (t : term) (k : kont) (G : term_kont_graph t k) : imonad val :=
   match t return term_kont_graph t k -> imonad val with
@@ -331,9 +331,9 @@ Fixpoint interpret_term_kont_dep (rec : irec_kont) (t : term) (k : kont) (G : te
                     let m2 := interpret_atom a2 in
                     imonad_bind m1
                       (fun v => match v with
-                                | VFun c => interpret_clo1_with (fun t' => app_irec_kont rec t k) c m2
-                                | VFix c => interpret_clo2_with (fun t' => app_irec_kont rec t k) c v m2
-                                | VKont k' => interpret_kont_dep rec (GTApp_inv G) (interpret_kont_with (app_irec_kont rec) k m2)
+                                | VFun c => interpret_clo1_with (fun t' => run_irec_kont rec t' k) c m2
+                                | VFix c => interpret_clo2_with (fun t' => run_irec_kont rec t' k) c v m2
+                                | VKont k' => interpret_kont_dep rec (GTApp_inv G) (interpret_kont_with (run_irec_kont rec) k' m2)
                                 | _ => imonad_throw (TypeError "")
                                 end)
   | TLet t1 t2 => fun G => imonad_bind imonad_ask_env (fun env => interpret_term_kont_dep rec (GTLet_inv G env))
@@ -360,14 +360,15 @@ with interpret_term2_kont_dep (rec : irec_kont) (t : term2) (k : kont) (G : term
   match t return term2_kont_graph t k -> imonad val with
   | T2 b1 b2 t' => fun G => with_binder b1 v1 (with_binder b2 v2 (interpret_term_kont_dep rec (GT2_inv G)))
   end G
-with interpret_clo1_kont_dep (rec : irec_kont) (c : clo1) (k : kont) (G : clo1_kont_graph c k) (v : val) : imonad val :=
-  match c return clo1_kont_graph c k -> imonad val with
-  | C1 env t => fun G => with_env env (interpret_term1_kont_dep rec (GC1_inv G) v)
-  end G
+with interpret_clo1_kont_dep (rec : irec_kont) (c : clo1) (k : kont) (G : clo1_kont_graph c k) (m : imonad val) : imonad val :=
+  imonad_bind m
+    (fun v => match c return clo1_kont_graph c k -> imonad val with
+              | C1 env t => fun G => with_env env (interpret_term1_kont_dep rec (GC1_inv G) v)
+              end G)
 with interpret_kont_dep (rec : irec_kont) (k : kont) (G : kont_graph k) (m : imonad val) : imonad val :=
   match k return kont_graph k -> imonad val with
   | KNil => fun _ => m
-  | KCons c k' => fun G => imonad_bind m (interpret_clo1_kont_dep rec (GKCons_inv G))
+  | KCons c k' => fun G => interpret_clo1_kont_dep rec (GKCons_inv G) m
   end G.
 
 Unset Implicit Arguments.
@@ -390,7 +391,7 @@ Fixpoint interpret_term_kont (fuel : nat) (t : term) (k : kont) : imonad val :=
   | S fuel' => interpret_term_kont_aux (IRecKont (interpret_term_kont fuel')) t k
   end.
 
-Record irec : Type := IRec { app_irec : term -> imonad val; app_kont_irec : term -> kont -> imonad val }.
+Record irec : Type := IRec { run_irec : term -> imonad val; run_kont_irec : term -> kont -> imonad val }.
 
 Fixpoint interpret_term_aux (rec : irec) (t : term) : imonad val :=
   match t with
@@ -401,9 +402,9 @@ Fixpoint interpret_term_aux (rec : irec) (t : term) : imonad val :=
                   let m2 := interpret_atom a2 in
                   imonad_bind m1
                     (fun v => match v with
-                              | VFun c => interpret_clo1_with (app_irec rec) c m2
-                              | VFix c => interpret_clo2_with (app_irec rec) c v m2
-                              | VKont k => interpret_kont_with (app_kont_irec rec) k m2
+                              | VFun c => interpret_clo1_with (run_irec rec) c m2
+                              | VFix c => interpret_clo2_with (run_irec rec) c v m2
+                              | VKont k => interpret_kont_with (run_kont_irec rec) k m2
                               | _ => imonad_throw (TypeError "not a fun/fix/kont")
                               end)
   | TLet t1 t2 => imonad_bind (interpret_term_aux rec t1) (interpret_term1_aux rec t2)
@@ -420,7 +421,7 @@ Fixpoint interpret_term_aux (rec : irec) (t : term) : imonad val :=
   | TSet a1 a2 => interpret_set a1 a2
   | TFree a => interpret_free a
   | TShift _ => imonad_throw (ControlError "shift without enclosing reset")
-  | TReset t' => interpret_term_kont_aux (IRecKont (app_kont_irec rec)) t' KNil
+  | TReset t' => interpret_term_kont_aux (IRecKont (run_kont_irec rec)) t' KNil
   end
 with interpret_term1_aux (rec : irec) (t : term1) (v : val) : imonad val :=
   let (b, t') := t in with_binder b v (interpret_term_aux rec t')
@@ -441,3 +442,12 @@ Definition eval_term (fuel : nat) (t : term) : ierror + val :=
 
 Definition exec_term (fuel : nat) (t : term) : iheap :=
   snd (run_term fuel t).
+
+Definition run_term_kont (fuel : nat) (t : term) (k : kont) : (ierror + val) * iheap :=
+  imonad_run (interpret_term_kont fuel t k) ENil iheap_empty.
+
+Definition eval_term_kont (fuel : nat) (t : term) (k : kont) : ierror + val :=
+  fst (run_term_kont fuel t k).
+
+Definition exec_term_kont (fuel : nat) (t : term) (k : kont) : iheap :=
+  snd (run_term_kont fuel t k).

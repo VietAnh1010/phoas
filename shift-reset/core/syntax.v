@@ -39,8 +39,7 @@ Inductive term : Type :=
 | TPrim1 : prim1 -> atom -> term
 | TPrim2 : prim2 -> atom -> atom -> term
 | TPair : atom -> atom -> term
-| TFst : atom -> term
-| TSnd : atom -> term
+| TSplit : atom -> term2 -> term
 | TInl : atom -> term
 | TInr : atom -> term
 | TCase : atom -> term1 -> term1 -> term
@@ -53,7 +52,7 @@ Inductive term : Type :=
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
-| T2 : binder -> term1 -> term2.
+| T2 : binder -> binder -> term -> term2.
 
 Inductive val : Type :=
 | VUnit : val

@@ -207,7 +207,7 @@ Fixpoint interpret_kont (rec : term -> imonad result) (k : kont) (m : imonad val
                     (interpret_clo1_with rec c m)
                     (fun r => match r with
                               | RVal v => interpret_kont rec k' (imonad_pure v)
-                              | RBubble f k'' => imonad_pure (RBubble f (kont_append k'' k'))
+                              | RBubble f k'' => f (VKont (kont_append k'' k'))
                               end)
   end.
 
@@ -227,12 +227,13 @@ Fixpoint interpret_term_aux (rec : irec) (t : term) : imonad result :=
                               | VKont k => interpret_kont (run_irec rec) k m2
                               | _ => imonad_throw (TypeError "not a fun/fix/kont")
                               end)
-  | TLet t1 t2 => imonad_bind (interpret_term_aux rec t1)
-                    (fun r => match r with
-                              | RVal v => interpret_term1_aux rec t2 v
-                              | RBubble f k => imonad_bind imonad_ask_env
-                                                 (fun env => imonad_pure (RBubble f (kont_append k (kont_singleton (C1 env t2)))))
-                              end)
+  | TLet t1 t2 => imonad_bind imonad_ask_env
+                    (fun env =>
+                       imonad_bind (interpret_term_aux rec t1)
+                         (fun r => match r with
+                                   | RVal v => interpret_term1_aux rec t2 v
+                                   | RBubble f k => imonad_pure (RBubble f (kont_append k (kont_singleton (C1 env t2))))
+                                   end))
   | TIf a t1 t2 => interpret_if a (interpret_term_aux rec t1) (interpret_term_aux rec t2)
   | TPrim1 p a => interpret_prim1 p a
   | TPrim2 p a1 a2 => interpret_prim2 p a1 a2
@@ -245,7 +246,13 @@ Fixpoint interpret_term_aux (rec : irec) (t : term) : imonad result :=
   | TGet a =>  (interpret_get a)
   | TSet a1 a2 =>  (interpret_set a1 a2)
   | TFree a =>  (interpret_free a)
-  | TShift t' => imonad_pure (RBubble (fun v => interpret_inside_reset (interpret_term1_aux rec t' v)) KNil)
+  | TShift t' =>
+      imonad_bind imonad_ask_env
+        (fun env =>
+           imonad_pure
+             (RBubble
+                (fun v => interpret_inside_reset (with_env env (interpret_term1_aux rec t' v)))
+                KNil))
   | TReset t' => interpret_inside_reset (interpret_term_aux rec t') (* val or bubble *)
   end
 with interpret_term1_aux (rec : irec) (t : term1) (v : val) : imonad result :=

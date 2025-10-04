@@ -154,9 +154,6 @@ Definition with_binder (b : binder) (v : val) (m : imonad val) : imonad val :=
   | BVar x => imonad_local_env (ECons x v) m
   end.
 
-Definition with_env (env : env) : imonad val -> imonad val :=
-  imonad_local_env (fun _ => env).
-
 Definition interpret_term1_with (rec : term -> imonad val) (t : term1) (v : val) : imonad val :=
   let (b, t') := t in with_binder b v (rec t').
 
@@ -164,10 +161,10 @@ Definition interpret_term2_with (rec : term -> imonad val) (t : term2) (v1 v2 : 
   let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (rec t')).
 
 Definition interpret_clo1_with (rec : term -> imonad val) (c : clo1) (m : imonad val) : imonad val :=
-  imonad_bind m (fun v => let (env, t) := c in with_env env (interpret_term1_with rec t v)).
+  imonad_bind m (fun v => let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term1_with rec t v)).
 
 Definition interpret_clo2_with (rec : term -> imonad val) (c : clo2) (f : val) (m : imonad val) : imonad val :=
-  imonad_bind m (fun v => let (env, t) := c in with_env env (interpret_term2_with rec t f v)).
+  imonad_bind m (fun v => let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term2_with rec t f v)).
 
 Definition interpret_kont_with (rec : kont -> term -> imonad val) (k : kont) (m : imonad val) : imonad val :=
   match k with
@@ -409,7 +406,7 @@ with interpret_term2_dep (rec : delim -> kont -> term -> imonad val) d k t (G : 
 with interpret_clo1_dep (rec : delim -> kont -> term -> imonad val) d k c (G : clo1_graph d k c) (m : imonad val) : imonad val :=
   imonad_bind m
     (fun v => match c return clo1_graph d k c -> imonad val with
-              | C1 env t => fun G => with_env env (interpret_term1_dep rec (GC1_inv G) v)
+              | C1 env t => fun G => imonad_local_env (fun _ => env) (interpret_term1_dep rec (GC1_inv G) v)
               end G)
 with interpret_kont_dep (rec : delim -> kont -> term -> imonad val) d k (G : kont_graph d k) (m : imonad val) : imonad val :=
   match k return kont_graph d k -> imonad val with

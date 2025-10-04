@@ -13,6 +13,8 @@ Inductive prim2 : Type :=
 | P2Rem : prim2
 | P2Lt : prim2
 | P2Le : prim2
+| P2Gt : prim2
+| P2Ge : prim2
 | P2And : prim2
 | P2Or : prim2
 | P2Xor : prim2
@@ -49,6 +51,8 @@ Inductive term : Type :=
 | TFree : atom -> term
 | TShift : term1 -> term
 | TReset : term -> term
+| TControl : term1 -> term
+| TPrompt : term -> term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
@@ -64,7 +68,8 @@ Inductive val : Type :=
 | VInl : val -> val
 | VInr : val -> val
 | VLoc : loc -> val
-| VKont : kont -> val
+| VKontS : kont -> val
+| VKontC : kont -> val
 with clo1 : Type :=
 | C1 : env -> term1 -> clo1
 with clo2 : Type :=

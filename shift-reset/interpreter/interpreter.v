@@ -1,5 +1,5 @@
 From Stdlib Require Import String ZArith.
-From shift_reset.core Require Import syntax env loc var.
+From shift_reset.core Require Import syntax env kont loc var.
 From shift_reset.interpreter Require Import ierror iheap imonad.
 
 Local Open Scope string_scope.
@@ -80,6 +80,8 @@ Definition interpret_prim2 (p : prim2) (a1 a2 : atom) : imonad val :=
   | P2Rem => interpret_ii2i Z.rem m1 m2
   | P2Lt => interpret_ii2b Z.ltb m1 m2
   | P2Le => interpret_ii2b Z.leb m1 m2
+  | P2Gt => interpret_ii2b Z.gtb m1 m2
+  | P2Ge => interpret_ii2b Z.geb m1 m2
   | P2And => interpret_bb2b andb m1 m2
   | P2Or => interpret_bb2b orb m1 m2
   | P2Xor => interpret_bb2b xorb m1 m2
@@ -152,9 +154,6 @@ Definition with_binder (b : binder) (v : val) (m : imonad val) : imonad val :=
   | BVar x => imonad_local_env (ECons x v) m
   end.
 
-Definition with_env (env : env) : imonad val -> imonad val :=
-  imonad_local_env (fun _ => env).
-
 Definition interpret_term1_with (rec : term -> imonad val) (t : term1) (v : val) : imonad val :=
   let (b, t') := t in with_binder b v (rec t').
 
@@ -162,292 +161,284 @@ Definition interpret_term2_with (rec : term -> imonad val) (t : term2) (v1 v2 : 
   let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (rec t')).
 
 Definition interpret_clo1_with (rec : term -> imonad val) (c : clo1) (m : imonad val) : imonad val :=
-  imonad_bind m (fun v => let (env, t) := c in with_env env (interpret_term1_with rec t v)).
+  imonad_bind m (fun v => let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term1_with rec t v)).
 
 Definition interpret_clo2_with (rec : term -> imonad val) (c : clo2) (f : val) (m : imonad val) : imonad val :=
-  imonad_bind m (fun v => let (env, t) := c in with_env env (interpret_term2_with rec t f v)).
+  imonad_bind m (fun v => let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term2_with rec t f v)).
 
-Definition interpret_kont_with (rec : term -> kont -> imonad val) (k : kont) (m : imonad val) : imonad val :=
+Definition interpret_kont_with (rec : kont -> term -> imonad val) (k : kont) (m : imonad val) : imonad val :=
   match k with
   | KNil => m
-  | KCons c k' => interpret_clo1_with (fun t => rec t k') c m
+  | KCons c k' => interpret_clo1_with (rec k') c m
   end.
+
+Inductive delim : Type :=
+| DNone : delim
+| DReset : delim
+| DPrompt : delim.
 
 Set Implicit Arguments.
 
-Inductive term_kont_graph : term -> kont -> Prop :=
-| GTAtom a k : kont_graph k -> term_kont_graph (TAtom a) k
-| GTFun t k : kont_graph k -> term_kont_graph (TFun t) k
-| GTFix t k : kont_graph k -> term_kont_graph (TFix t) k
-| GTApp a1 a2 k : kont_graph k -> term_kont_graph (TApp a1 a2) k
-| GTLet t1 t2 k : (forall env, term_kont_graph t1 (KCons (C1 env t2) k)) -> term_kont_graph (TLet t1 t2) k
-| GTIf a t1 t2 k : term_kont_graph t1 k -> term_kont_graph t2 k -> term_kont_graph (TIf a t1 t2) k
-| GTPrim1 p a k : kont_graph k -> term_kont_graph (TPrim1 p a) k
-| GTPrim2 p a1 a2 k : kont_graph k -> term_kont_graph (TPrim2 p a1 a2) k
-| GTPair a1 a2 k : kont_graph k -> term_kont_graph (TPair a1 a2) k
-| GTSplit a t k : term2_kont_graph t k -> term_kont_graph (TSplit a t) k
-| GTInl a k : kont_graph k -> term_kont_graph (TInl a) k
-| GTInr a k : kont_graph k -> term_kont_graph (TInr a) k
-| GTCase a t1 t2 k : term1_kont_graph t1 k -> term1_kont_graph t2 k -> term_kont_graph (TCase a t1 t2) k
-| GTRef a k : kont_graph k -> term_kont_graph (TRef a) k
-| GTGet a k : kont_graph k -> term_kont_graph (TGet a) k
-| GTSet a1 a2 k : kont_graph k -> term_kont_graph (TSet a1 a2) k
-| GTFree a k : kont_graph k -> term_kont_graph (TFree a) k
-| GTShift t k : term1_kont_graph t KNil -> term_kont_graph (TShift t) k
-| GTReset t k : term_kont_graph t KNil -> kont_graph k -> term_kont_graph (TReset t) k
-with term1_kont_graph : term1 -> kont -> Prop :=
-| GT1 b t k : term_kont_graph t k -> term1_kont_graph (T1 b t) k
-with term2_kont_graph : term2 -> kont -> Prop :=
-| GT2 b1 b2 t k : term_kont_graph t k -> term2_kont_graph (T2 b1 b2 t) k
-with clo1_kont_graph : clo1 -> kont -> Prop :=
-| GC1 env t k : term1_kont_graph t k -> clo1_kont_graph (C1 env t) k
-with kont_graph : kont -> Prop :=
-| GKNil : kont_graph KNil
-| GKCons c k : clo1_kont_graph c k -> kont_graph (KCons c k).
+Inductive term_graph : delim -> kont -> term -> Prop :=
+| GTAtom d k a : kont_graph d k -> term_graph d k (TAtom a)
+| GTFun d k t' : kont_graph d k -> term_graph d k (TFun t')
+| GTFix d k t' : kont_graph d k -> term_graph d k (TFix t')
+| GTApp d k a1 a2 : kont_graph d k -> term_graph d k (TApp a1 a2)
+| GTLet d k t1 t2 : (forall env, term_graph d (KCons (C1 env t2) k) t1) -> term_graph d k (TLet t1 t2)
+| GTIf d k a t1 t2 : term_graph d k t1 -> term_graph d k t2 -> term_graph d k (TIf a t1 t2)
+| GTPrim1 d k p a : kont_graph d k -> term_graph d k (TPrim1 p a)
+| GTPrim2 d k p a1 a2 : kont_graph d k -> term_graph d k (TPrim2 p a1 a2)
+| GTPair d k a1 a2 : kont_graph d k -> term_graph d k (TPair a1 a2)
+| GTSplit d k a t' : term2_graph d k t' -> term_graph d k (TSplit a t')
+| GTInl d k a : kont_graph d k -> term_graph d k (TInl a)
+| GTInr d k a : kont_graph d k -> term_graph d k (TInr a)
+| GTCase d k a t1 t2 : term1_graph d k t1 -> term1_graph d k t2 -> term_graph d k (TCase a t1 t2)
+| GTRef d k a : kont_graph d k -> term_graph d k (TRef a)
+| GTGet d k a : kont_graph d k -> term_graph d k (TGet a)
+| GTSet d k a1 a2 : kont_graph d k -> term_graph d k (TSet a1 a2)
+| GTFree d k a : kont_graph d k -> term_graph d k (TFree a)
+| GTShiftX k t' : term_graph DNone k (TShift t')
+| GTShiftS k t' : term1_graph DReset KNil t' -> term_graph DReset k (TShift t')
+| GTShiftC k t' : term_graph DPrompt k (TShift t')
+| GTReset d k t' : term_graph DReset KNil t' -> kont_graph d k -> term_graph d k (TReset t')
+| GTControlX k t' : term_graph DNone k (TControl t')
+| GTControlS k t' : term_graph DReset k (TControl t')
+| GTControlC k t' : term1_graph DPrompt KNil t' -> term_graph DPrompt k (TControl t')
+| GTPrompt d k t' : term_graph DPrompt KNil t' -> kont_graph d k -> term_graph d k (TPrompt t')
+with term1_graph : delim -> kont -> term1 -> Prop :=
+| GT1 d k b t' : term_graph d k t' -> term1_graph d k (T1 b t')
+with term2_graph : delim -> kont -> term2 -> Prop :=
+| GT2 d k b1 b2 t' : term_graph d k t' -> term2_graph d k (T2 b1 b2 t')
+with clo1_graph : delim -> kont -> clo1 -> Prop :=
+| GC1 d k env t : term1_graph d k t -> clo1_graph d k (C1 env t)
+with kont_graph : delim -> kont -> Prop :=
+| GKNil d : kont_graph d KNil
+| GKCons d c k' : clo1_graph d k' c -> kont_graph d (KCons c k').
 
-Lemma GTAtom_inv : forall a k, term_kont_graph (TAtom a) k -> kont_graph k.
+Lemma GTAtom_inv d k a : term_graph d k (TAtom a) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTFun_inv : forall t k, term_kont_graph (TFun t) k -> kont_graph k.
+Lemma GTFun_inv d k t' : term_graph d k (TFun t') -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTFix_inv : forall t k, term_kont_graph (TFix t) k -> kont_graph k.
+Lemma GTFix_inv d k t' : term_graph d k (TFix t') -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTApp_inv : forall a1 a2 k, term_kont_graph (TApp a1 a2) k -> kont_graph k.
+Lemma GTApp_inv d k a1 a2 : term_graph d k (TApp a1 a2) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTLet_inv : forall t1 t2 k, term_kont_graph (TLet t1 t2) k -> forall env, term_kont_graph t1 (KCons (C1 env t2) k).
+Lemma GTLet_inv d k t1 t2 : term_graph d k (TLet t1 t2) -> forall env, term_graph d (KCons (C1 env t2) k) t1.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTIf_inv1 : forall a t1 t2 k, term_kont_graph (TIf a t1 t2) k -> term_kont_graph t1 k.
+Lemma GTIf_inv1 d k a t1 t2 : term_graph d k (TIf a t1 t2) -> term_graph d k t1.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTIf_inv2 : forall a t1 t2 k, term_kont_graph (TIf a t1 t2) k -> term_kont_graph t2 k.
+Lemma GTIf_inv2 d k a t1 t2 : term_graph d k (TIf a t1 t2) -> term_graph d k t2.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPrim1_inv : forall p a k, term_kont_graph (TPrim1 p a) k -> kont_graph k.
+Lemma GTPrim1_inv d k p a : term_graph d k (TPrim1 p a) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPrim2_inv : forall p a1 a2 k, term_kont_graph (TPrim2 p a1 a2) k -> kont_graph k.
+Lemma GTPrim2_inv d k p a1 a2 : term_graph d k (TPrim2 p a1 a2) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPair_inv : forall a1 a2 k, term_kont_graph (TPair a1 a2) k -> kont_graph k.
+Lemma GTPair_inv d k a1 a2 : term_graph d k (TPair a1 a2) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTSplit_inv : forall a t k, term_kont_graph (TSplit a t) k -> term2_kont_graph t k.
+Lemma GTSplit_inv d k a t' : term_graph d k (TSplit a t') -> term2_graph d k t'.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTInl_inv : forall a k, term_kont_graph (TInl a) k -> kont_graph k.
+Lemma GTInl_inv d k a : term_graph d k (TInl a) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTInr_inv : forall a k, term_kont_graph (TInr a) k -> kont_graph k.
+Lemma GTInr_inv d k a : term_graph d k (TInr a) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTCase_inv1 : forall a t1 t2 k, term_kont_graph (TCase a t1 t2) k -> term1_kont_graph t1 k.
+Lemma GTCase_inv1 d k a t1 t2 : term_graph d k (TCase a t1 t2) -> term1_graph d k t1.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTCase_inv2 : forall a t1 t2 k, term_kont_graph (TCase a t1 t2) k -> term1_kont_graph t2 k.
+Lemma GTCase_inv2 d k a t1 t2 : term_graph d k (TCase a t1 t2) -> term1_graph d k t2.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTRef_inv : forall a k, term_kont_graph (TRef a) k -> kont_graph k.
+Lemma GTRef_inv d k a : term_graph d k (TRef a) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTGet_inv : forall a k, term_kont_graph (TGet a) k -> kont_graph k.
+Lemma GTGet_inv d k a : term_graph d k (TGet a) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTSet_inv : forall a1 a2 k, term_kont_graph (TSet a1 a2) k -> kont_graph k.
+Lemma GTSet_inv d k a1 a2 : term_graph d k (TSet a1 a2) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTFree_inv : forall a k, term_kont_graph (TFree a) k -> kont_graph k.
+Lemma GTFree_inv d k a : term_graph d k (TFree a) -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTShift_inv : forall t k, term_kont_graph (TShift t) k -> term1_kont_graph t KNil.
+Lemma GTShiftS_inv k t' : term_graph DReset k (TShift t') -> term1_graph DReset KNil t'.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTReset_inv1 : forall t k, term_kont_graph (TReset t) k -> term_kont_graph t KNil.
+Lemma GTReset_inv1 d k t' : term_graph d k (TReset t') -> term_graph DReset KNil t'.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTReset_inv2 : forall t k, term_kont_graph (TReset t) k -> kont_graph k.
+Lemma GTReset_inv2 d k t' : term_graph d k (TReset t') -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GT1_inv : forall b t k, term1_kont_graph (T1 b t) k -> term_kont_graph t k.
+Lemma GTControlC_inv k t' : term_graph DPrompt k (TControl t') -> term1_graph DPrompt KNil t'.
 Proof. inversion 1; auto. Defined.
 
-Lemma GT2_inv : forall b1 b2 t k, term2_kont_graph (T2 b1 b2 t) k -> term_kont_graph t k.
+Lemma GTPrompt_inv1 d k t' : term_graph d k (TPrompt t') -> term_graph DPrompt KNil t'.
 Proof. inversion 1; auto. Defined.
 
-Lemma GC1_inv : forall env t k, clo1_kont_graph (C1 env t) k -> term1_kont_graph t k.
+Lemma GTPrompt_inv2 d k t' : term_graph d k (TPrompt t') -> kont_graph d k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GKCons_inv : forall c k, kont_graph (KCons c k) -> clo1_kont_graph c k.
+Lemma GT1_inv d k b t' : term1_graph d k (T1 b t') -> term_graph d k t'.
 Proof. inversion 1; auto. Defined.
 
-Fixpoint compute_term_kont_graph_dep (t : term) (k : kont) (G : kont_graph k) : term_kont_graph t k :=
+Lemma GT2_inv d k b1 b2 t' : term2_graph d k (T2 b1 b2 t') -> term_graph d k t'.
+Proof. inversion 1; auto. Defined.
+
+Lemma GC1_inv d k env t : clo1_graph d k (C1 env t) -> term1_graph d k t.
+Proof. inversion 1; auto. Defined.
+
+Lemma GKCons_inv d c k' : kont_graph d (KCons c k') -> clo1_graph d k' c.
+Proof. inversion 1; auto. Defined.
+
+Fixpoint build_term_graph_dep d k (G : kont_graph d k) t : term_graph d k t :=
   match t with
   | TAtom a => GTAtom a G
   | TFun t' => GTFun t' G
   | TFix t' => GTFix t' G
   | TApp a1 a2 => GTApp a1 a2 G
-  | TLet t1 t2 => GTLet (fun env => compute_term_kont_graph_dep t1 (GKCons (GC1 env (compute_term1_kont_graph_dep t2 G))))
-  | TIf a t1 t2 => GTIf a (compute_term_kont_graph_dep t1 G) (compute_term_kont_graph_dep t2 G)
+  | TLet t1 t2 => GTLet (fun env => build_term_graph_dep (GKCons (GC1 env (build_term1_graph_dep G t2))) t1)
+  | TIf a t1 t2 => GTIf a (build_term_graph_dep G t1) (build_term_graph_dep G t2)
   | TPrim1 p a => GTPrim1 p a G
   | TPrim2 p a1 a2 => GTPrim2 p a1 a2 G
   | TPair a1 a2 => GTPair a1 a2 G
-  | TSplit a t' => GTSplit a (compute_term2_kont_graph_dep t' G)
+  | TSplit a t' => GTSplit a (build_term2_graph_dep G t')
   | TInl a => GTInl a G
   | TInr a => GTInr a G
-  | TCase a t1 t2 => GTCase a (compute_term1_kont_graph_dep t1 G) (compute_term1_kont_graph_dep t2 G)
+  | TCase a t1 t2 => GTCase a (build_term1_graph_dep G t1) (build_term1_graph_dep G t2)
   | TRef a => GTRef a G
   | TGet a => GTGet a G
   | TSet a1 a2 => GTSet a1 a2 G
   | TFree a => GTFree a G
-  | TShift t' => GTShift k (compute_term1_kont_graph_dep t' GKNil)
-  | TReset t' => GTReset (compute_term_kont_graph_dep t' GKNil) G
+  | TShift t' =>
+      match d with
+      | DNone => GTShiftX k t'
+      | DReset => GTShiftS k (build_term1_graph_dep (GKNil DReset) t')
+      | DPrompt => GTShiftC k t'
+      end
+  | TReset t' => GTReset (build_term_graph_dep (GKNil DReset) t') G
+  | TControl t' =>
+      match d with
+      | DNone => GTControlX k t'
+      | DReset => GTControlS k t'
+      | DPrompt => GTControlC k (build_term1_graph_dep (GKNil DPrompt) t')
+      end
+  | TPrompt t' => GTPrompt (build_term_graph_dep (GKNil DPrompt) t') G
   end
-with compute_term1_kont_graph_dep (t : term1) (k : kont) (G : kont_graph k) : term1_kont_graph t k :=
+with build_term1_graph_dep d k (G : kont_graph d k) t : term1_graph d k t :=
   match t with
-  | T1 b t' => GT1 b (compute_term_kont_graph_dep t' G)
+  | T1 b t' => GT1 b (build_term_graph_dep G t')
   end
-with compute_term2_kont_graph_dep (t : term2) (k : kont) (G : kont_graph k) : term2_kont_graph t k :=
+with build_term2_graph_dep d k (G : kont_graph d k) t : term2_graph d k t :=
   match t with
-  | T2 b1 b2 t' => GT2 b1 b2 (compute_term_kont_graph_dep t' G)
+  | T2 b1 b2 t' => GT2 b1 b2 (build_term_graph_dep G t')
   end.
 
-Definition compute_clo1_kont_graph_dep (c : clo1) (k : kont) (G : kont_graph k) : clo1_kont_graph c k :=
+Definition build_clo1_graph_dep d k (G : kont_graph d k) c : clo1_graph d k c :=
   match c with
-  | C1 env t => GC1 env (compute_term1_kont_graph_dep t G)
+  | C1 env t => GC1 env (build_term1_graph_dep G t)
   end.
 
-Record irec_kont : Type := IRecKont { run_irec_kont : term -> kont -> imonad val }.
-
-Fixpoint interpret_term_kont_dep (rec : irec_kont) (t : term) (k : kont) (G : term_kont_graph t k) : imonad val :=
-  match t return term_kont_graph t k -> imonad val with
+Fixpoint interpret_term_dep (rec : delim -> kont -> term -> imonad val) d k t (G : term_graph d k t) : imonad val :=
+  match t return term_graph d k t -> imonad val with
   | TAtom a => fun G => interpret_kont_dep rec (GTAtom_inv G) (interpret_atom a)
   | TFun t' => fun G => interpret_kont_dep rec (GTFun_inv G) (interpret_fun t')
   | TFix t' => fun G => interpret_kont_dep rec (GTFix_inv G) (interpret_fix t')
-  | TApp a1 a2 => fun G =>
-                    let m1 := interpret_atom a1 in
-                    let m2 := interpret_atom a2 in
-                    imonad_bind m1
-                      (fun v => match v with
-                                | VFun c => interpret_clo1_with (fun t' => run_irec_kont rec t' k) c m2
-                                | VFix c => interpret_clo2_with (fun t' => run_irec_kont rec t' k) c v m2
-                                | VKont k' => interpret_kont_dep rec (GTApp_inv G) (interpret_kont_with (run_irec_kont rec) k' m2)
-                                | _ => imonad_throw (TypeError "")
-                                end)
-  | TLet t1 t2 => fun G => imonad_bind imonad_ask_env (fun env => interpret_term_kont_dep rec (GTLet_inv G env))
-  | TIf a t1 t2 => fun G => interpret_if a (interpret_term_kont_dep rec (GTIf_inv1 G)) (interpret_term_kont_dep rec (GTIf_inv2 G))
+  | TApp a1 a2 =>
+      fun G =>
+        let m1 := interpret_atom a1 in
+        let m2 := interpret_atom a2 in
+        imonad_bind m1
+          (fun v => match v with
+                    | VFun c => interpret_clo1_with (rec d k) c m2
+                    | VFix c => interpret_clo2_with (rec d k) c v m2
+                    | VKontS k' => interpret_kont_dep rec (GTApp_inv G) (interpret_kont_with (rec DReset) k' m2)
+                    | VKontC k' => interpret_kont_with (rec d) (kont_append k' k) m2
+                    | _ => imonad_throw (TypeError "")
+                    end)
+  | TLet t1 t2 => fun G => imonad_bind imonad_ask_env (fun env => interpret_term_dep rec (GTLet_inv G env))
+  | TIf a t1 t2 => fun G => interpret_if a (interpret_term_dep rec (GTIf_inv1 G)) (interpret_term_dep rec (GTIf_inv2 G))
   | TPrim1 p a => fun G => interpret_kont_dep rec (GTPrim1_inv G) (interpret_prim1 p a)
   | TPrim2 p a1 a2 => fun G => interpret_kont_dep rec (GTPrim2_inv G) (interpret_prim2 p a1 a2)
   | TPair a1 a2 => fun G => interpret_kont_dep rec (GTPair_inv G) (interpret_pair a1 a2)
-  | TSplit a t' => fun G => interpret_split a (interpret_term2_kont_dep rec (GTSplit_inv G))
+  | TSplit a t' => fun G => interpret_split a (interpret_term2_dep rec (GTSplit_inv G))
   | TInl a => fun G => interpret_kont_dep rec (GTInl_inv G) (interpret_inl a)
   | TInr a => fun G => interpret_kont_dep rec (GTInr_inv G) (interpret_inr a)
-  | TCase a t1 t2 => fun G => interpret_case a (interpret_term1_kont_dep rec (GTCase_inv1 G)) (interpret_term1_kont_dep rec (GTCase_inv2 G))
+  | TCase a t1 t2 => fun G => interpret_case a (interpret_term1_dep rec (GTCase_inv1 G)) (interpret_term1_dep rec (GTCase_inv2 G))
   | TRef a => fun G => interpret_kont_dep rec (GTRef_inv G) (interpret_ref a)
   | TGet a => fun G => interpret_kont_dep rec (GTGet_inv G) (interpret_get a)
   | TSet a1 a2 => fun G => interpret_kont_dep rec (GTSet_inv G) (interpret_set a1 a2)
   | TFree a => fun G => interpret_kont_dep rec (GTFree_inv G) (interpret_free a)
-  | TShift t' => fun G => interpret_term1_kont_dep rec (GTShift_inv G) (VKont k)
-  | TReset t' => fun G => interpret_kont_dep rec (GTReset_inv2 G) (interpret_term_kont_dep rec (GTReset_inv1 G))
+  | TShift t' =>
+      match d return term_graph d k (TShift t') -> imonad val with
+      | DNone => fun _ => imonad_throw (ControlError "")
+      | DReset => fun G => interpret_term1_dep rec (GTShiftS_inv G) (VKontS k)
+      | DPrompt => fun _ => imonad_throw (ControlError "")
+      end
+  | TReset t' => fun G => interpret_kont_dep rec (GTReset_inv2 G) (interpret_term_dep rec (GTReset_inv1 G))
+  | TControl t' =>
+      match d return term_graph d k (TControl t') -> imonad val with
+      | DNone => fun _ => imonad_throw (ControlError "")
+      | DReset => fun _ => imonad_throw (ControlError "")
+      | DPrompt => fun G => interpret_term1_dep rec (GTControlC_inv G) (VKontC k)
+      end
+  | TPrompt t' => fun G => interpret_kont_dep rec (GTPrompt_inv2 G) (interpret_term_dep rec (GTPrompt_inv1 G))
   end G
-with interpret_term1_kont_dep (rec : irec_kont) (t : term1) (k : kont) (G : term1_kont_graph t k) (v : val) : imonad val :=
-  match t return term1_kont_graph t k -> imonad val with
-  | T1 b t' => fun G => with_binder b v (interpret_term_kont_dep rec (GT1_inv G))
+with interpret_term1_dep (rec : delim -> kont -> term -> imonad val) d k t (G : term1_graph d k t) (v : val) : imonad val :=
+  match t return term1_graph d k t -> imonad val with
+  | T1 b t' => fun G => with_binder b v (interpret_term_dep rec (GT1_inv G))
   end G
-with interpret_term2_kont_dep (rec : irec_kont) (t : term2) (k : kont) (G : term2_kont_graph t k) (v1 v2 : val) : imonad val :=
-  match t return term2_kont_graph t k -> imonad val with
-  | T2 b1 b2 t' => fun G => with_binder b1 v1 (with_binder b2 v2 (interpret_term_kont_dep rec (GT2_inv G)))
+with interpret_term2_dep (rec : delim -> kont -> term -> imonad val) d k t (G : term2_graph d k t) (v1 v2 : val) : imonad val :=
+  match t return term2_graph d k t -> imonad val with
+  | T2 b1 b2 t' => fun G => with_binder b1 v1 (with_binder b2 v2 (interpret_term_dep rec (GT2_inv G)))
   end G
-with interpret_clo1_kont_dep (rec : irec_kont) (c : clo1) (k : kont) (G : clo1_kont_graph c k) (m : imonad val) : imonad val :=
+with interpret_clo1_dep (rec : delim -> kont -> term -> imonad val) d k c (G : clo1_graph d k c) (m : imonad val) : imonad val :=
   imonad_bind m
-    (fun v => match c return clo1_kont_graph c k -> imonad val with
-              | C1 env t => fun G => with_env env (interpret_term1_kont_dep rec (GC1_inv G) v)
+    (fun v => match c return clo1_graph d k c -> imonad val with
+              | C1 env t => fun G => imonad_local_env (fun _ => env) (interpret_term1_dep rec (GC1_inv G) v)
               end G)
-with interpret_kont_dep (rec : irec_kont) (k : kont) (G : kont_graph k) (m : imonad val) : imonad val :=
-  match k return kont_graph k -> imonad val with
+with interpret_kont_dep (rec : delim -> kont -> term -> imonad val) d k (G : kont_graph d k) (m : imonad val) : imonad val :=
+  match k return kont_graph d k -> imonad val with
   | KNil => fun _ => m
-  | KCons c k' => fun G => interpret_clo1_kont_dep rec (GKCons_inv G) m
+  | KCons c k' => fun G => interpret_clo1_dep rec (GKCons_inv G) m
   end G.
 
 Unset Implicit Arguments.
 
-Fixpoint compute_kont_graph (k : kont) : kont_graph k :=
+Fixpoint build_kont_graph (d : delim) (k : kont) : kont_graph d k :=
   match k with
-  | KNil => GKNil
-  | KCons c k' => GKCons (compute_clo1_kont_graph_dep c (compute_kont_graph k'))
+  | KNil => GKNil d
+  | KCons c k' => GKCons (build_clo1_graph_dep (build_kont_graph d k') c)
   end.
 
-Definition compute_term_kont_graph (t : term) (k : kont) : term_kont_graph t k :=
-  compute_term_kont_graph_dep t (compute_kont_graph k).
+Definition build_term_graph (d : delim) (k : kont) (t : term) : term_graph d k t :=
+  build_term_graph_dep (build_kont_graph d k) t.
 
-Definition interpret_term_kont_aux (rec : irec_kont) (t : term) (k : kont) : imonad val :=
-  interpret_term_kont_dep rec (compute_term_kont_graph t k).
+Definition interpret_term_aux (rec : delim -> kont -> term -> imonad val) (d : delim) (k : kont) (t : term) : imonad val :=
+  interpret_term_dep rec (build_term_graph d k t).
 
-Fixpoint interpret_term_kont (fuel : nat) (t : term) (k : kont) : imonad val :=
+Fixpoint interpret_term (fuel : nat) (d : delim) (k : kont) (t : term) : imonad val :=
   match fuel with
   | O => imonad_throw OutOfFuel
-  | S fuel' => interpret_term_kont_aux (IRecKont (interpret_term_kont fuel')) t k
-  end.
-
-Record irec : Type := IRec { run_irec : term -> imonad val; run_kont_irec : term -> kont -> imonad val }.
-
-Fixpoint interpret_term_aux (rec : irec) (t : term) : imonad val :=
-  match t with
-  | TAtom a => interpret_atom a
-  | TFun t' => interpret_fun t'
-  | TFix t' => interpret_fix t'
-  | TApp a1 a2 => let m1 := interpret_atom a1 in
-                  let m2 := interpret_atom a2 in
-                  imonad_bind m1
-                    (fun v => match v with
-                              | VFun c => interpret_clo1_with (run_irec rec) c m2
-                              | VFix c => interpret_clo2_with (run_irec rec) c v m2
-                              | VKont k => interpret_kont_with (run_kont_irec rec) k m2
-                              | _ => imonad_throw (TypeError "not a fun/fix/kont")
-                              end)
-  | TLet t1 t2 => imonad_bind (interpret_term_aux rec t1) (interpret_term1_aux rec t2)
-  | TIf a t1 t2 => interpret_if a (interpret_term_aux rec t1) (interpret_term_aux rec t2)
-  | TPrim1 p a => interpret_prim1 p a
-  | TPrim2 p a1 a2 => interpret_prim2 p a1 a2
-  | TPair a1 a2 => interpret_pair a1 a2
-  | TSplit a t' => interpret_split a (interpret_term2_aux rec t')
-  | TInl a => interpret_inl a
-  | TInr a => interpret_inr a
-  | TCase a t1 t2 => interpret_case a (interpret_term1_aux rec t1) (interpret_term1_aux rec t2)
-  | TRef a => interpret_ref a
-  | TGet a => interpret_get a
-  | TSet a1 a2 => interpret_set a1 a2
-  | TFree a => interpret_free a
-  | TShift _ => imonad_throw (ControlError "shift without enclosing reset")
-  | TReset t' => interpret_term_kont_aux (IRecKont (run_kont_irec rec)) t' KNil
-  end
-with interpret_term1_aux (rec : irec) (t : term1) (v : val) : imonad val :=
-  let (b, t') := t in with_binder b v (interpret_term_aux rec t')
-with interpret_term2_aux (rec : irec) (t : term2) (v1 v2 : val) : imonad val :=
-  let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (interpret_term_aux rec t')).
-
-Fixpoint interpret_term (fuel : nat) (t : term) : imonad val :=
-  match fuel with
-  | O => imonad_throw OutOfFuel
-  | S fuel' => interpret_term_aux (IRec (interpret_term fuel') (interpret_term_kont fuel')) t
+  | S fuel' => interpret_term_aux (interpret_term fuel') d k t
   end.
 
 Definition run_term (fuel : nat) (t : term) : (ierror + val) * iheap :=
-  imonad_run (interpret_term fuel t) ENil iheap_empty.
+  imonad_run (interpret_term fuel DNone KNil t) ENil iheap_empty.
 
 Definition eval_term (fuel : nat) (t : term) : ierror + val :=
   fst (run_term fuel t).
 
 Definition exec_term (fuel : nat) (t : term) : iheap :=
   snd (run_term fuel t).
-
-Definition run_term_kont (fuel : nat) (t : term) (k : kont) : (ierror + val) * iheap :=
-  imonad_run (interpret_term_kont fuel t k) ENil iheap_empty.
-
-Definition eval_term_kont (fuel : nat) (t : term) (k : kont) : ierror + val :=
-  fst (run_term_kont fuel t k).
-
-Definition exec_term_kont (fuel : nat) (t : term) (k : kont) : iheap :=
-  snd (run_term_kont fuel t k).

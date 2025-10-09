@@ -63,8 +63,17 @@ Notation "'shift' k t" :=
         k at level 0,
         t custom term at level 99) : term_scope.
 
+Notation "'control' k t" :=
+  (TControl (T1 k t))
+    (in custom term at level 69,
+        k at level 0,
+        t custom term at level 99) : term_scope.
+
 Notation "'reset' t" :=
   (TReset t) (in custom term at level 69, t custom term) : term_scope.
+
+Notation "'prompt' t" :=
+  (TPrompt t) (in custom term at level 69, t custom term) : term_scope.
 
 Notation "'fun' x1 .. xn => t" :=
   (TFun (T1 x1 .. (TFun (T1 xn t)) ..))
@@ -131,6 +140,24 @@ Notation "a1 <> a2" :=
 
 Notation "a1 < a2" :=
   (TPrim2 P2Lt a1 a2)
+    (in custom term at level 50,
+        a1 custom term,
+        a2 custom term) : term_scope.
+
+Notation "a1 <= a2" :=
+  (TPrim2 P2Le a1 a2)
+    (in custom term at level 50,
+        a1 custom term,
+        a2 custom term) : term_scope.
+
+Notation "a1 > a2" :=
+  (TPrim2 P2Gt a1 a2)
+    (in custom term at level 50,
+        a1 custom term,
+        a2 custom term) : term_scope.
+
+Notation "a1 >= a2" :=
+  (TPrim2 P2Ge a1 a2)
     (in custom term at level 50,
         a1 custom term,
         a2 custom term) : term_scope.

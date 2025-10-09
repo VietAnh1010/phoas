@@ -34,10 +34,10 @@ Example append :=
   <{ let "append_aux" := append_aux in
      fun "xs" => reset "append_aux" "xs" }>.
 
-Fixpoint encode (xs : list Z) :=
+Fixpoint term_of_list (xs : list Z) :=
   match xs with
   | [] => <{ Inl () }>
-  | x :: xs' => <{ let "xs'" := {encode xs'} in
+  | x :: xs' => <{ let "xs'" := {term_of_list xs'} in
                    let "xs" := (x, "xs'") in
                    Inr "xs" }>
   end.
@@ -54,10 +54,10 @@ Example append2 xs ys :=
      let "append1" := "append" "xs" in
      "append1" "ys" }>.
 
-Compute (eval_term 3 (append1 (encode []))).
-Compute (eval_term 4 (append1 (encode [1]))).
-Compute (eval_term 3 (append2 (encode []) (encode [1]))).
-Compute (eval_term 4 (append2 (encode [1]) (encode [2]))).
+Compute (eval_term 3 (append1 (term_of_list []))).
+Compute (eval_term 4 (append1 (term_of_list [1]))).
+Compute (eval_term 3 (append2 (term_of_list []) (term_of_list [1]))).
+Compute (eval_term 4 (append2 (term_of_list [1]) (term_of_list [2]))).
 
 Fixpoint sequence start len : list Z :=
   match len with
@@ -89,13 +89,12 @@ Example append_direct2 xs ys :=
      let "append_direct1" := "append_direct" "xs" in
      "append_direct1" "ys" }>.
 
-Compute (eval_term 2 (append_direct1 (encode []))).
-Compute (eval_term 2 (append_direct1 (encode [1]))).
-Compute (eval_term 2 (append_direct2 (encode []) (encode [1]))).
-Compute (eval_term 3 (append_direct2 (encode [1]) (encode [2]))).
+Compute (eval_term 2 (append_direct1 (term_of_list []))).
+Compute (eval_term 2 (append_direct1 (term_of_list [1]))).
+Compute (eval_term 3 (append_direct2 (term_of_list []) (term_of_list [1]))).
+Compute (eval_term 5 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 
-Time Compute (eval_term 2000 (encode (sequence 0 1000))).
-Time Compute (eval_term_kont 2000 (encode (sequence 0 1000)) KNil).
+Time Compute (eval_term 2000 (term_of_list (sequence 0 1000))).
 
 Example either :=
   <{ fun "x" "y" => shift "k" let _ := "k" "x" in "k" "y" }>.
@@ -145,8 +144,109 @@ Example sum xs :=
          "result" <- "r"
      in !"result" }>.
 
-Compute (run_term 3 (sum (encode []))).
-Compute (run_term 4 (sum (encode [1]))).
-Compute (run_term 5 (sum (encode [1; 2]))).
+Compute (run_term 3 (sum (term_of_list []))).
+Compute (run_term 4 (sum (term_of_list [1]))).
+Compute (run_term 5 (sum (term_of_list [1; 2]))).
 
-Time Compute (run_term 1000 (sum (encode (sequence 0 500)))).
+Time Compute (run_term 503 (sum (term_of_list (sequence 0 500)))).
+
+Example yield :=
+  <{ fun "x" => shift "k" (let "p" := ("x", "k") in Inr "p") }>.
+
+Example walk_aux :=
+  <{ let "yield" := yield in
+     fix "walk_aux" "t" :=
+       match "t" with
+       | Inl "x" => "yield" "x"
+       | Inr "p" =>
+           let ("l", "r") := "p" in
+           let _ := "walk_aux" "l" in
+           "walk_aux" "r"
+       end }>.
+
+Example walk  :=
+  <{ let "walk_aux" := walk_aux in
+     fun "t" => reset (let _ := "walk_aux" "t" in Inl ()) }>.
+
+Example sum_tree :=
+  <{ let "walk" := walk in
+     fun "t" =>
+       let fix "go" "r" :=
+         match "r" with
+         | Inl _ => 0
+         | Inr "p" =>
+             let ("x", "r") := "p" in
+             let "r" := "r" () in
+             let "r" := "go" "r" in
+             "x" + "r"
+         end
+       in
+       let "r" := "walk" "t" in
+       "go" "r" }>.
+
+Inductive tree (A : Type) :=
+| Leaf : A -> tree A
+| Node : tree A -> tree A -> tree A.
+
+Arguments Leaf {A} _.
+Arguments Node {A} _ _.
+
+Fixpoint term_of_tree (t : tree Z) :=
+  match t with
+  | Leaf x => <{ Inl x }>
+  | Node l r => <{ let "l" := {term_of_tree l} in
+                   let "r" := {term_of_tree r} in
+                   let "p" := ("l", "r") in
+                   Inr "p" }>
+  end.
+
+Example sum_tree1 t :=
+  <{ let "sum_tree" := sum_tree in
+     let "t" := {term_of_tree t} in
+     "sum_tree" "t" }>.
+
+Compute (eval_term 100 (sum_tree1 (Leaf 0))).
+Compute (eval_term 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).
+
+Example copy :=
+  <{ fix "copy" "xs" :=
+       match "xs" with
+       | Inl _ => Inl ()
+       | Inr "xs" =>
+           let ("x", "xs'") := "xs" in
+           let "xs" :=
+             shift "k"
+               let "xs'" := "k" "xs'" in
+               let "xs" := ("x", "xs'") in
+               Inr "xs"
+           in
+           "copy" "xs"
+       end }>.
+
+Example reverse :=
+  <{ fix "reverse" "xs" :=
+       match "xs" with
+       | Inl _ => Inl ()
+       | Inr "xs" =>
+           let ("x", "xs'") := "xs" in
+           let "xs" :=
+             control "k"
+               let "xs'" := "k" "xs'" in
+               let "xs" := ("x", "xs'") in
+               Inr "xs"
+           in
+           "reverse" "xs"
+       end }>.
+
+Example copy1 xs :=
+  <{ let "copy" := copy in
+     let "xs" := xs in
+     reset ("copy" "xs") }>.
+
+Example reverse1 xs :=
+  <{ let "reverse" := reverse in
+     let "xs" := xs in
+     prompt ("reverse" "xs") }>.
+
+Time Compute (run_term 1000 (copy1 (term_of_list (sequence 0 400)))).
+Time Compute (run_term 1000 (reverse1 (term_of_list (sequence 0 400)))).

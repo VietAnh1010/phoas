@@ -32,6 +32,7 @@ data CC =
   | CCBind CC CCF
   | CCPushPrompt Prompt CC
   | CCTakeSubCont Prompt CCT
+  | CCPushSubCont SubCont V
 
 prim1 :: Prim1 -> V -> V
 prim1 P1Neg (VInt i) = VInt (negate i)
@@ -61,6 +62,7 @@ dispatchCC (CCPushPrompt p m) ki kd = dispatchCC m ki (Kd2 p ki kd)
 -- however, takeSubCont "introduce" a new variable (subcont - SC0)
 -- so the current signature of dispatchCC is not compatible
 dispatchCC (CCTakeSubCont p body) _ kd = dispatchKd kd SC0 p body
+dispatchCC (CCPushSubCont c v) ki kd = dispatchSubCont c v ki kd
 
 -- bind :: CC -> CCF -> Ki -> Kd -> V
 -- bind m f ki kd = dispatchCC m (Ki1 f ki kd) (Kd1 kd f)
@@ -103,10 +105,15 @@ data SubCont =
 
 -- "rebuild" the structure of the term, from the subcont
 -- effectively, we are "concatenate" the subcont to the "context"?
-dispatchSubCont :: SubCont -> CC -> CC
-dispatchSubCont SC0 m = m
-dispatchSubCont (SC1 c f) m = CCBind (dispatchSubCont c m) f
-dispatchSubCont (SC2 p c) m = CCPushPrompt p (dispatchSubCont c m)
+-- dispatchSubCont :: SubCont -> CC -> CC
+-- dispatchSubCont SC0 m = m
+-- dispatchSubCont (SC1 c f) m = CCBind (dispatchSubCont c m) f
+-- dispatchSubCont (SC2 p c) m = CCPushPrompt p (dispatchSubCont c m)
+
+dispatchSubCont :: SubCont -> V -> Ki -> Kd -> V
+dispatchSubCont SC0 v ki kd = dispatchKi ki v
+dispatchSubCont (SC1 c f) v ki kd = dispatchSubCont c v (Ki1 f ki kd) (Kd1 kd f)
+dispatchSubCont (SC2 p c) v ki kd = dispatchSubCont c v ki (Kd2 p ki kd)
 
 data Ki =
     Ki0
@@ -120,8 +127,11 @@ data Kd =
 -- this is because we allow the "argument" of the subcont to be a complex
 -- term. If we want to simplify this, the second argument should be an atom only,
 -- and then pushSubCont will just call the frames in sequence
-pushSubCont :: SubCont -> CC -> CC
-pushSubCont = dispatchSubCont -- decrease 1 index here
+-- also, note that this "build" the AST, and then the AST is immediately "consumed"
+-- by the interpreter. So this should be promoted into a semantics function, and
+-- then we add a syntatic element to represent "the application of a subcont"
+-- pushSubCont :: SubCont -> CC -> CC
+-- pushSubCont = dispatchSubCont -- decrease 1 index here
 
 runCC :: CC -> V
 runCC m = dispatchCC m Ki0 Kd0
@@ -136,7 +146,18 @@ shift :: ((V -> CC) -> CC) -> CC
 shift body =
   CCTakeSubCont resetPrompt
     (CCT $ \c -> CCPushPrompt resetPrompt
-      (body $ \v -> CCPushPrompt resetPrompt (pushSubCont c (CCAtom v))))
+      (body $ \v -> CCPushPrompt resetPrompt (CCPushSubCont c v)))
+
+reset0Prompt :: Prompt
+reset0Prompt = Prompt 1
+
+reset0 :: CC -> CC
+reset0 = CCPushPrompt reset0Prompt
+
+shift0 :: ((V -> CC) -> CC) -> CC
+shift0 body =
+  CCTakeSubCont reset0Prompt
+    (CCT $ \c -> body $ \v -> CCPushPrompt resetPrompt (CCPushSubCont c v))
 
 example :: CC
 example = CCBind

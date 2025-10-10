@@ -48,21 +48,21 @@ prim2 P2Eq v1 v2 = VBool (v1 == v2)
 prim2 _ _ _ = error "Type error"
 
 -- THIS IS OUR INTERPRETER
-dispatchCC :: CC -> Ki -> Kd -> V
-dispatchCC (CCAtom v) ki kd = dispatchKi ki v
-dispatchCC (CCPrim1 pr v) ki kd = dispatchKi ki (prim1 pr v)
-dispatchCC (CCPrim2 pr v1 v2) ki kd = dispatchKi ki (prim2 pr v1 v2)
-dispatchCC (CCBind m f) ki kd = dispatchCC m (Ki1 f ki kd) (Kd1 kd f)
+dispatchCC :: CC -> K -> V
+dispatchCC (CCAtom v) k = dispatchKi k v
+dispatchCC (CCPrim1 pr v) k = dispatchKi k (prim1 pr v)
+dispatchCC (CCPrim2 pr v1 v2) k = dispatchKi k (prim2 pr v1 v2)
+dispatchCC (CCBind m f) k = dispatchCC m (K1 k f)
 -- this is already structurally recursive, because
 -- we "recurse" on m, which is a subterm of (CCPushPrompt p m)
-dispatchCC (CCPushPrompt p m) ki kd = dispatchCC m ki (Kd2 p ki kd)
+dispatchCC (CCPushPrompt p m) k = dispatchCC m (K2 p k)
 -- can inline takeSubCont here, and then inline dispatchKd here
 -- then it would be "structurally recursive" over the call graph
 -- (Bove-Capretta method)
 -- however, takeSubCont "introduce" a new variable (subcont - SC0)
 -- so the current signature of dispatchCC is not compatible
-dispatchCC (CCTakeSubCont p body) _ kd = dispatchKd kd SC0 p body
-dispatchCC (CCPushSubCont c v) ki kd = dispatchSubCont c v ki kd
+dispatchCC (CCTakeSubCont p body) k = dispatchKd k SC0 p body
+dispatchCC (CCPushSubCont c v) k = dispatchSubCont c v k
 
 -- bind :: CC -> CCF -> Ki -> Kd -> V
 -- bind m f ki kd = dispatchCC m (Ki1 f ki kd) (Kd1 kd f)
@@ -73,28 +73,34 @@ dispatchCC (CCPushSubCont c v) ki kd = dispatchSubCont c v ki kd
 -- takeSubCont :: Prompt -> CCT -> Ki -> Kd -> V
 -- takeSubCont p body _ kd = dispatchKd kd SC0 p body
 
-dispatchKi :: Ki -> V -> V
-dispatchKi Ki0 a = a
-dispatchKi (Ki1 f ki kd) a = dispatchCCF f a ki kd
+data K =
+    K0
+  | K1 K CCF
+  | K2 Prompt K
 
-dispatchKd :: Kd -> SubCont -> Prompt -> CCT -> V
-dispatchKd Kd0 _ _ _ = error "Escaping bubble"
+dispatchKi :: K -> V -> V
+dispatchKi K0 v = v
+dispatchKi (K1 k f) v = dispatchCCF f v k
+dispatchKi (K2 _ k) v = dispatchKi k v
+
+dispatchKd :: K -> SubCont -> Prompt -> CCT -> V
+dispatchKd K0 _ _ _ = error "Escaping bubble"
 -- "reverse" kd -> subcont
-dispatchKd (Kd1 kd f) c p body = dispatchKd kd (SC1 c f) p body
+dispatchKd (K1 k f) c p body = dispatchKd k (SC1 c f) p body
 -- either "install" the handler, or "unwind" to find the appropriate handler, while building up the subcont
 -- we can also "inline" dispatchSubCont here, before "apply" to body
 -- the goal is to do a single pass over the data, instead of two pass over the data
-dispatchKd (Kd2 p' ki kd) c p body
-  | p' == p = dispatchCCT body c ki kd
-  | otherwise = dispatchKd kd (SC2 p' c) p body
+dispatchKd (K2 p' k) c p body
+  | p' == p = dispatchCCT body c k
+  | otherwise = dispatchKd k (SC2 p' c) p body
 
 data CCF = CCF (V -> CC)
 data CCT = CCT (SubCont -> CC)
 
-dispatchCCF :: CCF -> V -> Ki -> Kd -> V
+dispatchCCF :: CCF -> V -> K -> V
 dispatchCCF (CCF f) v = dispatchCC (f v)
 
-dispatchCCT :: CCT -> SubCont -> Ki -> Kd -> V
+dispatchCCT :: CCT -> SubCont -> K -> V
 dispatchCCT (CCT f) c = dispatchCC (f c)
 
 -- a list, where we append continuations to the back and prepend prompt to the front
@@ -102,6 +108,7 @@ data SubCont =
     SC0
   | SC1 SubCont CCF
   | SC2 Prompt SubCont
+-- now we note that SubCont is absolutely isomorphic to K
 
 -- "rebuild" the structure of the term, from the subcont
 -- effectively, we are "concatenate" the subcont to the "context"?
@@ -110,19 +117,20 @@ data SubCont =
 -- dispatchSubCont (SC1 c f) m = CCBind (dispatchSubCont c m) f
 -- dispatchSubCont (SC2 p c) m = CCPushPrompt p (dispatchSubCont c m)
 
-dispatchSubCont :: SubCont -> V -> Ki -> Kd -> V
-dispatchSubCont SC0 v ki kd = dispatchKi ki v
-dispatchSubCont (SC1 c f) v ki kd = dispatchSubCont c v (Ki1 f ki kd) (Kd1 kd f)
-dispatchSubCont (SC2 p c) v ki kd = dispatchSubCont c v ki (Kd2 p ki kd)
+-- dispatchSubCont :: SubCont -> V -> K -> V
+-- dispatchSubCont SC0 v k = dispatchKi k v
+-- dispatchSubCont (SC1 c f) v k = dispatchSubCont c v (K1 k f)
+-- dispatchSubCont (SC2 p c) v k = dispatchSubCont c v (K2 p k)
 
-data Ki =
-    Ki0
-  | Ki1 CCF Ki Kd
+reverseAppend :: SubCont -> K -> K
+reverseAppend SC0 k = k
+reverseAppend (SC1 c f) k = reverseAppend c (K1 k f)
+reverseAppend (SC2 p c) k = reverseAppend c (K2 p k)
 
-data Kd =
-    Kd0 -- error "Escaping bubble"
-  | Kd1 Kd CCF -- (\c -> kd ((>>= f) . c))
-  | Kd2 Prompt Ki Kd -- \c body -> case proj p body of ...
+dispatchSubCont :: SubCont -> V -> K -> V
+dispatchSubCont c v k = dispatchKi (reverseAppend c k) v
+
+-- and dispatchSubCont becomes "reverse_append"
 
 -- this is because we allow the "argument" of the subcont to be a complex
 -- term. If we want to simplify this, the second argument should be an atom only,
@@ -134,7 +142,7 @@ data Kd =
 -- pushSubCont = dispatchSubCont -- decrease 1 index here
 
 runCC :: CC -> V
-runCC m = dispatchCC m Ki0 Kd0
+runCC m = dispatchCC m K0
 
 resetPrompt :: Prompt
 resetPrompt = Prompt 0

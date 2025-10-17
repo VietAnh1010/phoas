@@ -4,22 +4,105 @@ From shift_reset.interpreter Require Import ierror iheap imonad.
 
 Local Open Scope string_scope.
 Local Open Scope Z_scope.
+Local Open Scope imonad_scope.
 
-Inductive iresult : Type :=
-| RReturn : val -> iresult
-| RBubbleS : (val -> imonad iresult) -> kont2S -> iresult
-| RBubbleC : (val -> imonad iresult) -> kont2C -> iresult.
+Inductive iresult2S : Type :=
+| R2SReturn : val -> iresult2S
+| R2SBubble : (val -> imonad iresult2C) -> kont2C -> iresult2S
+with iresult2C : Type :=
+| R2CReturn : val -> iresult2C
+| R2CBubble : (val -> imonad iresult2S) -> kont2S -> iresult2C.
+
+Inductive iresult3 : Type :=
+| R3Return : val -> iresult3
+| R3BubbleS : (val -> imonad iresult2S) -> kont2S -> iresult3
+| R3BubbleC : (val -> imonad iresult2C) -> kont2C -> iresult3.
+
+Definition handle_R3BubbleS (r : iresult3) : imonad iresult2S :=
+  match r with
+  | R3Return v => imonad_pure (R2SReturn v)
+  | R3BubbleS rec ks => rec (VKontS ks)
+  | R3BubbleC rec kc => imonad_pure (R2SBubble rec kc)
+  end.
+
+Definition handle_R3BubbleC (r : iresult3) : imonad iresult2C :=
+  match r with
+  | R3Return v => imonad_pure (R2CReturn v)
+  | R3BubbleS rec ks => imonad_pure (R2CBubble rec ks)
+  | R3BubbleC rec kc => rec (VKontC kc)
+  end.
+
+Definition unwrap_VInt (v : val) : imonad Z :=
+  match v with
+  | VInt i => imonad_pure i
+  | _ => imonad_throw (TypeError "")
+  end.
+
+Definition unwrap_VBool (v : val) : imonad bool :=
+  match v with
+  | VBool b => imonad_pure b
+  | _ => imonad_throw (TypeError "")
+  end.
+
+Definition unwrap_VLoc (v : val) : imonad loc :=
+  match v with
+  | VLoc l => imonad_pure l
+  | _ => imonad_throw (TypeError "")
+  end.
 
 Definition interpret_atom (a : atom) : imonad val :=
   match a with
   | AUnit => imonad_pure VUnit
   | AInt i => imonad_pure (VInt i)
   | ABool b => imonad_pure (VBool b)
-  | AVar x => imonad_bind imonad_ask_env
-                (fun env => match env_lookup x env with
-                            | None => imonad_throw (NameError (var_car x))
-                            | Some v => imonad_pure v
-                            end)
+  | AVar x =>
+      env <- imonad_ask_env;
+      match env_lookup x env with
+      | None => imonad_throw (NameError (var_car x))
+      | Some v => imonad_pure v
+      end
+  end.
+
+Definition interpret_i2i (f : Z -> Z) (a : atom) : imonad val :=
+  imonad_map (fun i => VInt (f i)) (interpret_atom a >>= unwrap_VInt).
+
+Definition interpret_b2b (f : bool -> bool) (a : atom) : imonad val :=
+  imonad_map (fun b => VBool (f b)) (interpret_atom a >>= unwrap_VBool).
+
+Definition interpret_prim1 (p : prim1) : atom -> imonad val :=
+  match p with
+  | P1Neg => interpret_i2i Z.opp
+  | P1Not => interpret_b2b negb
+  end.
+
+Definition interpret_ii2i (f : Z -> Z -> Z) (a1 a2 : atom) : imonad val :=
+  imonad_lift2 (fun i1 i2 => VInt (f i1 i2)) (interpret_atom a1 >>= unwrap_VInt) (interpret_atom a2 >>= unwrap_VInt).
+
+Definition interpret_ii2b (f : Z -> Z -> bool) (a1 a2 : atom) : imonad val :=
+  imonad_lift2 (fun i1 i2 => VBool (f i1 i2)) (interpret_atom a1 >>= unwrap_VInt) (interpret_atom a2 >>= unwrap_VInt).
+
+Definition interpret_bb2b (f : bool -> bool -> bool) (a1 a2 : atom) : imonad val :=
+  imonad_lift2 (fun b1 b2 => VBool (f b1 b2)) (interpret_atom a1 >>= unwrap_VBool) (interpret_atom a2 >>= unwrap_VBool).
+
+Definition interpret_vv2b (f : val -> val -> bool) (a1 a2 : atom) : imonad val :=
+  imonad_lift2 (fun v1 v2 => VBool (f v1 v2)) (interpret_atom a1) (interpret_atom a2).
+
+Definition interpret_prim2 (p : prim2) : atom -> atom -> imonad val :=
+  match p with
+  | P2Add => interpret_ii2i Z.add
+  | P2Sub => interpret_ii2i Z.sub
+  | P2Mul => interpret_ii2i Z.mul
+  | P2Div => interpret_ii2i Z.div
+  | P2Rem => interpret_ii2i Z.rem
+  | P2Lt => interpret_ii2b Z.ltb
+  | P2Le => interpret_ii2b Z.leb
+  | P2Gt => interpret_ii2b Z.gtb
+  | P2Ge => interpret_ii2b Z.geb
+  | P2And => interpret_bb2b andb
+  | P2Or => interpret_bb2b orb
+  | P2Xor => interpret_bb2b xorb
+  | P2Eq => interpret_vv2b val_eqb
+  | P2Neq => interpret_vv2b val_neqb
   end.
 
 Definition interpret_fun (t : term1) : imonad val :=
@@ -28,156 +111,135 @@ Definition interpret_fun (t : term1) : imonad val :=
 Definition interpret_fix (t : term2) : imonad val :=
   imonad_map (fun env => VFix (C2 env t)) imonad_ask_env.
 
-Definition unwrap_VInt_then {A} (m : imonad val) (k : Z -> imonad A) : imonad A :=
-  imonad_bind m
-    (fun v => match v with
-              | VInt i => k i
-              | _ => imonad_throw (TypeError "")
-              end).
-
-Definition unwrap_VBool_then {A} (m : imonad val) (k : bool -> imonad A) : imonad A :=
-  imonad_bind m
-    (fun v => match v with
-              | VBool b => k b
-              | _ => imonad_throw (TypeError "")
-              end).
-
-Definition unwrap_VLoc_then {A} (m : imonad val) (k : loc -> imonad A) : imonad A :=
-  imonad_bind m
-    (fun v => match v with
-              | VLoc l => k l
-              | _ => imonad_throw (TypeError "")
-              end).
-
-Definition interpret_if (a : atom) (m1 m2 : imonad iresult) : imonad iresult :=
-  unwrap_VBool_then (interpret_atom a) (fun b => if b then m1 else m2).
-
-Definition interpret_i2i (f : Z -> Z) (m : imonad val) : imonad val :=
-  unwrap_VInt_then m (fun i => imonad_pure (VInt (f i))).
-
-Definition interpret_b2b (f : bool -> bool) (m : imonad val) : imonad val :=
-  unwrap_VBool_then m (fun b => imonad_pure (VBool (f b))).
-
-Definition interpret_prim1 (p : prim1) (a : atom) : imonad val :=
-  let m := interpret_atom a in
-  match p with
-  | P1Neg => interpret_i2i Z.opp m
-  | P1Not => interpret_b2b negb m
-  end.
-
-Definition interpret_ii2i (f : Z -> Z -> Z) (m1 m2 : imonad val) : imonad val :=
-  unwrap_VInt_then m1 (fun i1 => unwrap_VInt_then m2 (fun i2 => imonad_pure (VInt (f i1 i2)))).
-
-Definition interpret_ii2b (f : Z -> Z -> bool) (m1 m2 : imonad val) : imonad val :=
-  unwrap_VInt_then m1 (fun i1 => unwrap_VInt_then m2 (fun i2 => imonad_pure (VBool (f i1 i2)))).
-
-Definition interpret_bb2b (f : bool -> bool -> bool) (m1 m2 : imonad val) : imonad val :=
-  unwrap_VBool_then m1 (fun b1 => unwrap_VBool_then m2 (fun b2 => imonad_pure (VBool (f b1 b2)))).
-
-Definition interpret_prim2 (p : prim2) (a1 a2 : atom) : imonad val :=
-  let m1 := interpret_atom a1 in
-  let m2 := interpret_atom a2 in
-  match p with
-  | P2Add => interpret_ii2i Z.add m1 m2
-  | P2Sub => interpret_ii2i Z.sub m1 m2
-  | P2Mul => interpret_ii2i Z.mul m1 m2
-  | P2Div => interpret_ii2i Z.div m1 m2
-  | P2Rem => interpret_ii2i Z.rem m1 m2
-  | P2Lt => interpret_ii2b Z.ltb m1 m2
-  | P2Le => interpret_ii2b Z.leb m1 m2
-  | P2Gt => interpret_ii2b Z.gtb m1 m2
-  | P2Ge => interpret_ii2b Z.geb m1 m2
-  | P2And => interpret_bb2b andb m1 m2
-  | P2Or => interpret_bb2b orb m1 m2
-  | P2Xor => interpret_bb2b xorb m1 m2
-  | P2Eq => imonad_lift2 (fun v1 v2 => VBool (val_eqb v1 v2)) m1 m2
-  | P2Neq => imonad_lift2 (fun v1 v2 => VBool (val_neqb v1 v2)) m1 m2
-  end.
-
 Definition interpret_pair (a1 a2 : atom) : imonad val :=
   imonad_lift2 VPair (interpret_atom a1) (interpret_atom a2).
 
-Definition interpret_split (a : atom) (k : val -> val -> imonad iresult) : imonad iresult :=
-  imonad_bind (interpret_atom a)
-    (fun v => match v with
-              | VPair v1 v2 => k v1 v2
-              | _ => imonad_throw (TypeError "")
-              end).
-
 Definition interpret_inl (a : atom) : imonad val :=
-  imonad_map VInl (interpret_atom a).
+  VInl <$> interpret_atom a.
 
 Definition interpret_inr (a : atom) : imonad val :=
-  imonad_map VInr (interpret_atom a).
-
-Definition interpret_case (a : atom) (k1 k2 : val -> imonad iresult) : imonad iresult :=
-  imonad_bind (interpret_atom a)
-    (fun v => match v with
-              | VInl v' => k1 v'
-              | VInr v' => k2 v'
-              | _ => imonad_throw (TypeError "")
-              end).
+  VInr <$> interpret_atom a.
 
 Definition interpret_ref (a : atom) : imonad val :=
-  imonad_bind (interpret_atom a)
-    (fun v => imonad_bind imonad_get_heap
-                (fun h => match iheap_ref v h with
-                          | None => imonad_throw (MemoryError "")
-                          | Some (l, h') => imonad_then (imonad_set_heap h') (imonad_pure (VLoc l))
-                          end)).
+  v <- interpret_atom a;
+  h <- imonad_get_heap;
+  match iheap_ref v h with
+  | None => imonad_throw (MemoryError "")
+  | Some (l, h') => VLoc l <$ imonad_set_heap h'
+  end.
 
 Definition interpret_get (a : atom) : imonad val :=
-  unwrap_VLoc_then (interpret_atom a)
-    (fun l => imonad_bind imonad_get_heap
-                (fun h => match iheap_get l h with
-                          | None => imonad_throw (MemoryError "")
-                          | Some v => imonad_pure v
-                          end)).
+  l <- interpret_atom a >>= unwrap_VLoc;
+  h <- imonad_get_heap;
+  match iheap_get l h with
+  | None => imonad_throw (MemoryError "")
+  | Some v => imonad_pure v
+  end.
 
 Definition interpret_set (a1 a2 : atom) : imonad val :=
-  let m1 := interpret_atom a1 in
-  let m2 := interpret_atom a2 in
-  unwrap_VLoc_then m1
-    (fun l => imonad_bind m2
-                (fun v => imonad_bind imonad_get_heap
-                            (fun h => match iheap_set l v h with
-                                      | None => imonad_throw (MemoryError "")
-                                      | Some h' => imonad_then (imonad_set_heap h') (imonad_pure VUnit)
-                                      end))).
+  l <- interpret_atom a1 >>= unwrap_VLoc;
+  v <- interpret_atom a2;
+  h <- imonad_get_heap;
+  match iheap_set l v h with
+  | None => imonad_throw (MemoryError "")
+  | Some h' => VUnit <$ imonad_set_heap h'
+  end.
 
 Definition interpret_free (a : atom) : imonad val :=
-  unwrap_VLoc_then (interpret_atom a)
-    (fun l => imonad_bind imonad_get_heap
-                (fun h => match iheap_free l h with
-                          | None => imonad_throw (MemoryError "")
-                          | Some h' => imonad_then (imonad_set_heap h') (imonad_pure VUnit)
-                          end)).
+  l <- interpret_atom a >>= unwrap_VLoc;
+  h <- imonad_get_heap;
+  match iheap_free l h with
+  | None => imonad_throw (MemoryError "")
+  | Some h' => VUnit <$ imonad_set_heap h'
+  end.
 
-Definition with_binder (b : binder) (v : val) (m : imonad iresult) : imonad iresult :=
+Definition interpret_let : (env -> imonad iresult3) -> imonad iresult3 :=
+  imonad_bind imonad_ask_env.
+
+Definition interpret_if (a : atom) (m1 m2 : imonad iresult3) : imonad iresult3 :=
+  b <- interpret_atom a >>= unwrap_VBool;
+  if b then m1 else m2.
+
+Definition interpret_split (a : atom) (f : val -> val -> imonad iresult3) : imonad iresult3 :=
+  v <- interpret_atom a;
+  match v with
+  | VPair v1 v2 => f v1 v2
+  | _ => imonad_throw (TypeError "")
+  end.
+
+Definition interpret_case (a : atom) (f1 f2 : val -> imonad iresult3) : imonad iresult3 :=
+  v <- interpret_atom a;
+  match v with
+  | VInl v' => f1 v'
+  | VInr v' => f2 v'
+  | _ => imonad_throw (TypeError "")
+  end.
+
+Definition interpret_reset (k : kont1) (m : imonad iresult3) (f : val -> imonad iresult3) : imonad iresult3 :=
+  r <- m >>= handle_R3BubbleS;
+  match r with
+  | R2SReturn v => f v
+  | R2SBubble f' kc => imonad_pure (R3BubbleC f' (K2CSnoc kc k))
+  end.
+
+Definition interpret_prompt (k : kont1) (m : imonad iresult3) (f : val -> imonad iresult3) : imonad iresult3 :=
+  r <- m >>= handle_R3BubbleC;
+  match r with
+  | R2CReturn v => f v
+  | R2CBubble f' ks => imonad_pure (R3BubbleS f' (K2SSnoc ks k))
+  end.
+
+Definition interpret_shift (k : kont1) (f : env -> val -> imonad iresult3) : imonad iresult3 :=
+  imonad_map (fun env => R3BubbleS (f env >=> handle_R3BubbleS) (K2SHead k)) imonad_ask_env.
+
+Definition interpret_control (k : kont1) (f : env -> val -> imonad iresult3) : imonad iresult3 :=
+  imonad_map (fun env => R3BubbleC (f env >=> handle_R3BubbleC) (K2CHead k)) imonad_ask_env.
+
+Definition with_binder (b : binder) (v : val) (m : imonad iresult3) : imonad iresult3 :=
   match b with
   | BAnon => m
   | BVar x => imonad_local_env (ECons x v) m
   end.
 
-Definition interpret_term1_with (rec : term -> imonad iresult) (t : term1) (v : val) : imonad iresult :=
+Definition interpret_term1_with (rec : term -> imonad iresult3) (t : term1) (v : val) : imonad iresult3 :=
   let (b, t') := t in with_binder b v (rec t').
 
-Definition interpret_term2_with (rec : term -> imonad iresult) (t : term2) (v1 v2 : val) : imonad iresult :=
+Definition interpret_term2_with (rec : term -> imonad iresult3) (t : term2) (v1 v2 : val) : imonad iresult3 :=
   let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (rec t')).
 
-Definition interpret_clo1_with (rec : term -> imonad iresult) (c : clo1) (m : imonad val) : imonad iresult :=
-  imonad_bind m (fun v => let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term1_with rec t v)).
+Definition interpret_clo1_with (rec : term -> imonad iresult3) (c : clo1) (v : val) : imonad iresult3 :=
+  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term1_with rec t v).
 
-Definition interpret_clo2_with (rec : term -> imonad iresult) (c : clo2) (f : val) (m : imonad val) : imonad iresult :=
-  imonad_bind m (fun v => let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term2_with rec t f v)).
+Definition interpret_clo2_with (rec : term -> imonad iresult3) (c : clo2) (v1 v2 : val) : imonad iresult3 :=
+  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term2_with rec t v1 v2).
 
-(*
-Definition interpret_kont_with (rec : kont -> term -> imonad val) (k : kont) (m : imonad val) : imonad val :=
+Definition interpret_kont1_with (rec : kont1 -> term -> imonad iresult3) (k : kont1) (v : val) : imonad iresult3 :=
   match k with
-  | KNil => m
-  | KCons c k' => interpret_clo1_with (rec k') c m
+  | K1Nil => imonad_pure (R3Return v)
+  | K1Cons c k' => interpret_clo1_with (rec k') c v
   end.
-*)
+
+Fixpoint interpret_kont2S_with (rec : kont1 -> term -> imonad iresult3) (ks : kont2S) (v : val) : imonad iresult3 :=
+  match ks with
+  | K2SHead k => interpret_kont1_with rec k v
+  | K2SSnoc ks' k => interpret_prompt k (interpret_kont2S_with rec ks' v) (interpret_kont1_with rec k)
+  end.
+
+Fixpoint interpret_kont2C_with (rec : kont1 -> term -> imonad iresult3) (kc : kont2C) (v : val) : imonad iresult3 :=
+  match kc with
+  | K2CHead k => interpret_kont1_with rec k v
+  | K2CSnoc kc' k => interpret_reset k (interpret_kont2C_with rec kc' v) (interpret_kont1_with rec k)
+  end.
+
+Definition interpret_app (rec : kont1 -> term -> imonad iresult3) (k : kont1) (a1 a2 : atom) (f : val -> imonad iresult3) : imonad iresult3 :=
+  v <- interpret_atom a1;
+  match v with
+  | VFun c => interpret_atom a2 >>= interpret_clo1_with (rec k) c
+  | VFix c => interpret_atom a2 >>= interpret_clo2_with (rec k) c v
+  | VKontS ks => interpret_reset k (interpret_atom a2 >>= interpret_kont2S_with rec ks) f
+  | VKontC kc => interpret_atom a2 >>= interpret_kont2C_with rec (kont2C_extend kc k)
+  | _ => imonad_throw (TypeError "")
+  end.
 
 Set Implicit Arguments.
 
@@ -199,9 +261,9 @@ Inductive term_graph : kont1 -> term -> Prop :=
 | GTGet k a : kont1_graph k -> term_graph k (TGet a)
 | GTSet k a1 a2 : kont1_graph k -> term_graph k (TSet a1 a2)
 | GTFree k a : kont1_graph k -> term_graph k (TFree a)
-| GTShift k t' : term1_graph K1Nil t' -> term_graph k (TShift t')
+| GTShift k t' : (forall env, clo1_graph K1Nil (C1 env t')) -> term_graph k (TShift t')
 | GTReset k t' : term_graph K1Nil t' -> kont1_graph k -> term_graph k (TReset t')
-| GTControl k t' : term1_graph K1Nil t' -> term_graph k (TControl t')
+| GTControl k t' : (forall env, clo1_graph K1Nil (C1 env t')) -> term_graph k (TControl t')
 | GTPrompt k t' : term_graph K1Nil t' -> kont1_graph k -> term_graph k (TPrompt t')
 with term1_graph : kont1 -> term1 -> Prop :=
 | GT1 k b t' : term_graph k t' -> term1_graph k (T1 b t')
@@ -270,7 +332,7 @@ Proof. inversion 1; auto. Defined.
 Lemma GTFree_inv k a : term_graph k (TFree a) -> kont1_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTShift_inv k t' : term_graph k (TShift t') -> term1_graph K1Nil t'.
+Lemma GTShift_inv k t' : term_graph k (TShift t') -> forall env, clo1_graph K1Nil (C1 env t').
 Proof. inversion 1; auto. Defined.
 
 Lemma GTReset_inv1 k t' : term_graph k (TReset t') -> term_graph K1Nil t'.
@@ -279,7 +341,7 @@ Proof. inversion 1; auto. Defined.
 Lemma GTReset_inv2 k t' : term_graph k (TReset t') -> kont1_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTControl_inv k t' : term_graph k (TControl t') -> term1_graph K1Nil t'.
+Lemma GTControl_inv k t' : term_graph k (TControl t') -> forall env, clo1_graph K1Nil (C1 env t').
 Proof. inversion 1; auto. Defined.
 
 Lemma GTPrompt_inv1 k t' : term_graph k (TPrompt t') -> term_graph K1Nil t'.
@@ -319,9 +381,9 @@ Fixpoint build_term_graph_dep (k : kont1) (G : kont1_graph k) (t : term) : term_
   | TGet a => GTGet a G
   | TSet a1 a2 => GTSet a1 a2 G
   | TFree a => GTFree a G
-  | TShift t' => GTShift k (build_term1_graph_dep GK1Nil t')
+  | TShift t' => GTShift k (fun env => GC1 env (build_term1_graph_dep GK1Nil t'))
   | TReset t' => GTReset (build_term_graph_dep GK1Nil t') G
-  | TControl t' => GTControl k (build_term1_graph_dep GK1Nil t')
+  | TControl t' => GTControl k (fun env => GC1 env (build_term1_graph_dep GK1Nil t'))
   | TPrompt t' => GTPrompt (build_term_graph_dep GK1Nil t') G
   end
 with build_term1_graph_dep (k : kont1) (G : kont1_graph k) (t : term1) : term1_graph k t :=
@@ -338,74 +400,46 @@ Definition build_clo1_graph_dep (k : kont1) (G : kont1_graph k) (c : clo1) : clo
   | C1 env t => GC1 env (build_term1_graph_dep G t)
   end.
 
-Fixpoint interpret_term_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : term) (G : term_graph k t) : imonad iresult :=
-  match t return term_graph k t -> imonad iresult with
-  | TAtom a => fun G => interpret_kont1_dep rec (GTAtom_inv G) (interpret_atom a)
-  | TFun t' => fun G => interpret_kont1_dep rec (GTFun_inv G) (interpret_fun t')
-  | TFix t' => fun G => interpret_kont1_dep rec (GTFix_inv G) (interpret_fix t')
-  | TApp a1 a2 =>
-      fun G =>
-        let m1 := interpret_atom a1 in
-        let m2 := interpret_atom a2 in
-        imonad_bind m1
-          (fun v => match v with
-                    | VFun c => interpret_clo1_with (rec k) c m2
-                    | VFix c => interpret_clo2_with (rec k) c v m2
-                    | VKontS k' => imonad_throw (TypeError "") (*interpret_kont1_dep rec (GTApp_inv G) (interpret_kont_with (rec DReset) k' m2)*)
-                    | VKontC k' => imonad_throw (TypeError "") (*interpret_kont_with (rec d) (kont_append k' k) m2*)
-                    | _ => imonad_throw (TypeError "")
-                    end)
-  | TLet t1 t2 => fun G => imonad_bind imonad_ask_env (fun env => interpret_term_dep rec (GTLet_inv G env))
+Fixpoint interpret_term_dep (rec : kont1 -> term -> imonad iresult3) (k : kont1) (t : term) (G : term_graph k t) : imonad iresult3 :=
+  match t return term_graph k t -> imonad iresult3 with
+  | TAtom a => fun G => interpret_atom a >>= interpret_kont1_dep rec (GTAtom_inv G)
+  | TFun t' => fun G => interpret_fun t' >>= interpret_kont1_dep rec (GTFun_inv G)
+  | TFix t' => fun G => interpret_fix t' >>= interpret_kont1_dep rec (GTFix_inv G)
+  | TApp a1 a2 => fun G => interpret_app rec k a1 a2 (interpret_kont1_dep rec (GTApp_inv G))
+  | TLet t1 t2 => fun G => interpret_let (fun env => interpret_term_dep rec (GTLet_inv G env))
   | TIf a t1 t2 => fun G => interpret_if a (interpret_term_dep rec (GTIf_inv1 G)) (interpret_term_dep rec (GTIf_inv2 G))
-  | TPrim1 p a => fun G => interpret_kont1_dep rec (GTPrim1_inv G) (interpret_prim1 p a)
-  | TPrim2 p a1 a2 => fun G => interpret_kont1_dep rec (GTPrim2_inv G) (interpret_prim2 p a1 a2)
-  | TPair a1 a2 => fun G => interpret_kont1_dep rec (GTPair_inv G) (interpret_pair a1 a2)
+  | TPrim1 p a => fun G => interpret_prim1 p a >>= interpret_kont1_dep rec (GTPrim1_inv G)
+  | TPrim2 p a1 a2 => fun G => interpret_prim2 p a1 a2 >>= interpret_kont1_dep rec (GTPrim2_inv G)
+  | TPair a1 a2 => fun G => interpret_pair a1 a2 >>= interpret_kont1_dep rec (GTPair_inv G)
   | TSplit a t' => fun G => interpret_split a (interpret_term2_dep rec (GTSplit_inv G))
-  | TInl a => fun G => interpret_kont1_dep rec (GTInl_inv G) (interpret_inl a)
-  | TInr a => fun G => interpret_kont1_dep rec (GTInr_inv G) (interpret_inr a)
+  | TInl a => fun G => interpret_inl a >>= interpret_kont1_dep rec (GTInl_inv G)
+  | TInr a => fun G => interpret_inr a >>= interpret_kont1_dep rec (GTInr_inv G)
   | TCase a t1 t2 => fun G => interpret_case a (interpret_term1_dep rec (GTCase_inv1 G)) (interpret_term1_dep rec (GTCase_inv2 G))
-  | TRef a => fun G => interpret_kont1_dep rec (GTRef_inv G) (interpret_ref a)
-  | TGet a => fun G => interpret_kont1_dep rec (GTGet_inv G) (interpret_get a)
-  | TSet a1 a2 => fun G => interpret_kont1_dep rec (GTSet_inv G) (interpret_set a1 a2)
-  | TFree a => fun G => interpret_kont1_dep rec (GTFree_inv G) (interpret_free a)
-  | TShift t' => fun G => imonad_pure (RBubbleS (interpret_term1_dep rec (GTShift_inv G)) (K2SHead k))
-  | TReset t' =>
-      fun G =>
-        imonad_bind (interpret_term_dep rec (GTReset_inv1 G))
-          (fun r =>
-             match r with
-             | RReturn v => interpret_kont1_dep rec (GTReset_inv2 G) (imonad_pure v)
-             | RBubbleS rec' ks => rec' (VKontS ks)
-             | RBubbleC rec' kc => imonad_pure (RBubbleC rec' (K2CSnoc kc k))
-             end)
-  | TControl t' => fun G => imonad_pure (RBubbleC (interpret_term1_dep rec (GTControl_inv G)) (K2CHead k))
-  | TPrompt t' =>
-      fun G =>
-        imonad_bind (interpret_term_dep rec (GTPrompt_inv1 G))
-          (fun r =>
-             match r with
-             | RReturn v => interpret_kont1_dep rec (GTPrompt_inv2 G) (imonad_pure v)
-             | RBubbleS rec' ks => rec' (VKontS ks)
-             | RBubbleC rec' kc => imonad_pure (RBubbleC rec' (K2CSnoc kc k))
-             end)
+  | TRef a => fun G => interpret_ref a >>= interpret_kont1_dep rec (GTRef_inv G)
+  | TGet a => fun G => interpret_get a >>= interpret_kont1_dep rec (GTGet_inv G)
+  | TSet a1 a2 => fun G => interpret_set a1 a2 >>= interpret_kont1_dep rec (GTSet_inv G)
+  | TFree a => fun G => interpret_free a >>= interpret_kont1_dep rec (GTFree_inv G)
+  | TShift t' => fun G => interpret_shift k (fun env => interpret_clo1_dep rec (GTShift_inv G env))
+  | TReset t' => fun G => interpret_reset k (interpret_term_dep rec (GTReset_inv1 G)) (interpret_kont1_dep rec (GTReset_inv2 G))
+  | TControl t' => fun G => interpret_control k (fun env => interpret_clo1_dep rec (GTControl_inv G env))
+  | TPrompt t' => fun G => interpret_prompt k (interpret_term_dep rec (GTPrompt_inv1 G)) (interpret_kont1_dep rec (GTPrompt_inv2 G))
   end G
-with interpret_term1_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : term1) (G : term1_graph k t) (v : val) : imonad iresult :=
-  match t return term1_graph k t -> imonad iresult with
+with interpret_term1_dep (rec : kont1 -> term -> imonad iresult3) (k : kont1) (t : term1) (G : term1_graph k t) (v : val) : imonad iresult3 :=
+  match t return term1_graph k t -> imonad iresult3 with
   | T1 b t' => fun G => with_binder b v (interpret_term_dep rec (GT1_inv G))
   end G
-with interpret_term2_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : term2) (G : term2_graph k t) (v1 v2 : val) : imonad iresult :=
-  match t return term2_graph k t -> imonad iresult with
+with interpret_term2_dep (rec : kont1 -> term -> imonad iresult3) (k : kont1) (t : term2) (G : term2_graph k t) (v1 v2 : val) : imonad iresult3 :=
+  match t return term2_graph k t -> imonad iresult3 with
   | T2 b1 b2 t' => fun G => with_binder b1 v1 (with_binder b2 v2 (interpret_term_dep rec (GT2_inv G)))
   end G
-with interpret_clo1_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (c : clo1) (G : clo1_graph k c) (m : imonad val) : imonad iresult :=
-  imonad_bind m
-    (fun v => match c return clo1_graph k c -> imonad iresult with
-              | C1 env t => fun G => imonad_local_env (fun _ => env) (interpret_term1_dep rec (GC1_inv G) v)
-              end G)
-with interpret_kont1_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (G : kont1_graph k) (m : imonad val) : imonad iresult :=
-  match k return kont1_graph k -> imonad iresult with
-  | K1Nil => fun _ => imonad_map RReturn m
-  | K1Cons c k' => fun G => interpret_clo1_dep rec (GK1Cons_inv G) m
+with interpret_clo1_dep (rec : kont1 -> term -> imonad iresult3) (k : kont1) (c : clo1) (G : clo1_graph k c) (v : val) : imonad iresult3 :=
+  match c return clo1_graph k c -> imonad iresult3 with
+  | C1 env t => fun G => imonad_local_env (fun _ => env) (interpret_term1_dep rec (GC1_inv G) v)
+  end G
+with interpret_kont1_dep (rec : kont1 -> term -> imonad iresult3) (k : kont1) (G : kont1_graph k) (v : val) : imonad iresult3 :=
+  match k return kont1_graph k -> imonad iresult3 with
+  | K1Nil => fun _ => imonad_pure (R3Return v)
+  | K1Cons c k' => fun G => interpret_clo1_dep rec (GK1Cons_inv G) v
   end G.
 
 Unset Implicit Arguments.
@@ -416,22 +450,22 @@ Fixpoint build_kont1_graph (k : kont1) : kont1_graph k :=
   | K1Cons c k' => GK1Cons (build_clo1_graph_dep (build_kont1_graph k') c)
   end.
 
-Definition build_term_graph (d : delim) (k : kont) (t : term) : term_graph d k t :=
-  build_term_graph_dep (build_kont1_graph d k) t.
+Definition build_term_graph (k : kont1) (t : term) : term_graph k t :=
+  build_term_graph_dep (build_kont1_graph k) t.
 
-Definition interpret_term_aux (rec : delim -> kont -> term -> imonad val) (d : delim) (k : kont) (t : term) : imonad val :=
-  interpret_term_dep rec (build_term_graph d k t).
+Definition interpret_term_aux (rec : kont1 -> term -> imonad iresult3) (k : kont1) (t : term) : imonad iresult3 :=
+  interpret_term_dep rec (build_term_graph k t).
 
-Fixpoint interpret_term (fuel : nat) (d : delim) (k : kont) (t : term) : imonad val :=
+Fixpoint interpret_term (fuel : nat) (k : kont1) (t : term) : imonad iresult3 :=
   match fuel with
   | O => imonad_throw OutOfFuel
-  | S fuel' => interpret_term_aux (interpret_term fuel') d k t
+  | S fuel' => interpret_term_aux (interpret_term fuel') k t
   end.
 
-Definition run_term (fuel : nat) (t : term) : (ierror + val) * iheap :=
-  imonad_run (interpret_term fuel DNone KNil t) ENil iheap_empty.
+Definition run_term (fuel : nat) (t : term) : (ierror + iresult3) * iheap :=
+  imonad_run (interpret_term fuel K1Nil t) ENil iheap_empty.
 
-Definition eval_term (fuel : nat) (t : term) : ierror + val :=
+Definition eval_term (fuel : nat) (t : term) : ierror + iresult3 :=
   fst (run_term fuel t).
 
 Definition exec_term (fuel : nat) (t : term) : iheap :=

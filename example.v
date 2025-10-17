@@ -248,5 +248,5 @@ Example reverse1 xs :=
      let "xs" := xs in
      prompt ("reverse" "xs") }>.
 
-Time Compute (eval_term 1000 (copy1 (term_of_list (sequence 0 400)))).
-Time Compute (eval_term 1000 (reverse1 (term_of_list (sequence 0 400)))).
+Time Compute (eval_term 10000 (copy1 (term_of_list (sequence 0 4000)))).
+Time Compute (eval_term 10000 (reverse1 (term_of_list (sequence 0 4000)))).

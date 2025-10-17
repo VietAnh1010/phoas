@@ -22,15 +22,22 @@ Inductive iresult3 : Type :=
 Definition handle_R3BubbleS (r : iresult3) : imonad iresult2S :=
   match r with
   | R3Return v => imonad_pure (R2SReturn v)
-  | R3BubbleS rec ks => rec (VKontS ks)
-  | R3BubbleC rec kc => imonad_pure (R2SBubble rec kc)
+  | R3BubbleS f ks => f (VKontS ks)
+  | R3BubbleC f kc => imonad_pure (R2SBubble f kc)
   end.
 
 Definition handle_R3BubbleC (r : iresult3) : imonad iresult2C :=
   match r with
   | R3Return v => imonad_pure (R2CReturn v)
-  | R3BubbleS rec ks => imonad_pure (R2CBubble rec ks)
-  | R3BubbleC rec kc => rec (VKontC kc)
+  | R3BubbleS f ks => imonad_pure (R2CBubble f ks)
+  | R3BubbleC f kc => f (VKontC kc)
+  end.
+
+Definition unwrap_R3Return (r : iresult3) : imonad val :=
+  match r with
+  | R3Return v => imonad_pure v
+  | R3BubbleS _ _ => imonad_throw (ControlError "undelimited shift")
+  | R3BubbleC _ _ => imonad_throw (ControlError "undelimited control")
   end.
 
 Definition unwrap_VInt (v : val) : imonad Z :=
@@ -463,10 +470,10 @@ Fixpoint interpret_term (fuel : nat) (k : kont1) (t : term) : imonad iresult3 :=
   | S fuel' => interpret_term_aux (interpret_term fuel') k t
   end.
 
-Definition run_term (fuel : nat) (t : term) : (ierror + iresult3) * iheap :=
-  imonad_run (interpret_term fuel K1Nil t) ENil iheap_empty.
+Definition run_term (fuel : nat) (t : term) : (ierror + val) * iheap :=
+  imonad_run (interpret_term fuel K1Nil t >>= unwrap_R3Return) ENil iheap_empty.
 
-Definition eval_term (fuel : nat) (t : term) : ierror + iresult3 :=
+Definition eval_term (fuel : nat) (t : term) : ierror + val :=
   fst (run_term fuel t).
 
 Definition exec_term (fuel : nat) (t : term) : iheap :=

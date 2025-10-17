@@ -68,15 +68,21 @@ Inductive val : Type :=
 | VInl : val -> val
 | VInr : val -> val
 | VLoc : loc -> val
-| VKontS : kont -> val
-| VKontC : kont -> val
+| VKontS : kont2S -> val
+| VKontC : kont2C -> val
 with clo1 : Type :=
 | C1 : env -> term1 -> clo1
 with clo2 : Type :=
 | C2 : env -> term2 -> clo2
-with kont : Type :=
-| KNil : kont
-| KCons : clo1 -> kont -> kont
+with kont1 : Type :=
+| K1Nil : kont1
+| K1Cons : clo1 -> kont1 -> kont1
+with kont2S : Type :=
+| K2SHead : kont1 -> kont2S
+| K2SSnoc : kont2S -> kont1 -> kont2S
+with kont2C : Type :=
+| K2CHead : kont1 -> kont2C
+| K2CSnoc : kont2C -> kont1 -> kont2C
 with env : Type :=
 | ENil : env
 | ECons : var -> val -> env -> env.
@@ -105,18 +111,22 @@ Defined.
 Fixpoint val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with clo1_eq_dec : forall (c1 c2 : clo1), {c1 = c2} + {c1 <> c2}
 with clo2_eq_dec : forall (c1 c2 : clo2), {c1 = c2} + {c1 <> c2}
-with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
+with kont1_eq_dec : forall (k1 k2 : kont1), {k1 = k2} + {k1 <> k2}
+with kont2S_eq_dec : forall (ks1 ks2 : kont2S), {ks1 = ks2} + {ks1 <> ks2}
+with kont2C_eq_dec : forall (kc1 kc2 : kont2C), {kc1 = kc2} + {kc1 <> kc2}
 with env_eq_dec : forall (env1 env2 : env), {env1 = env2} + {env1 <> env2}.
 Proof.
   { decide equality; auto using Z.eq_dec, bool_dec, loc_eq_dec. }
   { decide equality; auto using term1_eq_dec. }
   { decide equality; auto using term2_eq_dec. }
   { decide equality. }
+  { decide equality. }
+  { decide equality. }
   { decide equality; auto using var_eq_dec. }
 Defined.
 
-Definition val_eqb (v1 v2 : val) : bool := proj1_sig (bool_of_sumbool (val_eq_dec v1 v2)).
-Definition val_neqb (v1 v2 : val) : bool := negb (val_eqb v1 v2).
+Definition val_eqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then true else false.
+Definition val_neqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then false else true.
 
 Module Coerce.
   Coercion Var : string >-> var.

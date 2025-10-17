@@ -1,7 +1,13 @@
 From shift_reset.core Require Import syntax.
 
-Fixpoint kont_append (k1 k2 : kont) : kont :=
+Fixpoint kont1_append (k1 k2 : kont1) : kont1 :=
   match k1 with
-  | KNil => k2
-  | KCons c k1' => KCons c (kont_append k1' k2)
+  | K1Nil => k2
+  | K1Cons c k1' => K1Cons c (kont1_append k1' k2)
+  end.
+
+Definition kont2C_extend (kc : kont2C) (k : kont1) : kont2C :=
+  match kc with
+  | K2CHead k' => K2CHead (kont1_append k' k)
+  | K2CSnoc kc' k' => K2CSnoc kc' (kont1_append k' k)
   end.

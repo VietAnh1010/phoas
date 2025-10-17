@@ -5,6 +5,7 @@ From shift_reset.interpreter Require Import ierror iheap imonad.
 Local Open Scope string_scope.
 Local Open Scope Z_scope.
 Local Open Scope imonad_scope.
+Local Unset Elimination Schemes.
 
 Inductive iresult2S : Type :=
 | R2SReturn : val -> iresult2S

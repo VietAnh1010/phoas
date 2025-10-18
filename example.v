@@ -260,17 +260,21 @@ Example unhandled_exception :=
   <{ let "exn" := exception "Segfault" 139 in
      raise "exn" }>.
 
-Example handle_exception :=
+Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
      try
-       let "exn" := exception "Segfault" 139 in
+       let "exn" := exception tag 10 in
        raise "exn";
      fun '("Segfault" "code") =>
-       let "b" := "code" = 139 in
+       let "b" := "code" = 10 in
        let _ := "r" <- "b" in
-       !"r" }>.
+       !"r";
+     fun '("StackOverflow" _) => false;
+     fun "exn" => raise "exn" }>.
 
 Print handle_exception.
 
 Compute (eval_term 1 unhandled_exception).
-Compute (eval_term 1 handle_exception).
+Compute (eval_term 1 (handle_exception "Segfault")).
+Compute (eval_term 1 (handle_exception "StackOverflow")).
+Compute (eval_term 1 (handle_exception "Exception")).

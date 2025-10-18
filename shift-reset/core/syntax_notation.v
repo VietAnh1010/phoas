@@ -5,7 +5,7 @@ Delimit Scope term_scope with term.
 Bind Scope term_scope with term.
 
 Declare Custom Entry binder'.
-Declare Custom Entry exn_pattern.
+Declare Custom Entry pattern'.
 Declare Custom Entry term.
 Declare Custom Entry term1.
 Declare Custom Entry exn_term.
@@ -13,11 +13,11 @@ Declare Custom Entry exn_term.
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
 
-Notation "'_'" := ExnPAny (in custom exn_pattern at level 0) : term_scope.
-Notation "x" := x (in custom exn_pattern at level 0, x constr at level 0) : term_scope.
+Notation "'_'" := PAny (in custom pattern' at level 0) : term_scope.
+Notation "x" := x (in custom pattern' at level 0, x constr at level 0) : term_scope.
 
 Notation "' ( tag x )" :=
-  (ExnPTag tag x) (in custom exn_pattern at level 10, tag custom exn_pattern, x custom exn_pattern) : term_scope.
+  (PTag tag x) (in custom pattern' at level 10, tag at level 0, x custom binder') : term_scope.
 
 Notation "<{ t }>" := t (t custom term at level 99) : term_scope.
 Notation "( t )" := t (in custom term, t at level 99) : term_scope.
@@ -34,10 +34,18 @@ Notation "'fun' x => t" :=
         t custom term) : term_scope.
 
 Notation "'fun' x => t" :=
-  (ExnT x t)
+  (ExnTBase x t)
     (in custom exn_term at level 69,
-        x custom exn_pattern at level 10,
+        x custom pattern' at level 10,
         t custom term) : term_scope.
+
+Notation "'fun' x => t1 ; t2" :=
+  (ExnTCons x t1 t2)
+    (in custom exn_term at level 69,
+        x custom pattern' at level 10,
+        t1 custom term,
+        t2 custom exn_term,
+        right associativity) : term_scope.
 
 Notation "a1 a2" :=
   (TApp a1 a2) (in custom term at level 10, a1 custom term, a2 custom term) : term_scope.

@@ -1,5 +1,5 @@
 From Stdlib Require Import Bool String ZArith.
-From shift_reset.core Require Import loc var.
+From shift_reset.core Require Import ident loc.
 
 Inductive prim1 : Type :=
 | P1Not : prim1
@@ -23,13 +23,13 @@ Inductive prim2 : Type :=
 
 Inductive binder : Type :=
 | BAnon : binder
-| BVar : var -> binder.
+| BVar : ident -> binder.
 
 Inductive atom : Type :=
 | AUnit : atom
 | AInt : Z -> atom
 | ABool : bool -> atom
-| AVar : var -> atom.
+| AVar : ident -> atom.
 
 Inductive term : Type :=
 | TAtom : atom -> term
@@ -53,6 +53,9 @@ Inductive term : Type :=
 | TReset : term -> term
 | TControl : term1 -> term
 | TPrompt : term -> term
+| TExn : ident -> atom -> term
+| TRaise : atom -> term
+| TTry : term -> ident -> term1 -> term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
@@ -70,6 +73,7 @@ Inductive val : Type :=
 | VLoc : loc -> val
 | VKontS : kont2S -> val
 | VKontC : kont2C -> val
+| VExn : exn -> val
 with clo1 : Type :=
 | C1 : env -> term1 -> clo1
 with clo2 : Type :=
@@ -84,8 +88,10 @@ with kont2C : Type :=
 | K2CHead : kont1 -> kont2C
 | K2CSnoc : kont2C -> kont1 -> kont2C
 with env : Type :=
-| ENil : env
-| ECons : var -> val -> env -> env.
+| EnvNil : env
+| EnvCons : ident -> val -> env -> env
+with exn : Type :=
+| Exn : ident -> val -> exn.
 
 Definition prim1_eq_dec : forall (p1 p2 : prim1), {p1 = p2} + {p1 <> p2}.
 Proof. decide equality. Defined.
@@ -94,16 +100,16 @@ Definition prim2_eq_dec : forall (p1 p2 : prim2), {p1 = p2} + {p1 <> p2}.
 Proof. decide equality. Defined.
 
 Definition binder_eq_dec : forall (b1 b2 : binder), {b1 = b2} + {b1 <> b2}.
-Proof. decide equality; auto using var_eq_dec. Defined.
+Proof. decide equality; auto using ident_eq_dec. Defined.
 
 Definition atom_eq_dec : forall (a1 a2 : atom), {a1 = a2} + {a1 <> a2}.
-Proof. decide equality; auto using Z.eq_dec, bool_dec, var_eq_dec. Defined.
+Proof. decide equality; auto using Z.eq_dec, bool_dec, ident_eq_dec. Defined.
 
 Fixpoint term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
 with term1_eq_dec : forall (t1 t2 : term1), {t1 = t2} + {t1 <> t2}
 with term2_eq_dec : forall (t1 t2 : term2), {t1 = t2} + {t1 <> t2}.
 Proof.
-  { decide equality; auto using atom_eq_dec, prim1_eq_dec, prim2_eq_dec. }
+  { decide equality; auto using atom_eq_dec, prim1_eq_dec, prim2_eq_dec, ident_eq_dec. }
   { decide equality; auto using binder_eq_dec. }
   { decide equality; auto using binder_eq_dec. }
 Defined.
@@ -114,7 +120,8 @@ with clo2_eq_dec : forall (c1 c2 : clo2), {c1 = c2} + {c1 <> c2}
 with kont1_eq_dec : forall (k1 k2 : kont1), {k1 = k2} + {k1 <> k2}
 with kont2S_eq_dec : forall (ks1 ks2 : kont2S), {ks1 = ks2} + {ks1 <> ks2}
 with kont2C_eq_dec : forall (kc1 kc2 : kont2C), {kc1 = kc2} + {kc1 <> kc2}
-with env_eq_dec : forall (env1 env2 : env), {env1 = env2} + {env1 <> env2}.
+with env_eq_dec : forall (env1 env2 : env), {env1 = env2} + {env1 <> env2}
+with exn_eq_dec : forall (exn1 exn2 : exn), {exn1 = exn2} + {exn1 <> exn2}.
 Proof.
   { decide equality; auto using Z.eq_dec, bool_dec, loc_eq_dec. }
   { decide equality; auto using term1_eq_dec. }
@@ -122,17 +129,18 @@ Proof.
   { decide equality. }
   { decide equality. }
   { decide equality. }
-  { decide equality; auto using var_eq_dec. }
+  { decide equality; auto using ident_eq_dec. }
+  { decide equality; auto using ident_eq_dec. }
 Defined.
 
 Definition val_eqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then true else false.
 Definition val_neqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then false else true.
 
 Module Coerce.
-  Coercion Var : string >-> var.
-  Coercion BVar : var >-> binder.
+  Coercion Ident : string >-> ident.
+  Coercion BVar : ident >-> binder.
   Coercion AInt : Z >-> atom.
   Coercion ABool : bool >-> atom.
-  Coercion AVar : var >-> atom.
+  Coercion AVar : ident >-> atom.
   Coercion TAtom : atom >-> term.
 End Coerce.

@@ -1,9 +1,8 @@
-From shift_reset.core Require Import syntax var.
+From shift_reset.core Require Import syntax.
 
 Declare Scope term_scope.
 Delimit Scope term_scope with term.
 Bind Scope term_scope with term.
-Open Scope term_scope.
 
 Declare Custom Entry term.
 

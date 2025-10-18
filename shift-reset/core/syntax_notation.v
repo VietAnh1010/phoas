@@ -93,7 +93,7 @@ Notation "'fix' f x1 x2 .. xn := t" :=
         t custom term at level 99) : term_scope.
 
 Notation "()" := AUnit (in custom term at level 0) : term_scope.
-Notation "'_'" := BAnon (in custom term at level 0) : term_scope.
+Notation "'_'" := BAny (in custom term at level 0) : term_scope.
 
 Notation "'not' a" :=
   (TPrim1 P1Not a) (in custom term at level 23, a custom term at level 0) : term_scope.

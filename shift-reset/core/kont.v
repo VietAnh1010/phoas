@@ -8,6 +8,7 @@ Fixpoint kont1_append (k1 k2 : kont1) : kont1 :=
 
 Definition kont2C_extend (kc : kont2C) (k : kont1) : kont2C :=
   match kc with
-  | K2CHead k' => K2CHead (kont1_append k' k)
-  | K2CSnoc kc' k' => K2CSnoc kc' (kont1_append k' k)
+  | K2CPure k' => K2CPure (kont1_append k' k)
+  | K2CReset kc' k' => K2CReset kc' (kont1_append k' k)
+  | K2CTry kc' c k' => K2CTry kc' c (kont1_append k' k)
   end.

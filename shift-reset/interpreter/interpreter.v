@@ -1,5 +1,5 @@
 From Stdlib Require Import String ZArith.
-From shift_reset.core Require Import syntax env ident kont loc.
+From shift_reset.core Require Import syntax env kont loc tag var.
 From shift_reset.interpreter Require Import ierror iheap imonad.
 
 Local Open Scope string_scope.
@@ -22,12 +22,6 @@ Definition handle_RShift (r : iresult) : imonad iresult :=
 Definition handle_RControl (r : iresult) : imonad iresult :=
   match r with
   | RControl f kc => f (VKontC kc)
-  | _ => imonad_pure r
-  end.
-
-Definition handle_RRaise (h : exn -> imonad iresult) (r : iresult) : imonad iresult :=
-  match r with
-  | RRaise exn => h exn
   | _ => imonad_pure r
   end.
 
@@ -65,7 +59,7 @@ Definition interpret_atom (a : atom) : imonad val :=
   | AVar x =>
       env <- imonad_ask_env;
       match env_lookup x env with
-      | None => imonad_throw (NameError (ident_car x))
+      | None => imonad_throw (NameError (var_car x))
       | Some v => imonad_pure v
       end
   end.
@@ -127,8 +121,8 @@ Definition interpret_inl (a : atom) : imonad val :=
 Definition interpret_inr (a : atom) : imonad val :=
   VInr <$> interpret_atom a.
 
-Definition interpret_exn (x : ident) (a : atom) : imonad val :=
-  imonad_map (fun v => VExn (Exn x v)) (interpret_atom a).
+Definition interpret_exn (tag : tag) (a : atom) : imonad val :=
+  imonad_map (fun v => VExn (Exn tag v)) (interpret_atom a).
 
 Definition interpret_ref (a : atom) : imonad val :=
   v <- interpret_atom a;
@@ -203,18 +197,14 @@ Definition interpret_prompt (k : kont1) (m : imonad iresult) (f : val -> imonad 
   | RRaise _ => imonad_pure r
   end.
 
-Definition interpret_try' (k : kont1) (m : imonad iresult) (f : val -> imonad iresult) (c : exn_clo) (h : exn -> imonad iresult) : imonad iresult :=
-  r <- m >>= handle_RRaise h;
+Definition interpret_try (k : kont1) (m : imonad iresult) (f : val -> imonad iresult) (t : exn_term) (h : exn -> imonad iresult) : imonad iresult :=
+  r <- m;
   match r with
   | RReturn v => f v
-  | RShift f' ks => imonad_pure (RShift f' (K2STry ks c k))
-  | RControl f' kc => imonad_pure (RControl f' (K2CTry kc c k))
-  | RRaise _ => imonad_pure r
+  | RShift f' ks => imonad_map (fun env => RShift f' (K2STry ks (ExnC env t) k)) imonad_ask_env
+  | RControl f' kc => imonad_map (fun env => RControl f' (K2CTry kc (ExnC env t) k)) imonad_ask_env
+  | RRaise exn => h exn
   end.
-
-Definition interpret_try (k : kont1) (m : imonad iresult) (f : val -> imonad iresult) (t : exn_term) (h : exn -> imonad iresult) : imonad iresult :=
-  env <- imonad_ask_env;
-  interpret_try' k m f (ExnC env t) h.
 
 Definition interpret_shift (k : kont1) (f : env -> val -> imonad iresult) : imonad iresult :=
   imonad_map (fun env => RShift (f env >=> handle_RShift) (K2SPure k)) imonad_ask_env.
@@ -239,54 +229,71 @@ Definition with_exn_pattern (p : exn_pattern) (exn : exn) (m : imonad iresult) :
   match p with
   | ExnPAny => m
   | ExnPVar x => imonad_local_env (EnvCons x (VExn exn)) m
-  | ExnPExn tag x =>
+  | ExnPTag tag x =>
       let (tag', v) := exn in
-      if ident_eq_dec tag tag' then imonad_local_env (EnvCons x v) m else imonad_pure (RRaise exn)
+      if tag_eq_dec tag tag' then imonad_local_env (EnvCons x v) m else imonad_pure (RRaise exn)
   end.
 
-Definition interpret_term1_with (rec : term -> imonad iresult) (t : term1) (v : val) : imonad iresult :=
-  let (b, t') := t in with_binder b v (rec t').
+Definition interpreter : Type := kont1 -> term -> imonad iresult.
 
-Definition interpret_term2_with (rec : term -> imonad iresult) (t : term2) (v1 v2 : val) : imonad iresult :=
-  let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (rec t')).
+Definition interpret_term1_with (rec : interpreter) (k : kont1) (t : term1) (v : val) : imonad iresult :=
+  let (b, t') := t in with_binder b v (rec k t').
 
-Definition interpret_exn_term_with (rec : term -> imonad iresult) (t : exn_term) (exn : exn) : imonad iresult :=
-  let (p, t') := t in with_exn_pattern p exn (rec t').
+Definition interpret_term2_with (rec : interpreter) (k : kont1) (t : term2) (v1 v2 : val) : imonad iresult :=
+  let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (rec k t')).
 
-Definition interpret_clo1_with (rec : term -> imonad iresult) (c : clo1) (v : val) : imonad iresult :=
-  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term1_with rec t v).
+Definition interpret_exn_term_with (rec : interpreter) (k : kont1) (t : exn_term) (exn : exn) : imonad iresult :=
+  let (p, t') := t in with_exn_pattern p exn (rec k t').
 
-Definition interpret_clo2_with (rec : term -> imonad iresult) (c : clo2) (v1 v2 : val) : imonad iresult :=
-  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term2_with rec t v1 v2).
+Definition interpret_clo1_with (rec : interpreter) (k : kont1) (c : clo1) (v : val) : imonad iresult :=
+  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term1_with rec k t v).
 
-Definition interpret_exn_clo_with (rec : term -> imonad iresult) (c : exn_clo) (exn : exn) : imonad iresult :=
-  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_exn_term_with rec t exn).
+Definition interpret_clo2_with (rec : interpreter) (k : kont1) (c : clo2) (v1 v2 : val) : imonad iresult :=
+  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_term2_with rec k t v1 v2).
 
-Definition interpret_kont1_with (rec : kont1 -> term -> imonad iresult) (k : kont1) (v : val) : imonad iresult :=
+Definition interpret_exn_clo_with (rec : interpreter) (k : kont1) (c : exn_clo) (exn : exn) : imonad iresult :=
+  let (env, t) := c in imonad_local_env (fun _ => env) (interpret_exn_term_with rec k t exn).
+
+Definition interpret_kont1_with (rec : interpreter) (k : kont1) (v : val) : imonad iresult :=
   match k with
   | K1Nil => imonad_pure (RReturn v)
-  | K1Cons c k' => interpret_clo1_with (rec k') c v
+  | K1Cons c k' => interpret_clo1_with rec k' c v
   end.
 
-Fixpoint interpret_kont2S_with (rec : kont1 -> term -> imonad iresult) (ks : kont2S) (v : val) : imonad iresult :=
+Definition interpret_K2Reset_with (rec : interpreter) (k : kont1) (m : imonad iresult) : imonad iresult :=
+  interpret_reset k m (interpret_kont1_with rec k).
+
+Definition interpret_K2Prompt_with (rec : interpreter) (k : kont1) (m : imonad iresult) : imonad iresult :=
+  interpret_prompt k m (interpret_kont1_with rec k).
+
+Definition interpret_K2Try_with (rec : interpreter) (k : kont1) (m : imonad iresult) (c : exn_clo) : imonad iresult :=
+  r <- m;
+  match r with
+  | RReturn v => interpret_kont1_with rec k v
+  | RShift f ks => imonad_pure (RShift f (K2STry ks c k))
+  | RControl f kc => imonad_pure (RControl f (K2CTry kc c k))
+  | RRaise exn => interpret_exn_clo_with rec k c exn
+  end.
+
+Fixpoint interpret_kont2S_with (rec : interpreter) (ks : kont2S) (v : val) : imonad iresult :=
   match ks with
   | K2SPure k => interpret_kont1_with rec k v
-  | K2SPrompt ks' k => interpret_prompt k (interpret_kont2S_with rec ks' v) (interpret_kont1_with rec k)
-  | K2STry ks' c k => interpret_try' k (interpret_kont2S_with rec ks' v) (interpret_kont1_with rec k) c (interpret_exn_clo_with (rec k) c)
+  | K2SPrompt ks' k => interpret_K2Prompt_with rec k (interpret_kont2S_with rec ks' v)
+  | K2STry ks' c k => interpret_K2Try_with rec k (interpret_kont2S_with rec ks' v) c
   end.
 
-Fixpoint interpret_kont2C_with (rec : kont1 -> term -> imonad iresult) (kc : kont2C) (v : val) : imonad iresult :=
+Fixpoint interpret_kont2C_with (rec : interpreter) (kc : kont2C) (v : val) : imonad iresult :=
   match kc with
   | K2CPure k => interpret_kont1_with rec k v
-  | K2CReset kc' k => interpret_reset k (interpret_kont2C_with rec kc' v) (interpret_kont1_with rec k)
-  | K2CTry kc' c k => interpret_try' k (interpret_kont2C_with rec kc' v) (interpret_kont1_with rec k) c (interpret_exn_clo_with (rec k) c)
+  | K2CReset kc' k => interpret_K2Reset_with rec k (interpret_kont2C_with rec kc' v)
+  | K2CTry kc' c k => interpret_K2Try_with rec k (interpret_kont2C_with rec kc' v) c
   end.
 
-Definition interpret_app (rec : kont1 -> term -> imonad iresult) (k : kont1) (a1 a2 : atom) (f : val -> imonad iresult) : imonad iresult :=
+Definition interpret_app (rec : interpreter) (k : kont1) (a1 a2 : atom) (f : val -> imonad iresult) : imonad iresult :=
   v <- interpret_atom a1;
   match v with
-  | VFun c => interpret_atom a2 >>= interpret_clo1_with (rec k) c
-  | VFix c => interpret_atom a2 >>= interpret_clo2_with (rec k) c v
+  | VFun c => interpret_atom a2 >>= interpret_clo1_with rec k c
+  | VFix c => interpret_atom a2 >>= interpret_clo2_with rec k c v
   | VKontS ks => interpret_reset k (interpret_atom a2 >>= interpret_kont2S_with rec ks) f
   | VKontC kc => interpret_atom a2 >>= interpret_kont2C_with rec (kont2C_extend kc k)
   | _ => imonad_throw (TypeError "")
@@ -316,7 +323,7 @@ Inductive term_graph : kont1 -> term -> Prop :=
 | GTReset k t' : term_graph K1Nil t' -> kont1_graph k -> term_graph k (TReset t')
 | GTControl k t' : (forall env, clo1_graph K1Nil (C1 env t')) -> term_graph k (TControl t')
 | GTPrompt k t' : term_graph K1Nil t' -> kont1_graph k -> term_graph k (TPrompt t')
-| GTExn k x a : kont1_graph k -> term_graph k (TExn x a)
+| GTExn k tag a : kont1_graph k -> term_graph k (TExn tag a)
 | GTRaise k a : term_graph k (TRaise a)
 | GTTry k t1 t2 : term_graph K1Nil t1 -> kont1_graph k -> exn_term_graph k t2 -> term_graph k (TTry t1 t2)
 with term1_graph : kont1 -> term1 -> Prop :=
@@ -406,7 +413,7 @@ Proof. inversion 1; auto. Defined.
 Lemma GTPrompt_inv2 k t' : term_graph k (TPrompt t') -> kont1_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTExn_inv k x a : term_graph k (TExn x a) -> kont1_graph k.
+Lemma GTExn_inv k tag a : term_graph k (TExn tag a) -> kont1_graph k.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTTry_inv1 k t1 t2 : term_graph k (TTry t1 t2) -> term_graph K1Nil t1.
@@ -456,7 +463,7 @@ Fixpoint build_term_graph_dep (k : kont1) (G : kont1_graph k) (t : term) : term_
   | TReset t' => GTReset (build_term_graph_dep GK1Nil t') G
   | TControl t' => GTControl k (fun env => GC1 env (build_term1_graph_dep GK1Nil t'))
   | TPrompt t' => GTPrompt (build_term_graph_dep GK1Nil t') G
-  | TExn x a => GTExn x a G
+  | TExn tag a => GTExn tag a G
   | TRaise a => GTRaise k a
   | TTry t1 t2 => GTTry (build_term_graph_dep GK1Nil t1) G (build_exn_term_graph_dep G t2)
   end
@@ -478,7 +485,7 @@ Definition build_clo1_graph_dep (k : kont1) (G : kont1_graph k) (c : clo1) : clo
   | C1 env t => GC1 env (build_term1_graph_dep G t)
   end.
 
-Fixpoint interpret_term_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : term) (G : term_graph k t) : imonad iresult :=
+Fixpoint interpret_term_dep (rec : interpreter) (k : kont1) (t : term) (G : term_graph k t) : imonad iresult :=
   match t return term_graph k t -> imonad iresult with
   | TAtom a => fun G => interpret_atom a >>= interpret_kont1_dep rec (GTAtom_inv G)
   | TFun t' => fun G => interpret_fun t' >>= interpret_kont1_dep rec (GTFun_inv G)
@@ -501,28 +508,27 @@ Fixpoint interpret_term_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) 
   | TReset t' => fun G => interpret_reset k (interpret_term_dep rec (GTReset_inv1 G)) (interpret_kont1_dep rec (GTReset_inv2 G))
   | TControl t' => fun G => interpret_control k (fun env => interpret_clo1_dep rec (GTControl_inv G env))
   | TPrompt t' => fun G => interpret_prompt k (interpret_term_dep rec (GTPrompt_inv1 G)) (interpret_kont1_dep rec (GTPrompt_inv2 G))
-  | TExn x a => fun G => interpret_exn x a >>= interpret_kont1_dep rec (GTExn_inv G)
+  | TExn tag a => fun G => interpret_exn tag a >>= interpret_kont1_dep rec (GTExn_inv G)
   | TRaise a => fun G => interpret_raise a
-  | TTry t1 t2 => fun G => interpret_try k (interpret_term_dep rec (GTTry_inv1 G)) (interpret_kont1_dep rec (GTTry_inv2 G))
-                             t2 (interpret_exn_term_dep rec (GTTry_inv3 G))
+  | TTry t1 t2 => fun G => interpret_try k (interpret_term_dep rec (GTTry_inv1 G)) (interpret_kont1_dep rec (GTTry_inv2 G)) t2 (interpret_exn_term_dep rec (GTTry_inv3 G))
   end G
-with interpret_term1_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : term1) (G : term1_graph k t) (v : val) : imonad iresult :=
+with interpret_term1_dep (rec : interpreter) (k : kont1) (t : term1) (G : term1_graph k t) (v : val) : imonad iresult :=
   match t return term1_graph k t -> imonad iresult with
   | T1 b t' => fun G => with_binder b v (interpret_term_dep rec (GT1_inv G))
   end G
-with interpret_term2_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : term2) (G : term2_graph k t) (v1 v2 : val) : imonad iresult :=
+with interpret_term2_dep (rec : interpreter) (k : kont1) (t : term2) (G : term2_graph k t) (v1 v2 : val) : imonad iresult :=
   match t return term2_graph k t -> imonad iresult with
   | T2 b1 b2 t' => fun G => with_binder b1 v1 (with_binder b2 v2 (interpret_term_dep rec (GT2_inv G)))
   end G
-with interpret_exn_term_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : exn_term) (G : exn_term_graph k t) (exn : exn) : imonad iresult :=
+with interpret_exn_term_dep (rec : interpreter) (k : kont1) (t : exn_term) (G : exn_term_graph k t) (exn : exn) : imonad iresult :=
   match t return exn_term_graph k t -> imonad iresult with
   | ExnT p t' => fun G => with_exn_pattern p exn (interpret_term_dep rec (GExnT_inv G))
   end G
-with interpret_clo1_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (c : clo1) (G : clo1_graph k c) (v : val) : imonad iresult :=
+with interpret_clo1_dep (rec : interpreter) (k : kont1) (c : clo1) (G : clo1_graph k c) (v : val) : imonad iresult :=
   match c return clo1_graph k c -> imonad iresult with
   | C1 env t => fun G => imonad_local_env (fun _ => env) (interpret_term1_dep rec (GC1_inv G) v)
   end G
-with interpret_kont1_dep (rec : kont1 -> term -> imonad iresult) (k : kont1) (G : kont1_graph k) (v : val) : imonad iresult :=
+with interpret_kont1_dep (rec : interpreter) (k : kont1) (G : kont1_graph k) (v : val) : imonad iresult :=
   match k return kont1_graph k -> imonad iresult with
   | K1Nil => fun _ => imonad_pure (RReturn v)
   | K1Cons c k' => fun G => interpret_clo1_dep rec (GK1Cons_inv G) v
@@ -539,7 +545,7 @@ Fixpoint build_kont1_graph (k : kont1) : kont1_graph k :=
 Definition build_term_graph (k : kont1) (t : term) : term_graph k t :=
   build_term_graph_dep (build_kont1_graph k) t.
 
-Definition interpret_term_aux (rec : kont1 -> term -> imonad iresult) (k : kont1) (t : term) : imonad iresult :=
+Definition interpret_term_aux (rec : interpreter) (k : kont1) (t : term) : imonad iresult :=
   interpret_term_dep rec (build_term_graph k t).
 
 Fixpoint interpret_term (fuel : nat) (k : kont1) (t : term) : imonad iresult :=

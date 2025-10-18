@@ -1,7 +1,7 @@
-From shift_reset.core Require Import ident syntax.
+From shift_reset.core Require Import var syntax.
 
-Fixpoint env_lookup (x : ident) (env : env) : option val :=
+Fixpoint env_lookup (x : var) (env : env) : option val :=
   match env with
   | EnvNil => None
-  | EnvCons x' v env' => if ident_eq_dec x x' then Some v else env_lookup x env'
+  | EnvCons x' v env' => if var_eq_dec x x' then Some v else env_lookup x env'
   end.

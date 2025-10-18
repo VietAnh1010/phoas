@@ -1,5 +1,5 @@
 From Stdlib Require Import Bool String ZArith.
-From shift_reset.core Require Import ident loc.
+From shift_reset.core Require Import loc tag var.
 
 Inductive prim1 : Type :=
 | P1Not : prim1
@@ -25,16 +25,16 @@ Inductive atom : Type :=
 | AUnit : atom
 | AInt : Z -> atom
 | ABool : bool -> atom
-| AVar : ident -> atom.
+| AVar : var -> atom.
 
 Inductive binder : Type :=
 | BAny : binder
-| BVar : ident -> binder.
+| BVar : var -> binder.
 
 Inductive exn_pattern : Type :=
 | ExnPAny : exn_pattern
-| ExnPVar : ident -> exn_pattern
-| ExnPExn : ident -> ident -> exn_pattern.
+| ExnPVar : var -> exn_pattern
+| ExnPTag : tag -> var -> exn_pattern.
 
 Inductive term : Type :=
 | TAtom : atom -> term
@@ -58,7 +58,7 @@ Inductive term : Type :=
 | TReset : term -> term
 | TControl : term1 -> term
 | TPrompt : term -> term
-| TExn : ident -> atom -> term
+| TExn : tag -> atom -> term
 | TRaise : atom -> term
 | TTry : term -> exn_term -> term
 with term1 : Type :=
@@ -100,16 +100,17 @@ with kont2C : Type :=
 | K2CTry : kont2C -> exn_clo -> kont1 -> kont2C
 with env : Type :=
 | EnvNil : env
-| EnvCons : ident -> val -> env -> env
+| EnvCons : var -> val -> env -> env
 with exn : Type :=
-| Exn : ident -> val -> exn.
+| Exn : tag -> val -> exn.
 
 Create HintDb eq_dec_db discriminated.
 
 Hint Resolve Z.eq_dec : eq_dec_db.
 Hint Resolve bool_dec : eq_dec_db.
-Hint Resolve ident_eq_dec : eq_dec_db.
 Hint Resolve loc_eq_dec : eq_dec_db.
+Hint Resolve tag_eq_dec : eq_dec_db.
+Hint Resolve var_eq_dec : eq_dec_db.
 
 Definition prim1_eq_dec : forall (p1 p2 : prim1), {p1 = p2} + {p1 <> p2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
@@ -168,10 +169,11 @@ Definition val_eqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then true else fa
 Definition val_neqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then false else true.
 
 Module Coerce.
-  Coercion Ident : string >-> ident.
-  Coercion BVar : ident >-> binder.
+  Coercion Tag : string >-> tag.
+  Coercion Var : string >-> var.
+  Coercion BVar : var >-> binder.
   Coercion AInt : Z >-> atom.
   Coercion ABool : bool >-> atom.
-  Coercion AVar : ident >-> atom.
+  Coercion AVar : var >-> atom.
   Coercion TAtom : atom >-> term.
 End Coerce.

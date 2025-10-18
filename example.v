@@ -13,17 +13,18 @@ Example ex1 :=
   <{ let "f" :=
        reset
          let "x" := 6 * 9 in
-         let "y" := shift "k" "k" in
+         let "y" := shift fun "k" => "k" in
          "x" * "y"
      in
      "f" 10 }>.
 
+Print ex1.
 Compute (eval_term 2 ex1).
 
 Example append_aux :=
   <{ fix "append_aux" "xs" :=
        match "xs" with
-       | Inl _ => shift "k" "k"
+       | Inl _ => shift fun "k" => "k"
        | Inr "xs" =>
            let ("x", "xs'") := "xs" in
            let "r" := "append_aux" "xs'" in
@@ -98,7 +99,7 @@ Compute (eval_term 5 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 Time Compute (eval_term 2000 (term_of_list (sequence 0 1000))).
 
 Example either :=
-  <{ fun "x" "y" => shift "k" let _ := "k" "x" in "k" "y" }>.
+  <{ fun "x" "y" => shift fun "k" => let _ := "k" "x" in "k" "y" }>.
 
 Example ex2 :=
   <{ let "either" := either in
@@ -122,8 +123,9 @@ Compute (eval_term 6 ex2).
 
 Example choice :=
   <{ fun "xs" =>
-       shift "k"
-         let fix "go" "xs" :=
+       shift
+         fun "k" =>
+           let fix "go" "xs" :=
            match "xs" with
            | Inl _ => ()
            | Inr "xs" =>
@@ -131,7 +133,7 @@ Example choice :=
                let _ := "k" "x" in
                "go" "xs'"
            end
-         in "go" "xs" }>.
+           in "go" "xs" }>.
 
 Example sum xs :=
   <{ let "choice" := choice in
@@ -145,14 +147,14 @@ Example sum xs :=
          "result" <- "r"
      in !"result" }>.
 
-Compute (run_term 3 (sum (term_of_list []))).
-Compute (run_term 4 (sum (term_of_list [1]))).
-Compute (run_term 5 (sum (term_of_list [1; 2]))).
+Compute (eval_term 3 (sum (term_of_list []))).
+Compute (eval_term 4 (sum (term_of_list [1]))).
+Compute (eval_term 5 (sum (term_of_list [1; 2]))).
 
-Time Compute (run_term 503 (sum (term_of_list (sequence 0 500)))).
+Time Compute (eval_term 503 (sum (term_of_list (sequence 0 500)))).
 
 Example yield :=
-  <{ fun "x" => shift "k" (let "p" := ("x", "k") in Inr "p") }>.
+  <{ fun "x" => shift fun "k" => let "p" := ("x", "k") in Inr "p" }>.
 
 Example walk_aux :=
   <{ let "yield" := yield in
@@ -167,7 +169,7 @@ Example walk_aux :=
 
 Example walk  :=
   <{ let "walk_aux" := walk_aux in
-     fun "t" => reset (let _ := "walk_aux" "t" in Inl ()) }>.
+     fun "t" => reset let _ := "walk_aux" "t" in Inl () }>.
 
 Example sum_tree :=
   <{ let "walk" := walk in
@@ -216,10 +218,11 @@ Example copy :=
        | Inr "xs" =>
            let ("x", "xs'") := "xs" in
            let "xs" :=
-             shift "k"
-               let "xs'" := "k" "xs'" in
-               let "xs" := ("x", "xs'") in
-               Inr "xs"
+             shift
+               fun "k" =>
+                 let "xs'" := "k" "xs'" in
+                 let "xs" := ("x", "xs'") in
+                 Inr "xs"
            in
            "copy" "xs"
        end }>.
@@ -231,10 +234,11 @@ Example reverse :=
        | Inr "xs" =>
            let ("x", "xs'") := "xs" in
            let "xs" :=
-             control "k"
-               let "xs'" := "k" "xs'" in
-               let "xs" := ("x", "xs'") in
-               Inr "xs"
+             control
+               fun "k" =>
+                 let "xs'" := "k" "xs'" in
+                 let "xs" := ("x", "xs'") in
+                 Inr "xs"
            in
            "reverse" "xs"
        end }>.
@@ -249,11 +253,24 @@ Example reverse1 xs :=
      let "xs" := xs in
      prompt ("reverse" "xs") }>.
 
-Time Compute (eval_term 1000 (copy1 (term_of_list (sequence 0 400)))).
-Time Compute (eval_term 1000 (reverse1 (term_of_list (sequence 0 400)))).
+Time Compute (eval_term 1000 (copy1 (term_of_list (sequence 0 5)))).
+Time Compute (eval_term 1000 (reverse1 (term_of_list (sequence 0 5)))).
 
 Example unhandled_exception :=
   <{ let "exn" := exception "Segfault" 139 in
      raise "exn" }>.
 
+Example handle_exception :=
+  <{ let "r" := ref false in
+     try
+       let "exn" := exception "Segfault" 139 in
+       raise "exn";
+     fun '("Segfault" "code") =>
+       let "b" := "code" = 139 in
+       let _ := "r" <- "b" in
+       !"r" }>.
+
+Print handle_exception.
+
 Compute (eval_term 1 unhandled_exception).
+Compute (eval_term 1 handle_exception).

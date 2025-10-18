@@ -195,6 +195,7 @@ Notation "'let' ( x1 , x2 ) := a 'in' t" :=
   (TSplit a (T2 x1 x2 t))
     (in custom term at level 69,
         x1, x2 at level 0,
+        a custom term,
         t custom term,
         right associativity) : term_scope.
 
@@ -202,6 +203,7 @@ Notation "'let' x1 , x2 := a 'in' t" :=
   (TSplit a (T2 x1 x2 t))
     (in custom term at level 69,
         x1, x2 at level 0,
+        a custom term,
         t custom term,
         right associativity) : term_scope.
 
@@ -218,3 +220,12 @@ Notation "'match' a 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
         x1, x2 at level 0,
         t1 custom term,
         t2 custom term) : term_scope.
+
+Notation "'exception' x a" :=
+  (TExn x a)
+    (in custom term at level 23,
+        x at level 0,
+        a custom term at level 0) : term_scope.
+
+Notation "'raise' a" :=
+  (TRaise a) (in custom term at level 23, a custom term at level 0) : term_scope.

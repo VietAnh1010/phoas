@@ -7,6 +7,7 @@ Import Coerce.
 
 Open Scope string_scope.
 Open Scope Z_scope.
+Open Scope term_scope.
 
 Example ex1 :=
   <{ let "f" :=
@@ -248,5 +249,11 @@ Example reverse1 xs :=
      let "xs" := xs in
      prompt ("reverse" "xs") }>.
 
-Time Compute (eval_term 10000 (copy1 (term_of_list (sequence 0 4000)))).
-Time Compute (eval_term 10000 (reverse1 (term_of_list (sequence 0 4000)))).
+Time Compute (eval_term 1000 (copy1 (term_of_list (sequence 0 400)))).
+Time Compute (eval_term 1000 (reverse1 (term_of_list (sequence 0 400)))).
+
+Example unhandled_exception :=
+  <{ let "exn" := exception "Segfault" 139 in
+     raise "exn" }>.
+
+Compute (eval_term 1 unhandled_exception).

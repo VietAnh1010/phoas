@@ -267,7 +267,7 @@ Definition interpret_K2Reset_with (rec : interpreter) (k : kont) (m : imonad ire
 Definition interpret_K2Prompt_with (rec : interpreter) (k : kont) (m : imonad iresult) : imonad iresult :=
   interpret_prompt k m (interpret_kont_with rec k).
 
-Definition interpret_K2Try_with (rec : interpreter) (k : kont) (m : imonad iresult) (c : exn_clo) : imonad iresult :=
+Definition interpret_K2Try_with (rec : interpreter) (k : kont) (c : exn_clo) (m : imonad iresult) : imonad iresult :=
   r <- m;
   match r with
   | RReturn v => interpret_kont_with rec k v
@@ -281,7 +281,7 @@ Fixpoint interpret_metakont_with (rec : interpreter) (mk : metakont) (v : val) :
   | MKPure k => interpret_kont_with rec k v
   | MKReset mk' k => interpret_K2Reset_with rec k (interpret_metakont_with rec mk' v)
   | MKPrompt mk' k => interpret_K2Prompt_with rec k (interpret_metakont_with rec mk' v)
-  | MKTry mk' c k => interpret_K2Try_with rec k (interpret_metakont_with rec mk' v) c
+  | MKTry mk' c k => interpret_K2Try_with rec k c (interpret_metakont_with rec mk' v)
   end.
 
 Definition interpret_app (rec : interpreter) (k : kont) (a1 a2 : atom) (f : val -> imonad iresult) : imonad iresult :=

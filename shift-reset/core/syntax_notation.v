@@ -26,32 +26,25 @@ Notation "( t )" := t (in custom term, t at level 99) : term_scope.
 Notation "{ t }" := t (in custom term, t constr) : term_scope.
 Notation "t" := t (in custom term at level 0, t constr at level 0) : term_scope.
 
-Notation "( t )" := t (in custom term1, t at level 99) : term_scope.
-Notation "( t )" := t (in custom ret_term, t at level 99) : term_scope.
-Notation "( t )" := t (in custom exn_term, t at level 99) : term_scope.
-Notation "( t )" := t (in custom eff_term, t at level 99) : term_scope.
-
-Notation "'fun' x => t" :=
+Notation "( 'fun' x => t )" :=
   (T1 x t)
     (in custom term1 at level 69,
         x custom binder' at level 0,
         t custom term) : term_scope.
 
-Notation "'_'" := TRet0 (in custom ret_term at level 0) : term_scope.
-
-Notation "'fun' x => t" :=
+Notation "( 'fun' x => t )" :=
   (TRet1 x t)
     (in custom ret_term at level 69,
         x custom binder' at level 0,
         t custom term) : term_scope.
 
-Notation "'fun' x => t" :=
+Notation "( 'fun' x => t )" :=
   (TExnBase x t)
     (in custom exn_term at level 69,
         x custom pattern' at level 10,
         t custom term) : term_scope.
 
-Notation "'fun' x => t1 ; t2" :=
+Notation "( 'fun' x => t1 ) ; t2" :=
   (TExnCons x t1 t2)
     (in custom exn_term at level 69,
         x custom pattern' at level 10,
@@ -59,20 +52,20 @@ Notation "'fun' x => t1 ; t2" :=
         t2 custom exn_term,
         right associativity) : term_scope.
 
-Notation "'fun' x , k => t" :=
+Notation "( 'fun' x , k => t )" :=
   (TEffBase x k t)
     (in custom eff_term at level 69,
         x custom pattern' at level 10,
         k custom binder' at level 0,
         t custom term) : term_scope.
 
-Notation "'fun' x , k => t1 ; t2" :=
+Notation "( 'fun' x , k => t1 ) ; t2" :=
   (TEffCons x k t1 t2)
     (in custom eff_term at level 69,
         x custom pattern' at level 10,
         k custom binder' at level 0,
         t1 custom term,
-        t2 custom exn_term,
+        t2 custom eff_term,
         right associativity) : term_scope.
 
 Notation "a1 a2" :=
@@ -281,9 +274,21 @@ Notation "'handle' t1 ; t2 ; t3" :=
         t2 custom ret_term,
         t3 custom eff_term) : term_scope.
 
+Notation "'handle' t1 ;; t2" :=
+  (THandle t1 TRet0 t2)
+    (in custom term at level 23,
+        t1 custom term,
+        t2 custom eff_term) : term_scope.
+
 Notation "'shallow' 'handle' t1 ; t2 ; t3" :=
   (TShallowHandle t1 t2 t3)
     (in custom term at level 23,
         t1 custom term,
         t2 custom ret_term,
         t3 custom eff_term) : term_scope.
+
+Notation "'shallow' 'handle' t1 ;; t2" :=
+  (TShallowHandle t1 TRet0 t2)
+    (in custom term at level 23,
+        t1 custom term,
+        t2 custom eff_term) : term_scope.

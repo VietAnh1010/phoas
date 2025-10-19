@@ -13,7 +13,7 @@ Example ex1 :=
   <{ let "f" :=
        reset
          let "x" := 6 * 9 in
-         let "y" := shift fun "k" => "k" in
+         let "y" := shift (fun "k" => "k") in
          "x" * "y"
      in
      "f" 10 }>.
@@ -24,7 +24,7 @@ Compute (eval_term 2 ex1).
 Example append_aux :=
   <{ fix "append_aux" "xs" :=
        match "xs" with
-       | Inl _ => shift fun "k" => "k"
+       | Inl _ => shift (fun "k" => "k")
        | Inr "xs" =>
            let ("x", "xs'") := "xs" in
            let "r" := "append_aux" "xs'" in
@@ -34,7 +34,7 @@ Example append_aux :=
 
 Example append :=
   <{ let "append_aux" := append_aux in
-     fun "xs" => reset "append_aux" "xs" }>.
+     fun "xs" => reset ("append_aux" "xs") }>.
 
 Fixpoint term_of_list (xs : list Z) :=
   match xs with
@@ -99,7 +99,7 @@ Compute (eval_term 5 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 Time Compute (eval_term 2000 (term_of_list (sequence 0 1000))).
 
 Example either :=
-  <{ fun "x" "y" => shift fun "k" => let _ := "k" "x" in "k" "y" }>.
+  <{ fun "x" "y" => shift (fun "k" => let _ := "k" "x" in "k" "y") }>.
 
 Example ex2 :=
   <{ let "either" := either in
@@ -124,16 +124,16 @@ Compute (eval_term 6 ex2).
 Example choice :=
   <{ fun "xs" =>
        shift
-         fun "k" =>
-           let fix "go" "xs" :=
-           match "xs" with
-           | Inl _ => ()
-           | Inr "xs" =>
-               let ("x", "xs'") := "xs" in
-               let _ := "k" "x" in
-               "go" "xs'"
-           end
-           in "go" "xs" }>.
+         (fun "k" =>
+            let fix "go" "xs" :=
+              match "xs" with
+              | Inl _ => ()
+              | Inr "xs" =>
+                  let ("x", "xs'") := "xs" in
+                  let _ := "k" "x" in
+                  "go" "xs'"
+              end
+            in "go" "xs") }>.
 
 Example sum xs :=
   <{ let "choice" := choice in
@@ -154,7 +154,7 @@ Compute (eval_term 5 (sum (term_of_list [1; 2]))).
 Time Compute (eval_term 503 (sum (term_of_list (sequence 0 500)))).
 
 Example yield :=
-  <{ fun "x" => shift fun "k" => let "p" := ("x", "k") in Inr "p" }>.
+  <{ fun "x" => shift (fun "k" => let "p" := ("x", "k") in Inr "p") }>.
 
 Example walk_aux :=
   <{ let "yield" := yield in
@@ -169,7 +169,7 @@ Example walk_aux :=
 
 Example walk  :=
   <{ let "walk_aux" := walk_aux in
-     fun "t" => reset let _ := "walk_aux" "t" in Inl () }>.
+     fun "t" => reset (let _ := "walk_aux" "t" in Inl ()) }>.
 
 Example sum_tree :=
   <{ let "walk" := walk in
@@ -219,10 +219,10 @@ Example copy :=
            let ("x", "xs'") := "xs" in
            let "xs" :=
              shift
-               fun "k" =>
-                 let "xs'" := "k" "xs'" in
-                 let "xs" := ("x", "xs'") in
-                 Inr "xs"
+               (fun "k" =>
+                  let "xs'" := "k" "xs'" in
+                  let "xs" := ("x", "xs'") in
+                  Inr "xs")
            in
            "copy" "xs"
        end }>.
@@ -235,10 +235,10 @@ Example reverse :=
            let ("x", "xs'") := "xs" in
            let "xs" :=
              control
-               fun "k" =>
-                 let "xs'" := "k" "xs'" in
-                 let "xs" := ("x", "xs'") in
-                 Inr "xs"
+               (fun "k" =>
+                  let "xs'" := "k" "xs'" in
+                  let "xs" := ("x", "xs'") in
+                  Inr "xs")
            in
            "reverse" "xs"
        end }>.
@@ -265,12 +265,12 @@ Example handle_exception (tag : string) :=
      try
        let "exn" := exception tag 10 in
        raise "exn";
-     fun '("Segfault" "code") =>
-       let "b" := "code" = 10 in
-       let _ := "r" <- "b" in
-       !"r";
-     fun '("StackOverflow" _) => false;
-     fun "exn" => raise "exn" }>.
+     (fun '("Segfault" "code") =>
+        let "b" := "code" = 10 in
+        let _ := "r" <- "b" in
+        !"r");
+     (fun '("StackOverflow" _) => false);
+     (fun "exn" => raise "exn") }>.
 
 Print handle_exception.
 
@@ -278,3 +278,51 @@ Compute (eval_term 1 unhandled_exception).
 Compute (eval_term 1 (handle_exception "Segfault")).
 Compute (eval_term 1 (handle_exception "StackOverflow")).
 Compute (eval_term 1 (handle_exception "Exception")).
+
+Example unhandled_effect :=
+  <{ handle
+       (let "eff" := effect "Effect0" 0 in
+        perform "eff");;
+     (fun '("Effect1" _), _ => ());
+     (fun '("Effect2" _), _ => ()) }>.
+
+Compute (eval_term 1 unhandled_effect).
+
+Example print stdout x :=
+  <{ let "y" := !stdout in
+     let "y" := (x, "y") in
+     stdout <- "y" }>.
+
+Example basic_exn_eff :=
+  <{ let "stdout" := ref () in
+     let _ :=
+       (shallow handle
+          (let _ :=
+             (handle
+                (try
+                   (let "eff" := effect "Effect0" 0 in
+                    let _ := perform "eff" in
+                    let _ := {print "stdout" "eff"} in
+                    let "eff" := effect "Effect1" 1 in
+                    let _ := perform "eff" in
+                    let _ := {print "stdout" "eff"} in
+                    let "exn" := exception "Exception0" () in
+                    raise "exn");
+                 (fun '("Exception0" _) =>
+                    let "exn" := exception "Exception0" () in
+                    {print "stdout" "exn"}));;
+              (fun '("Effect1" "x"), "k" =>
+                 let _ := {print "stdout" "x"} in
+                 "k" ());
+              (fun '("Effect2" _), _ => 2);
+              (fun _, "k" => "k" ()))
+           in
+           let "final_msg" := 69 in
+           {print "stdout" "final_msg"});;
+        (fun '("Effect0" "x"), "k" =>
+           let _ := {print "stdout" "x"} in
+           "k" ()))
+     in
+     !"stdout" }>.
+
+Compute (eval_term 10 basic_exn_eff).

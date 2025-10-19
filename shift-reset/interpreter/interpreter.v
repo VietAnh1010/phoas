@@ -31,8 +31,8 @@ Definition unwrap_RReturn (r : iresult) : imonad val :=
   | RReturn v => imonad_pure v
   | RShift _ _ => imonad_throw (ControlError "undelimited shift")
   | RControl _ _ => imonad_throw (ControlError "undelimited control")
-  | RRaise _ => imonad_throw (ControlError "unhandled exception")
-  | RPerform _ _ => imonad_throw (ControlError "unhandled effect")
+  | RRaise (Exn tag _) => imonad_throw (ControlError ("unhandled exception: " ++ tag_car tag))
+  | RPerform (Eff tag _) _ => imonad_throw (ControlError ("unhandled effect: " ++ tag_car tag))
   end.
 
 Definition unwrap_VInt (v : val) : imonad Z :=

@@ -9,16 +9,16 @@ Local Unset Elimination Schemes.
 
 Inductive iresult : Type :=
 | RReturn : val -> iresult
-| RShift : (val -> imonad iresult) -> metakont -> iresult
-| RControl : (val -> imonad iresult) -> metakont -> iresult
+| RShift : tag -> (val -> imonad iresult) -> metakont -> iresult
+| RControl : tag -> (val -> imonad iresult) -> metakont -> iresult
 | RRaise : exn -> iresult
 | RPerform : eff -> metakont -> iresult.
 
 Definition unwrap_RReturn (r : iresult) : imonad val :=
   match r with
   | RReturn v => imonad_pure v
-  | RShift _ _ => imonad_throw (ControlError "undelimited shift")
-  | RControl _ _ => imonad_throw (ControlError "undelimited control")
+  | RShift tag _ _ => imonad_throw (ControlError ("undelimited shift: " ++ tag_car tag))
+  | RControl tag _ _ => imonad_throw (ControlError ("undelimited control: " ++ tag_car tag))
   | RRaise (Exn tag _) => imonad_throw (ControlError ("unhandled exception: " ++ tag_car tag))
   | RPerform (Eff tag _) _ => imonad_throw (ControlError ("unhandled effect: " ++ tag_car tag))
   end.
@@ -172,36 +172,36 @@ Definition interpret_case (a : atom) (f1 f2 : val -> imonad iresult) : imonad ir
   | _ => imonad_throw (TypeError "")
   end.
 
-Definition delimit_reset (r : iresult) : imonad iresult :=
+Fixpoint delimit_reset (tag : tag) (r : iresult) : imonad iresult :=
   match r with
-  | RShift f mk => f (VKontReset mk)
+  | RShift tag' f mk => if tag_eq_dec tag tag' then f (VKontReset mk tag) >>= delimit_reset tag else imonad_pure r
   | _ => imonad_pure r
   end.
 
-Definition delimit_prompt (r : iresult) : imonad iresult :=
+Fixpoint delimit_prompt (tag : tag) (r : iresult) : imonad iresult :=
   match r with
-  | RControl f mk => f (VKont mk)
+  | RControl tag' f mk => if tag_eq_dec tag tag' then f (VKont mk) >>= delimit_prompt tag else imonad_pure r
   | _ => imonad_pure r
   end.
 
-Definition interpret_reset (k : kont) (m : imonad iresult) (f : val -> imonad iresult) : imonad iresult :=
-  r <- m >>= delimit_reset;
+Definition interpret_reset (k : kont) (tag : tag) (m : imonad iresult) (f : val -> imonad iresult) : imonad iresult :=
+  r <- m >>= delimit_reset tag;
   match r with
   | RReturn v => f v
-  | RShift _ _ => imonad_throw (ControlError "unreachable")
-  | RControl f mk => imonad_pure (RControl f (MKReset mk k))
+  | RShift tag' f' mk => imonad_pure (RShift tag' f' (MKReset mk tag k))
+  | RControl tag' f' mk => imonad_pure (RControl tag' f' (MKReset mk tag k))
   | RRaise _ => imonad_pure r
-  | RPerform eff mk => imonad_pure (RPerform eff (MKReset mk k))
+  | RPerform eff mk => imonad_pure (RPerform eff (MKReset mk tag k))
   end.
 
-Definition interpret_prompt (k : kont) (m : imonad iresult) (f : val -> imonad iresult) : imonad iresult :=
-  r <- m >>= delimit_prompt;
+Definition interpret_prompt (k : kont) (tag : tag) (m : imonad iresult) (f : val -> imonad iresult) : imonad iresult :=
+  r <- m >>= delimit_prompt tag;
   match r with
   | RReturn v => f v
-  | RShift f mk => imonad_pure (RShift f (MKPrompt mk k))
-  | RControl _ _ => imonad_throw (ControlError "unreachable")
+  | RShift tag' f' mk => imonad_pure (RShift tag' f' (MKPrompt mk tag k))
+  | RControl tag' f' mk => imonad_pure (RControl tag' f' (MKPrompt mk tag k))
   | RRaise _ => imonad_pure r
-  | RPerform eff mk => imonad_pure (RPerform eff (MKPrompt mk k))
+  | RPerform eff mk => imonad_pure (RPerform eff (MKPrompt mk tag k))
   end.
 
 Definition interpret_try (k : kont) (t : exn_term) (m : imonad iresult) (f : val -> imonad iresult)
@@ -209,8 +209,8 @@ Definition interpret_try (k : kont) (t : exn_term) (m : imonad iresult) (f : val
   r <- m;
   match r with
   | RReturn v => f v
-  | RShift f mk => imonad_reader_env (fun env => RShift f (MKTry' mk t k env))
-  | RControl f mk => imonad_reader_env (fun env => RControl f (MKTry' mk t k env))
+  | RShift tag f' mk => imonad_reader_env (fun env => RShift tag f' (MKTry' mk t k env))
+  | RControl tag f' mk => imonad_reader_env (fun env => RControl tag f' (MKTry' mk t k env))
   | RRaise exn =>
       match h exn with
       | Some m => m
@@ -224,8 +224,8 @@ Definition interpret_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imon
   r <- m;
   match r with
   | RReturn v => f v
-  | RShift f mk => imonad_reader_env (fun env => RShift f (MKHandle' mk t1 t2 k env))
-  | RControl f mk => imonad_reader_env (fun env => RControl f (MKHandle' mk t1 t2 k env))
+  | RShift tag f' mk => imonad_reader_env (fun env => RShift tag f' (MKHandle' mk t1 t2 k env))
+  | RControl tag f' mk => imonad_reader_env (fun env => RControl tag f' (MKHandle' mk t1 t2 k env))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       env <- imonad_ask_env;
@@ -236,14 +236,13 @@ Definition interpret_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imon
       end
   end.
 
-Definition interpret_shallow_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imonad iresult)
-  (f : val -> imonad iresult)
+Definition interpret_shallow_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imonad iresult) (f : val -> imonad iresult)
   (h : eff -> val -> option (imonad iresult)) : imonad iresult :=
   r <- m;
   match r with
   | RReturn v => f v
-  | RShift f mk => imonad_reader_env (fun env => RShift f (MKShallowHandle' mk t1 t2 k env))
-  | RControl f mk => imonad_reader_env (fun env => RControl f (MKShallowHandle' mk t1 t2 k env))
+  | RShift tag f' mk => imonad_reader_env (fun env => RShift tag f' (MKShallowHandle' mk t1 t2 k env))
+  | RControl tag f' mk => imonad_reader_env (fun env => RControl tag f' (MKShallowHandle' mk t1 t2 k env))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       match h eff (VKont mk) with
@@ -252,11 +251,11 @@ Definition interpret_shallow_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (
       end
   end.
 
-Definition interpret_shift (k : kont) (f : env -> val -> imonad iresult) : imonad iresult :=
-  imonad_reader_env (fun env => RShift (f env >=> delimit_reset) (MKPure k)).
+Definition interpret_shift (k : kont) (tag : tag) (f : env -> val -> imonad iresult) : imonad iresult :=
+  imonad_reader_env (fun env => RShift tag (f env) (MKPure k)).
 
-Definition interpret_control (k : kont) (f : env -> val -> imonad iresult) : imonad iresult :=
-  imonad_reader_env (fun env => RControl (f env >=> delimit_prompt) (MKPure k)).
+Definition interpret_control (k : kont) (tag : tag) (f : env -> val -> imonad iresult) : imonad iresult :=
+  imonad_reader_env (fun env => RControl tag (f env) (MKPure k)).
 
 Definition interpret_raise (a : atom) : imonad iresult :=
   v <- interpret_atom a;
@@ -341,8 +340,8 @@ Fixpoint interpret_eff_term_with (rec : interpreter) (k : kont) (t : eff_term) (
 Definition interpret_try_clo_with (rec : interpreter) (k : kont) (c : try_clo) (r : iresult) : imonad iresult :=
   match r with
   | RReturn v => interpret_kont_with rec k v
-  | RShift f mk => imonad_pure (RShift f (MKTry mk c k))
-  | RControl f mk => imonad_pure (RControl f (MKTry mk c k))
+  | RShift tag f mk => imonad_pure (RShift tag f (MKTry mk c k))
+  | RControl tag f mk => imonad_pure (RControl tag f (MKTry mk c k))
   | RRaise exn =>
       let (env, t) := c in
       match interpret_exn_term_with rec k t exn with
@@ -355,8 +354,8 @@ Definition interpret_try_clo_with (rec : interpreter) (k : kont) (c : try_clo) (
 Definition interpret_handle_clo_with (rec : interpreter) (k : kont) (c : handle_clo) (r : iresult) : imonad iresult :=
   match r with
   | RReturn v => let (env, t, _) := c in imonad_use_env env (interpret_ret_term_with rec k t v)
-  | RShift f mk => imonad_pure (RShift f (MKHandle mk c k))
-  | RControl f mk => imonad_pure (RControl f (MKHandle mk c k))
+  | RShift tag f mk => imonad_pure (RShift tag f (MKHandle mk c k))
+  | RControl tag f mk => imonad_pure (RControl tag f (MKHandle mk c k))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       let (env, _, t) := c in
@@ -369,8 +368,8 @@ Definition interpret_handle_clo_with (rec : interpreter) (k : kont) (c : handle_
 Definition interpret_shallow_handle_clo_with (rec : interpreter) (k : kont) (c : handle_clo) (r : iresult) : imonad iresult :=
   match r with
   | RReturn v => let (env, t, _) := c in imonad_use_env env (interpret_ret_term_with rec k t v)
-  | RShift f mk => imonad_pure (RShift f (MKShallowHandle mk c k))
-  | RControl f mk => imonad_pure (RControl f (MKShallowHandle mk c k))
+  | RShift tag f mk => imonad_pure (RShift tag f (MKShallowHandle mk c k))
+  | RControl tag f mk => imonad_pure (RControl tag f (MKShallowHandle mk c k))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       let (env, _, t) := c in
@@ -383,8 +382,8 @@ Definition interpret_shallow_handle_clo_with (rec : interpreter) (k : kont) (c :
 Fixpoint interpret_metakont_with (rec : interpreter) (mk : metakont) (v : val) : imonad iresult :=
   match mk with
   | MKPure k => interpret_kont_with rec k v
-  | MKReset mk' k => interpret_reset k (interpret_metakont_with rec mk' v) (interpret_kont_with rec k)
-  | MKPrompt mk' k => interpret_prompt k (interpret_metakont_with rec mk' v) (interpret_kont_with rec k)
+  | MKReset mk' tag k => interpret_reset k tag (interpret_metakont_with rec mk' v) (interpret_kont_with rec k)
+  | MKPrompt mk' tag k => interpret_prompt k tag (interpret_metakont_with rec mk' v) (interpret_kont_with rec k)
   | MKTry mk' c k => interpret_metakont_with rec mk' v >>= interpret_try_clo_with rec k c
   | MKHandle mk' c k => interpret_metakont_with rec mk' v >>= interpret_handle_clo_with rec k c
   | MKShallowHandle mk' c k => interpret_metakont_with rec mk' v >>= interpret_shallow_handle_clo_with rec k c
@@ -395,7 +394,7 @@ Definition interpret_app (rec : interpreter) (k : kont) (a1 a2 : atom) (f : val 
   match v with
   | VFun c => interpret_atom a2 >>= interpret_clo1_with rec k c
   | VFix c => interpret_atom a2 >>= interpret_clo2_with rec k c v
-  | VKontReset mk => interpret_reset k (interpret_atom a2 >>= interpret_metakont_with rec mk) f
+  | VKontReset mk tag => interpret_reset k tag (interpret_atom a2 >>= interpret_metakont_with rec mk) f
   | VKont mk => interpret_atom a2 >>= interpret_metakont_with rec (metakont_extend mk k)
   | VKontHandle mk c => interpret_atom a2 >>= interpret_metakont_with rec mk >>= interpret_handle_clo_with rec k c
   | _ => imonad_throw (TypeError "")
@@ -421,10 +420,10 @@ Inductive term_graph : kont -> term -> Prop :=
 | GTGet k a : kont_graph k -> term_graph k (TGet a)
 | GTSet k a1 a2 : kont_graph k -> term_graph k (TSet a1 a2)
 | GTFree k a : kont_graph k -> term_graph k (TFree a)
-| GTShift k t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TShift t')
-| GTReset k t' : term_graph KNil t' -> kont_graph k -> term_graph k (TReset t')
-| GTControl k t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TControl t')
-| GTPrompt k t' : term_graph KNil t' -> kont_graph k -> term_graph k (TPrompt t')
+| GTShift k tag t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TShift tag t')
+| GTReset k tag t' : term_graph KNil t' -> kont_graph k -> term_graph k (TReset tag t')
+| GTControl k tag t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TControl tag t')
+| GTPrompt k tag t' : term_graph KNil t' -> kont_graph k -> term_graph k (TPrompt tag t')
 | GTExn k tag a : kont_graph k -> term_graph k (TExn tag a)
 | GTRaise k a : term_graph k (TRaise a)
 | GTTry k t1 t2 : term_graph KNil t1 -> kont_graph k -> exn_term_graph k t2 -> term_graph k (TTry t1 t2)
@@ -508,22 +507,22 @@ Proof. inversion 1; auto. Defined.
 Lemma GTFree_inv k a : term_graph k (TFree a) -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTShift_inv k t' : term_graph k (TShift t') -> forall env, clo1_graph KNil (C1 env t').
+Lemma GTShift_inv k tag t' : term_graph k (TShift tag t') -> forall env, clo1_graph KNil (C1 env t').
 Proof. inversion 1; auto. Defined.
 
-Lemma GTReset_inv1 k t' : term_graph k (TReset t') -> term_graph KNil t'.
+Lemma GTReset_inv1 k tag t' : term_graph k (TReset tag t') -> term_graph KNil t'.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTReset_inv2 k t' : term_graph k (TReset t') -> kont_graph k.
+Lemma GTReset_inv2 k tag t' : term_graph k (TReset tag t') -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTControl_inv k t' : term_graph k (TControl t') -> forall env, clo1_graph KNil (C1 env t').
+Lemma GTControl_inv k tag t' : term_graph k (TControl tag t') -> forall env, clo1_graph KNil (C1 env t').
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPrompt_inv1 k t' : term_graph k (TPrompt t') -> term_graph KNil t'.
+Lemma GTPrompt_inv1 k tag t' : term_graph k (TPrompt tag t') -> term_graph KNil t'.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPrompt_inv2 k t' : term_graph k (TPrompt t') -> kont_graph k.
+Lemma GTPrompt_inv2 k tag t' : term_graph k (TPrompt tag t') -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTExn_inv k tag a : term_graph k (TExn tag a) -> kont_graph k.
@@ -614,10 +613,10 @@ Fixpoint build_term_graph_dep (k : kont) (G : kont_graph k) (t : term) : term_gr
   | TGet a => GTGet a G
   | TSet a1 a2 => GTSet a1 a2 G
   | TFree a => GTFree a G
-  | TShift t' => GTShift k (fun env => GC1 env (build_term1_graph_dep GKNil t'))
-  | TReset t' => GTReset (build_term_graph_dep GKNil t') G
-  | TControl t' => GTControl k (fun env => GC1 env (build_term1_graph_dep GKNil t'))
-  | TPrompt t' => GTPrompt (build_term_graph_dep GKNil t') G
+  | TShift tag t' => GTShift k tag (fun env => GC1 env (build_term1_graph_dep GKNil t'))
+  | TReset tag t' => GTReset tag (build_term_graph_dep GKNil t') G
+  | TControl tag t' => GTControl k tag (fun env => GC1 env (build_term1_graph_dep GKNil t'))
+  | TPrompt tag t' => GTPrompt tag (build_term_graph_dep GKNil t') G
   | TExn tag a => GTExn tag a G
   | TRaise a => GTRaise k a
   | TTry t1 t2 => GTTry (build_term_graph_dep GKNil t1) G (build_exn_term_graph_dep G t2)
@@ -662,22 +661,34 @@ Fixpoint interpret_term_dep (rec : interpreter) (k : kont) (t : term) (G : term_
   | TFix t' => fun G => interpret_fix t' >>= interpret_kont_dep rec (GTFix_inv G)
   | TApp a1 a2 => fun G => interpret_app rec k a1 a2 (interpret_kont_dep rec (GTApp_inv G))
   | TLet t1 t2 => fun G => interpret_let (fun env => interpret_term_dep rec (GTLet_inv G env))
-  | TIf a t1 t2 => fun G => interpret_if a (interpret_term_dep rec (GTIf_inv1 G)) (interpret_term_dep rec (GTIf_inv2 G))
+  | TIf a t1 t2 =>
+      fun G => interpret_if a
+                 (interpret_term_dep rec (GTIf_inv1 G))
+                 (interpret_term_dep rec (GTIf_inv2 G))
   | TPrim1 p a => fun G => interpret_prim1 p a >>= interpret_kont_dep rec (GTPrim1_inv G)
   | TPrim2 p a1 a2 => fun G => interpret_prim2 p a1 a2 >>= interpret_kont_dep rec (GTPrim2_inv G)
   | TPair a1 a2 => fun G => interpret_pair a1 a2 >>= interpret_kont_dep rec (GTPair_inv G)
   | TSplit a t' => fun G => interpret_split a (interpret_term2_dep rec (GTSplit_inv G))
   | TInl a => fun G => interpret_inl a >>= interpret_kont_dep rec (GTInl_inv G)
   | TInr a => fun G => interpret_inr a >>= interpret_kont_dep rec (GTInr_inv G)
-  | TCase a t1 t2 => fun G => interpret_case a (interpret_term1_dep rec (GTCase_inv1 G)) (interpret_term1_dep rec (GTCase_inv2 G))
+  | TCase a t1 t2 =>
+      fun G => interpret_case a
+                 (interpret_term1_dep rec (GTCase_inv1 G))
+                 (interpret_term1_dep rec (GTCase_inv2 G))
   | TRef a => fun G => interpret_ref a >>= interpret_kont_dep rec (GTRef_inv G)
   | TGet a => fun G => interpret_get a >>= interpret_kont_dep rec (GTGet_inv G)
   | TSet a1 a2 => fun G => interpret_set a1 a2 >>= interpret_kont_dep rec (GTSet_inv G)
   | TFree a => fun G => interpret_free a >>= interpret_kont_dep rec (GTFree_inv G)
-  | TShift t' => fun G => interpret_shift k (fun env => interpret_clo1_dep rec (GTShift_inv G env))
-  | TReset t' => fun G => interpret_reset k (interpret_term_dep rec (GTReset_inv1 G)) (interpret_kont_dep rec (GTReset_inv2 G))
-  | TControl t' => fun G => interpret_control k (fun env => interpret_clo1_dep rec (GTControl_inv G env))
-  | TPrompt t' => fun G => interpret_prompt k (interpret_term_dep rec (GTPrompt_inv1 G)) (interpret_kont_dep rec (GTPrompt_inv2 G))
+  | TShift tag t' => fun G => interpret_shift k tag (fun env => interpret_clo1_dep rec (GTShift_inv G env))
+  | TReset tag t' =>
+      fun G => interpret_reset k tag
+                 (interpret_term_dep rec (GTReset_inv1 G))
+                 (interpret_kont_dep rec (GTReset_inv2 G))
+  | TControl tag t' => fun G => interpret_control k tag (fun env => interpret_clo1_dep rec (GTControl_inv G env))
+  | TPrompt tag t' =>
+      fun G => interpret_prompt k tag
+                 (interpret_term_dep rec (GTPrompt_inv1 G))
+                 (interpret_kont_dep rec (GTPrompt_inv2 G))
   | TExn tag a => fun G => interpret_exn tag a >>= interpret_kont_dep rec (GTExn_inv G)
   | TRaise a => fun G => interpret_raise a
   | TTry t1 t2 =>

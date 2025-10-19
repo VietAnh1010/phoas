@@ -54,10 +54,10 @@ Inductive term : Type :=
 | TGet : atom -> term
 | TSet : atom -> atom -> term
 | TFree : atom -> term
-| TShift : term1 -> term
-| TReset : term -> term
-| TControl : term1 -> term
-| TPrompt : term -> term
+| TShift : tag -> term1 -> term
+| TReset : tag -> term -> term
+| TControl : tag -> term1 -> term
+| TPrompt : tag -> term -> term
 | TExn : tag -> atom -> term
 | TRaise : atom -> term
 | TTry : term -> exn_term -> term
@@ -89,7 +89,7 @@ Inductive val : Type :=
 | VInl : val -> val
 | VInr : val -> val
 | VLoc : loc -> val
-| VKontReset : metakont -> val
+| VKontReset : metakont -> tag -> val
 | VKont : metakont -> val
 | VKontHandle : metakont -> handle_clo -> val
 | VExn : exn -> val
@@ -107,8 +107,8 @@ with kont : Type :=
 | KCons : clo1 -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
-| MKReset : metakont -> kont -> metakont
-| MKPrompt : metakont -> kont -> metakont
+| MKReset : metakont -> tag -> kont -> metakont
+| MKPrompt : metakont -> tag -> kont -> metakont
 | MKTry : metakont -> try_clo -> kont -> metakont
 | MKHandle : metakont -> handle_clo -> kont -> metakont
 | MKShallowHandle : metakont -> handle_clo -> kont -> metakont

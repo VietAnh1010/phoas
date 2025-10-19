@@ -296,9 +296,9 @@ Example print stdout x :=
 Example basic_exn_eff :=
   <{ let "stdout" := ref () in
      let _ :=
-       (shallow handle
+       (handle
           (let _ :=
-             (handle
+             (shallow handle
                 (try
                    (let "eff" := effect "Effect0" 0 in
                     let _ := perform "eff" in
@@ -321,7 +321,8 @@ Example basic_exn_eff :=
            {print "stdout" "final_msg"});;
         (fun '("Effect0" "x"), "k" =>
            let _ := {print "stdout" "x"} in
-           "k" ()))
+           "k" ());
+        (fun _, "k" => {print "stdout" "k"}))
      in
      !"stdout" }>.
 

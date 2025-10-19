@@ -1,4 +1,4 @@
-From shift_reset.core Require Import syntax.
+From shift_reset.core Require Import syntax tag.
 
 Declare Scope term_scope.
 Delimit Scope term_scope with term.
@@ -117,16 +117,28 @@ Notation "'let' 'fix' f x1 x2 .. xn := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'shift' t" :=
-  (TShift t) (in custom term at level 69, t custom term1) : term_scope.
+  (TShift tag_empty t) (in custom term at level 69, t custom term1) : term_scope.
+
+Notation "'shift' 'at' tag t" :=
+  (TShift tag t) (in custom term at level 69, tag at level 0, t custom term1) : term_scope.
 
 Notation "'control' t" :=
-  (TControl t) (in custom term at level 69, t custom term1) : term_scope.
+  (TControl tag_empty t) (in custom term at level 69, t custom term1) : term_scope.
+
+Notation "'control' 'at' tag t" :=
+  (TControl tag t) (in custom term at level 69, tag at level 0, t custom term1) : term_scope.
 
 Notation "'reset' t" :=
-  (TReset t) (in custom term at level 69, t custom term) : term_scope.
+  (TReset tag_empty t) (in custom term at level 69, t custom term) : term_scope.
+
+Notation "'reset' 'at' tag t" :=
+  (TReset tag t) (in custom term at level 69, tag at level 0, t custom term) : term_scope.
 
 Notation "'prompt' t" :=
-  (TPrompt t) (in custom term at level 69, t custom term) : term_scope.
+  (TPrompt tag_empty t) (in custom term at level 69, t custom term) : term_scope.
+
+Notation "'prompt' 'at' tag t" :=
+  (TPrompt tag t) (in custom term at level 69, tag at level 0, t custom term) : term_scope.
 
 Notation "'fun' x1 .. xn => t" :=
   (TFun (T1 x1 .. (TFun (T1 xn t)) ..))

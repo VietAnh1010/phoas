@@ -14,18 +14,6 @@ Inductive iresult : Type :=
 | RRaise : exn -> iresult
 | RPerform : eff -> metakont -> iresult.
 
-Definition delimit_reset (r : iresult) : imonad iresult :=
-  match r with
-  | RShift f mk => f (VKontReset mk)
-  | _ => imonad_pure r
-  end.
-
-Definition delimit_prompt (r : iresult) : imonad iresult :=
-  match r with
-  | RControl f mk => f (VKont mk)
-  | _ => imonad_pure r
-  end.
-
 Definition unwrap_RReturn (r : iresult) : imonad val :=
   match r with
   | RReturn v => imonad_pure v
@@ -184,6 +172,18 @@ Definition interpret_case (a : atom) (f1 f2 : val -> imonad iresult) : imonad ir
   | _ => imonad_throw (TypeError "")
   end.
 
+Definition delimit_reset (r : iresult) : imonad iresult :=
+  match r with
+  | RShift f mk => f (VKontReset mk)
+  | _ => imonad_pure r
+  end.
+
+Definition delimit_prompt (r : iresult) : imonad iresult :=
+  match r with
+  | RControl f mk => f (VKont mk)
+  | _ => imonad_pure r
+  end.
+
 Definition interpret_reset (k : kont) (m : imonad iresult) (f : val -> imonad iresult) : imonad iresult :=
   r <- m >>= delimit_reset;
   match r with
@@ -204,8 +204,7 @@ Definition interpret_prompt (k : kont) (m : imonad iresult) (f : val -> imonad i
   | RPerform eff mk => imonad_pure (RPerform eff (MKPrompt mk k))
   end.
 
-Definition interpret_try (k : kont) (t : exn_term) (m : imonad iresult)
-  (f : val -> imonad iresult)
+Definition interpret_try (k : kont) (t : exn_term) (m : imonad iresult) (f : val -> imonad iresult)
   (h : exn -> option (imonad iresult)) : imonad iresult :=
   r <- m;
   match r with
@@ -220,8 +219,7 @@ Definition interpret_try (k : kont) (t : exn_term) (m : imonad iresult)
   | RPerform eff mk => imonad_reader_env (fun env => RPerform eff (MKTry' mk t k env))
   end.
 
-Definition interpret_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imonad iresult)
-  (f : val -> imonad iresult)
+Definition interpret_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imonad iresult) (f : val -> imonad iresult)
   (h : eff -> val -> option (imonad iresult)) : imonad iresult :=
   r <- m;
   match r with

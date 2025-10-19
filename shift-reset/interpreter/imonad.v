@@ -13,11 +13,20 @@ Definition imonad_ask_env : imonad env :=
 Definition imonad_local_env {A} (f : env -> env) (m : imonad A) : imonad A :=
   IMonad (fun env => imonad_run m (f env)).
 
+Definition imonad_reader_env {A} (f : env -> A) : imonad A :=
+  IMonad (fun env h => (inr (f env), h)).
+
 Definition imonad_get_heap : imonad iheap :=
   IMonad (fun _ h => (inr h, h)).
 
 Definition imonad_set_heap (h : iheap) : imonad unit :=
   IMonad (fun _ _ => (inr tt, h)).
+
+Definition imonad_state_heap {A} (f : iheap -> A * iheap) : imonad A :=
+  IMonad (fun _ h => let (x, h) := f h in (inr x, h)).
+
+Definition imonad_gets_heap {A} (f : iheap -> A) : imonad A :=
+  IMonad (fun _ h => (inr (f h), h)).
 
 Definition imonad_modify_heap (f : iheap -> iheap) : imonad unit :=
   IMonad (fun _ h => (inr tt, f h)).

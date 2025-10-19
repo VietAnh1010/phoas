@@ -61,13 +61,19 @@ Inductive term : Type :=
 | TExn : tag -> atom -> term
 | TRaise : atom -> term
 | TTry : term -> exn_term -> term
+| TEff : tag -> atom -> term
+| TPerform : atom -> term
+| THandle : term -> term1 -> eff_term -> term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
 | T2 : binder -> binder -> term -> term2
 with exn_term : Type :=
-| ExnTBase : pattern -> term -> exn_term
-| ExnTCons : pattern -> term -> exn_term -> exn_term.
+| TExnBase : pattern -> term -> exn_term
+| TExnCons : pattern -> term -> exn_term -> exn_term
+with eff_term : Type :=
+| TEffBase : pattern -> binder -> term -> eff_term
+| TEffCons : pattern -> binder -> term -> eff_term -> eff_term.
 
 Inductive val : Type :=
 | VUnit : val
@@ -81,13 +87,17 @@ Inductive val : Type :=
 | VLoc : loc -> val
 | VKontReset : metakont -> val
 | VKont : metakont -> val
+| VKontHandle : metakont -> handle_clo -> val
 | VExn : exn -> val
+| VEff : eff -> val
 with clo1 : Type :=
 | C1 : env -> term1 -> clo1
 with clo2 : Type :=
 | C2 : env -> term2 -> clo2
-with exn_clo : Type :=
-| ExnC : env -> exn_term -> exn_clo
+with try_clo : Type :=
+| CTry : env -> exn_term -> try_clo
+with handle_clo : Type :=
+| CHandle : env -> term1 -> eff_term -> handle_clo
 with kont : Type :=
 | KNil : kont
 | KCons : clo1 -> kont -> kont
@@ -95,12 +105,15 @@ with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> kont -> metakont
 | MKPrompt : metakont -> kont -> metakont
-| MKTry : metakont -> exn_clo -> kont -> metakont
+| MKTry : metakont -> try_clo -> kont -> metakont
+| MKHandle : metakont -> handle_clo -> kont -> metakont
 with env : Type :=
 | EnvNil : env
 | EnvCons : var -> val -> env -> env
 with exn : Type :=
-| Exn : tag -> val -> exn.
+| Exn : tag -> val -> exn
+with eff : Type :=
+| Eff : tag -> val -> eff.
 
 Create HintDb eq_dec_db discriminated.
 
@@ -135,32 +148,38 @@ Hint Resolve pattern_eq_dec : eq_dec_db.
 Fixpoint term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
 with term1_eq_dec : forall (t1 t2 : term1), {t1 = t2} + {t1 <> t2}
 with term2_eq_dec : forall (t1 t2 : term2), {t1 = t2} + {t1 <> t2}
-with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}.
+with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}
+with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve term_eq_dec : eq_dec_db.
 Hint Resolve term1_eq_dec : eq_dec_db.
 Hint Resolve term2_eq_dec : eq_dec_db.
 Hint Resolve exn_term_eq_dec : eq_dec_db.
+Hint Resolve eff_term_eq_dec : eq_dec_db.
 
 Fixpoint val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with clo1_eq_dec : forall (c1 c2 : clo1), {c1 = c2} + {c1 <> c2}
 with clo2_eq_dec : forall (c1 c2 : clo2), {c1 = c2} + {c1 <> c2}
-with exn_clo_eq_dec : forall (c1 c2 : exn_clo), {c1 = c2} + {c1 <> c2}
+with try_clo_eq_dec : forall (c1 c2 : try_clo), {c1 = c2} + {c1 <> c2}
+with handle_clo_eq_dec : forall (c1 c2 : handle_clo), {c1 = c2} + {c1 <> c2}
 with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
 with metakont_eq_dec : forall (mk1 mk2 : metakont), {mk1 = mk2} + {mk1 <> mk2}
 with env_eq_dec : forall (env1 env2 : env), {env1 = env2} + {env1 <> env2}
-with exn_eq_dec : forall (exn1 exn2 : exn), {exn1 = exn2} + {exn1 <> exn2}.
+with exn_eq_dec : forall (exn1 exn2 : exn), {exn1 = exn2} + {exn1 <> exn2}
+with eff_eq_dec : forall (eff1 eff2 : eff), {eff1 = eff2} + {eff1 <> eff2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve val_eq_dec : eq_dec_db.
 Hint Resolve clo1_eq_dec : eq_dec_db.
 Hint Resolve clo2_eq_dec : eq_dec_db.
-Hint Resolve exn_clo_eq_dec : eq_dec_db.
+Hint Resolve try_clo_eq_dec : eq_dec_db.
+Hint Resolve handle_clo_eq_dec : eq_dec_db.
 Hint Resolve kont_eq_dec : eq_dec_db.
 Hint Resolve metakont_eq_dec : eq_dec_db.
 Hint Resolve env_eq_dec : eq_dec_db.
 Hint Resolve exn_eq_dec : eq_dec_db.
+Hint Resolve eff_eq_dec : eq_dec_db.
 
 Definition val_eqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then true else false.
 Definition val_neqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then false else true.

@@ -12,4 +12,5 @@ Definition metakont_extend (mk : metakont) (k : kont) : metakont :=
   | MKReset mk' k' => MKReset mk' (kont_append k' k)
   | MKPrompt mk' k' => MKPrompt mk' (kont_append k' k)
   | MKTry mk' c k' => MKTry mk' c (kont_append k' k)
+  | MKHandle mk' c k' => MKHandle mk' c (kont_append k' k)
   end.

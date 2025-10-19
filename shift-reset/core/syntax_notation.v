@@ -34,13 +34,13 @@ Notation "'fun' x => t" :=
         t custom term) : term_scope.
 
 Notation "'fun' x => t" :=
-  (ExnTBase x t)
+  (TExnBase x t)
     (in custom exn_term at level 69,
         x custom pattern' at level 10,
         t custom term) : term_scope.
 
 Notation "'fun' x => t1 ; t2" :=
-  (ExnTCons x t1 t2)
+  (TExnCons x t1 t2)
     (in custom exn_term at level 69,
         x custom pattern' at level 10,
         t1 custom term,

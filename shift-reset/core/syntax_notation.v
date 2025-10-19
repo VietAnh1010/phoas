@@ -8,7 +8,9 @@ Declare Custom Entry binder'.
 Declare Custom Entry pattern'.
 Declare Custom Entry term.
 Declare Custom Entry term1.
+Declare Custom Entry ret_term.
 Declare Custom Entry exn_term.
+Declare Custom Entry eff_term.
 
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
@@ -25,11 +27,21 @@ Notation "{ t }" := t (in custom term, t constr) : term_scope.
 Notation "t" := t (in custom term at level 0, t constr at level 0) : term_scope.
 
 Notation "( t )" := t (in custom term1, t at level 99) : term_scope.
+Notation "( t )" := t (in custom ret_term, t at level 99) : term_scope.
 Notation "( t )" := t (in custom exn_term, t at level 99) : term_scope.
+Notation "( t )" := t (in custom eff_term, t at level 99) : term_scope.
 
 Notation "'fun' x => t" :=
   (T1 x t)
     (in custom term1 at level 69,
+        x custom binder' at level 0,
+        t custom term) : term_scope.
+
+Notation "'_'" := TRet0 (in custom ret_term at level 0) : term_scope.
+
+Notation "'fun' x => t" :=
+  (TRet1 x t)
+    (in custom ret_term at level 69,
         x custom binder' at level 0,
         t custom term) : term_scope.
 
@@ -43,6 +55,22 @@ Notation "'fun' x => t1 ; t2" :=
   (TExnCons x t1 t2)
     (in custom exn_term at level 69,
         x custom pattern' at level 10,
+        t1 custom term,
+        t2 custom exn_term,
+        right associativity) : term_scope.
+
+Notation "'fun' x , k => t" :=
+  (TEffBase x k t)
+    (in custom eff_term at level 69,
+        x custom pattern' at level 10,
+        k custom binder' at level 0,
+        t custom term) : term_scope.
+
+Notation "'fun' x , k => t1 ; t2" :=
+  (TEffCons x k t1 t2)
+    (in custom eff_term at level 69,
+        x custom pattern' at level 10,
+        k custom binder' at level 0,
         t1 custom term,
         t2 custom exn_term,
         right associativity) : term_scope.
@@ -236,3 +264,26 @@ Notation "'try' t1 ; t2" :=
     (in custom term at level 69,
         t1 custom term,
         t2 custom exn_term) : term_scope.
+
+Notation "'effect' tag a" :=
+  (TEff tag a)
+    (in custom term at level 23,
+        tag at level 0,
+        a custom term at level 0) : term_scope.
+
+Notation "'perform' a" :=
+  (TPerform a) (in custom term at level 23, a custom term at level 0) : term_scope.
+
+Notation "'handle' t1 ; t2 ; t3" :=
+  (THandle t1 t2 t3)
+    (in custom term at level 23,
+        t1 custom term,
+        t2 custom ret_term,
+        t3 custom eff_term) : term_scope.
+
+Notation "'shallow' 'handle' t1 ; t2 ; t3" :=
+  (TShallowHandle t1 t2 t3)
+    (in custom term at level 23,
+        t1 custom term,
+        t2 custom ret_term,
+        t3 custom eff_term) : term_scope.

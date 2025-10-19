@@ -63,11 +63,15 @@ Inductive term : Type :=
 | TTry : term -> exn_term -> term
 | TEff : tag -> atom -> term
 | TPerform : atom -> term
-| THandle : term -> term1 -> eff_term -> term
+| THandle : term -> ret_term -> eff_term -> term
+| TShallowHandle : term -> ret_term -> eff_term -> term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
 | T2 : binder -> binder -> term -> term2
+with ret_term : Type :=
+| TRet0 : ret_term
+| TRet1 : binder -> term -> ret_term
 with exn_term : Type :=
 | TExnBase : pattern -> term -> exn_term
 | TExnCons : pattern -> term -> exn_term -> exn_term
@@ -97,7 +101,7 @@ with clo2 : Type :=
 with try_clo : Type :=
 | CTry : env -> exn_term -> try_clo
 with handle_clo : Type :=
-| CHandle : env -> term1 -> eff_term -> handle_clo
+| CHandle : env -> ret_term -> eff_term -> handle_clo
 with kont : Type :=
 | KNil : kont
 | KCons : clo1 -> kont -> kont
@@ -107,6 +111,7 @@ with metakont : Type :=
 | MKPrompt : metakont -> kont -> metakont
 | MKTry : metakont -> try_clo -> kont -> metakont
 | MKHandle : metakont -> handle_clo -> kont -> metakont
+| MKShallowHandle : metakont -> handle_clo -> kont -> metakont
 with env : Type :=
 | EnvNil : env
 | EnvCons : var -> val -> env -> env
@@ -148,6 +153,7 @@ Hint Resolve pattern_eq_dec : eq_dec_db.
 Fixpoint term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
 with term1_eq_dec : forall (t1 t2 : term1), {t1 = t2} + {t1 <> t2}
 with term2_eq_dec : forall (t1 t2 : term2), {t1 = t2} + {t1 <> t2}
+with ret_term_eq_dec : forall (t1 t2 : ret_term), {t1 = t2} + {t1 <> t2}
 with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}
 with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
@@ -155,6 +161,7 @@ Proof. all: decide equality; auto with eq_dec_db. Defined.
 Hint Resolve term_eq_dec : eq_dec_db.
 Hint Resolve term1_eq_dec : eq_dec_db.
 Hint Resolve term2_eq_dec : eq_dec_db.
+Hint Resolve ret_term_eq_dec : eq_dec_db.
 Hint Resolve exn_term_eq_dec : eq_dec_db.
 Hint Resolve eff_term_eq_dec : eq_dec_db.
 

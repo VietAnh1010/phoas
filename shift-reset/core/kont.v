@@ -13,10 +13,14 @@ Definition metakont_extend (mk : metakont) (k : kont) : metakont :=
   | MKPrompt mk' k' => MKPrompt mk' (kont_append k' k)
   | MKTry mk' c k' => MKTry mk' c (kont_append k' k)
   | MKHandle mk' c k' => MKHandle mk' c (kont_append k' k)
+  | MKShallowHandle mk' c k' => MKShallowHandle mk' c (kont_append k' k)
   end.
 
 Definition MKTry' (mk : metakont) (t : exn_term) (k : kont) (env : env) : metakont :=
   MKTry mk (CTry env t) k.
 
-Definition MKHandle' (mk : metakont) (t1 : term1) (t2 : eff_term) (k : kont) (env : env) : metakont :=
+Definition MKHandle' (mk : metakont) (t1 : ret_term) (t2 : eff_term) (k : kont) (env : env) : metakont :=
   MKHandle mk (CHandle env t1 t2) k.
+
+Definition MKShallowHandle' (mk : metakont) (t1 : ret_term) (t2 : eff_term) (k : kont) (env : env) : metakont :=
+  MKShallowHandle mk (CHandle env t1 t2) k.

@@ -14,3 +14,9 @@ Definition metakont_extend (mk : metakont) (k : kont) : metakont :=
   | MKTry mk' c k' => MKTry mk' c (kont_append k' k)
   | MKHandle mk' c k' => MKHandle mk' c (kont_append k' k)
   end.
+
+Definition MKTry' (mk : metakont) (t : exn_term) (k : kont) (env : env) : metakont :=
+  MKTry mk (CTry env t) k.
+
+Definition MKHandle' (mk : metakont) (t1 : term1) (t2 : eff_term) (k : kont) (env : env) : metakont :=
+  MKHandle mk (CHandle env t1 t2) k.

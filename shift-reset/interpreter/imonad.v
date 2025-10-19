@@ -16,6 +16,9 @@ Definition imonad_local_env {A} (f : env -> env) (m : imonad A) : imonad A :=
 Definition imonad_reader_env {A} (f : env -> A) : imonad A :=
   IMonad (fun env h => (inr (f env), h)).
 
+Definition imonad_use_env {A} (env : env) (m : imonad A) : imonad A :=
+  IMonad (fun _ => imonad_run m env).
+
 Definition imonad_get_heap : imonad iheap :=
   IMonad (fun _ h => (inr h, h)).
 
@@ -96,8 +99,8 @@ Bind Scope imonad_scope with imonad.
 
 Notation "f <$> m" := (imonad_map f m) (at level 65, left associativity) : imonad_scope.
 Notation "x <$ m" := (imonad_replace x m) (at level 65, left associativity) : imonad_scope.
-Notation "m >>= f" := (imonad_bind m f) (at level 60, right associativity) : imonad_scope.
-Notation "m1 >> m2" := (imonad_then m1 m2) (at level 60, right associativity) : imonad_scope.
+Notation "m >>= f" := (imonad_bind m f) (at level 50, left associativity) : imonad_scope.
+Notation "m1 >> m2" := (imonad_then m1 m2) (at level 50, left associativity) : imonad_scope.
 Notation "f1 >=> f2" := (imonad_kleisli_compose f1 f2) (at level 60, right associativity) : imonad_scope.
 
 Notation "x <- m1 ; m2" := (imonad_bind m1 (fun x => m2)) (at level 100, right associativity) : imonad_scope.

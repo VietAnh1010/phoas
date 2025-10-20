@@ -34,7 +34,8 @@ Inductive binder : Type :=
 Inductive pattern : Type :=
 | PAny : pattern
 | PVar : var -> pattern
-| PTag : tag -> binder -> pattern.
+| PConstr : tag -> binder -> pattern
+| PAlias : pattern -> var -> pattern.
 
 Inductive term : Type :=
 | TVal : val_term -> term

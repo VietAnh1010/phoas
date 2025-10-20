@@ -295,126 +295,140 @@ Definition with_binder (b : binder) (v : val) (m : imonad iresult) : imonad ires
   | BVar x => imonad_local_env (EnvCons x v) m
   end.
 
-Definition match_exn (p : pattern) (exn : exn) (m : imonad iresult) : option (imonad iresult) :=
+Fixpoint match_exn (p : pattern) (exn : exn) (m : imonad iresult) : option (imonad iresult) :=
   match p with
   | PAny => Some m
   | PVar x => Some (imonad_local_env (EnvCons x (VExn exn)) m)
-  | PTag tag b => let (tag', v) := exn in if tag_eq_dec tag tag' then Some (with_binder b v m) else None
+  | PConstr tag b =>
+      let (tag', v) := exn in
+      if tag_eq_dec tag tag' then Some (with_binder b v m) else None
+  | PAlias p' x =>
+      match match_exn p' exn m with
+      | Some m' => Some (imonad_local_env (EnvCons x (VExn exn)) m')
+      | None => None
+      end
   end.
 
-Definition match_eff (p : pattern) (b : binder) (eff : eff) (v : val) (m : imonad iresult) : option (imonad iresult) :=
+Fixpoint match_eff (p : pattern) (b : binder) (eff : eff) (v : val) (m : imonad iresult) : option (imonad iresult) :=
   match p with
   | PAny => Some (with_binder b v m)
   | PVar x => Some (imonad_local_env (EnvCons x (VEff eff)) (with_binder b v m))
-  | PTag tag b' => let (tag', v') := eff in if tag_eq_dec tag tag' then Some (with_binder b' v' (with_binder b v m)) else None
+  | PConstr tag b' =>
+      let (tag', v') := eff in
+      if tag_eq_dec tag tag' then Some (with_binder b' v' (with_binder b v m)) else None
+  | PAlias p' x =>
+      match match_eff p' b eff v m with
+      | Some m' => Some (imonad_local_env (EnvCons x (VEff eff)) m')
+      | None => None
+      end
   end.
 
 Definition interpreter : Type := kont -> term -> imonad iresult.
 
-Definition interpret_term1_with (rec : interpreter) (k : kont) (t : term1) (v : val) : imonad iresult :=
-  let (b, t') := t in with_binder b v (rec k t').
+Definition interpret_term1_with (self : interpreter) (k : kont) (t : term1) (v : val) : imonad iresult :=
+  let (b, t') := t in with_binder b v (self k t').
 
-Definition interpret_term2_with (rec : interpreter) (k : kont) (t : term2) (v1 v2 : val) : imonad iresult :=
-  let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (rec k t')).
+Definition interpret_term2_with (self : interpreter) (k : kont) (t : term2) (v1 v2 : val) : imonad iresult :=
+  let (b1, b2, t') := t in with_binder b1 v1 (with_binder b2 v2 (self k t')).
 
-Definition interpret_clo1_with (rec : interpreter) (k : kont) (c : clo1) (v : val) : imonad iresult :=
-  let (env, t) := c in imonad_use_env env (interpret_term1_with rec k t v).
+Definition interpret_clo1_with (self : interpreter) (k : kont) (c : clo1) (v : val) : imonad iresult :=
+  let (env, t) := c in imonad_use_env env (interpret_term1_with self k t v).
 
-Definition interpret_clo2_with (rec : interpreter) (k : kont) (c : clo2) (v1 v2 : val) : imonad iresult :=
-  let (env, t) := c in imonad_use_env env (interpret_term2_with rec k t v1 v2).
+Definition interpret_clo2_with (self : interpreter) (k : kont) (c : clo2) (v1 v2 : val) : imonad iresult :=
+  let (env, t) := c in imonad_use_env env (interpret_term2_with self k t v1 v2).
 
-Definition interpret_kont_with (rec : interpreter) (k : kont) (v : val) : imonad iresult :=
+Definition interpret_kont_with (self : interpreter) (k : kont) (v : val) : imonad iresult :=
   match k with
   | KNil => imonad_pure (RReturn v)
-  | KCons c k' => interpret_clo1_with rec k' c v
+  | KCons c k' => interpret_clo1_with self k' c v
   end.
 
-Definition interpret_ret_term_with (rec : interpreter) (k : kont) (t : ret_term) (v : val) : imonad iresult :=
+Definition interpret_ret_term_with (self : interpreter) (k : kont) (t : ret_term) (v : val) : imonad iresult :=
   match t with
-  | TRet0 => interpret_kont_with rec k v
-  | TRet1 b t' => with_binder b v (rec k t')
+  | TRet0 => interpret_kont_with self k v
+  | TRet1 b t' => with_binder b v (self k t')
   end.
 
-Fixpoint interpret_exn_term_with (rec : interpreter) (k : kont) (t : exn_term) (exn : exn) : option (imonad iresult) :=
+Fixpoint interpret_exn_term_with (self : interpreter) (k : kont) (t : exn_term) (exn : exn) : option (imonad iresult) :=
   match t with
-  | TExnBase p t' => match_exn p exn (rec k t')
+  | TExnBase p t' => match_exn p exn (self k t')
   | TExnCons p t1 t2 =>
-      match match_exn p exn (rec k t1) with
+      match match_exn p exn (self k t1) with
       | Some _ as r => r
-      | None => interpret_exn_term_with rec k t2 exn
+      | None => interpret_exn_term_with self k t2 exn
       end
   end.
 
-Fixpoint interpret_eff_term_with (rec : interpreter) (k : kont) (t : eff_term) (eff : eff) (v : val) : option (imonad iresult) :=
+Fixpoint interpret_eff_term_with (self : interpreter) (k : kont) (t : eff_term) (eff : eff) (v : val) : option (imonad iresult) :=
   match t with
-  | TEffBase p b t' => match_eff p b eff v (rec k t')
+  | TEffBase p b t' => match_eff p b eff v (self k t')
   | TEffCons p b t1 t2 =>
-      match match_eff p b eff v (rec k t1) with
+      match match_eff p b eff v (self k t1) with
       | Some _ as r => r
-      | None => interpret_eff_term_with rec k t2 eff v
+      | None => interpret_eff_term_with self k t2 eff v
       end
   end.
 
-Definition interpret_try_clo_with (rec : interpreter) (k : kont) (c : try_clo) (r : iresult) : imonad iresult :=
+Definition interpret_try_clo_with (self : interpreter) (k : kont) (c : try_clo) (r : iresult) : imonad iresult :=
   match r with
-  | RReturn v => interpret_kont_with rec k v
+  | RReturn v => interpret_kont_with self k v
   | RShift tag f mk => imonad_pure (RShift tag f (MKTry mk c k))
   | RControl tag f mk => imonad_pure (RControl tag f (MKTry mk c k))
   | RRaise exn =>
       let (env, t) := c in
-      match interpret_exn_term_with rec k t exn with
+      match interpret_exn_term_with self k t exn with
       | Some m => imonad_use_env env m
       | None => imonad_pure r
       end
   | RPerform eff mk => imonad_pure (RPerform eff (MKTry mk c k))
   end.
 
-Definition interpret_handle_clo_with (rec : interpreter) (k : kont) (c : handle_clo) (r : iresult) : imonad iresult :=
+Definition interpret_handle_clo_with (self : interpreter) (k : kont) (c : handle_clo) (r : iresult) : imonad iresult :=
   match r with
-  | RReturn v => let (env, t, _) := c in imonad_use_env env (interpret_ret_term_with rec k t v)
+  | RReturn v => let (env, t, _) := c in imonad_use_env env (interpret_ret_term_with self k t v)
   | RShift tag f mk => imonad_pure (RShift tag f (MKHandle mk c k))
   | RControl tag f mk => imonad_pure (RControl tag f (MKHandle mk c k))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       let (env, _, t) := c in
-      match interpret_eff_term_with rec k t eff (VKontHandle mk c) with
+      match interpret_eff_term_with self k t eff (VKontHandle mk c) with
       | Some m => imonad_use_env env m
       | None => imonad_pure (RPerform eff (MKHandle mk c k))
       end
   end.
 
-Definition interpret_shallow_handle_clo_with (rec : interpreter) (k : kont) (c : handle_clo) (r : iresult) : imonad iresult :=
+Definition interpret_shallow_handle_clo_with (self : interpreter) (k : kont) (c : handle_clo) (r : iresult) : imonad iresult :=
   match r with
-  | RReturn v => let (env, t, _) := c in imonad_use_env env (interpret_ret_term_with rec k t v)
+  | RReturn v => let (env, t, _) := c in imonad_use_env env (interpret_ret_term_with self k t v)
   | RShift tag f mk => imonad_pure (RShift tag f (MKShallowHandle mk c k))
   | RControl tag f mk => imonad_pure (RControl tag f (MKShallowHandle mk c k))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       let (env, _, t) := c in
-      match interpret_eff_term_with rec k t eff (VKont mk) with
+      match interpret_eff_term_with self k t eff (VKont mk) with
       | Some m => imonad_use_env env m
       | None => imonad_pure (RPerform eff (MKShallowHandle mk c k))
       end
   end.
 
-Fixpoint interpret_metakont_with (rec : interpreter) (mk : metakont) (v : val) : imonad iresult :=
+Fixpoint interpret_metakont_with (self : interpreter) (mk : metakont) (v : val) : imonad iresult :=
   match mk with
-  | MKPure k => interpret_kont_with rec k v
-  | MKReset mk' tag k => interpret_reset k tag (interpret_metakont_with rec mk' v) (interpret_kont_with rec k)
-  | MKPrompt mk' tag k => interpret_prompt k tag (interpret_metakont_with rec mk' v) (interpret_kont_with rec k)
-  | MKTry mk' c k => interpret_metakont_with rec mk' v >>= interpret_try_clo_with rec k c
-  | MKHandle mk' c k => interpret_metakont_with rec mk' v >>= interpret_handle_clo_with rec k c
-  | MKShallowHandle mk' c k => interpret_metakont_with rec mk' v >>= interpret_shallow_handle_clo_with rec k c
+  | MKPure k => interpret_kont_with self k v
+  | MKReset mk' tag k => interpret_reset k tag (interpret_metakont_with self mk' v) (interpret_kont_with self k)
+  | MKPrompt mk' tag k => interpret_prompt k tag (interpret_metakont_with self mk' v) (interpret_kont_with self k)
+  | MKTry mk' c k => interpret_metakont_with self mk' v >>= interpret_try_clo_with self k c
+  | MKHandle mk' c k => interpret_metakont_with self mk' v >>= interpret_handle_clo_with self k c
+  | MKShallowHandle mk' c k => interpret_metakont_with self mk' v >>= interpret_shallow_handle_clo_with self k c
   end.
 
-Definition interpret_app (rec : interpreter) (k : kont) (m1 m2 : imonad val) (f : val -> imonad iresult) : imonad iresult :=
+Definition interpret_app (self : interpreter) (k : kont) (m1 m2 : imonad val) (f : val -> imonad iresult) : imonad iresult :=
   v <- m1;
   match v with
-  | VFun c => m2 >>= interpret_clo1_with rec k c
-  | VFix c => m2 >>= interpret_clo2_with rec k c v
-  | VKontReset mk tag => interpret_reset k tag (m2 >>= interpret_metakont_with rec mk) f
-  | VKont mk => m2 >>= interpret_metakont_with rec (metakont_extend mk k)
-  | VKontHandle mk c => m2 >>= interpret_metakont_with rec mk >>= interpret_handle_clo_with rec k c
+  | VFun c => m2 >>= interpret_clo1_with self k c
+  | VFix c => m2 >>= interpret_clo2_with self k c v
+  | VKontReset mk tag => interpret_reset k tag (m2 >>= interpret_metakont_with self mk) f
+  | VKont mk => m2 >>= interpret_metakont_with self (metakont_extend mk k)
+  | VKontHandle mk c => m2 >>= interpret_metakont_with self mk >>= interpret_handle_clo_with self k c
   | _ => imonad_throw (TypeError "")
   end.
 
@@ -607,106 +621,106 @@ Definition build_clo1_graph_dep (k : kont) (G : kont_graph k) (c : clo1) : clo1_
   | C1 env t => GC1 env (build_term1_graph_dep G t)
   end.
 
-Fixpoint interpret_term_dep (rec : interpreter) (k : kont) (t : term) (G : term_graph k t) {struct G} : imonad iresult :=
+Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term_graph k t) {struct G} : imonad iresult :=
   match t return term_graph k t -> imonad iresult with
   | TVal t' =>
-      fun G => interpret_val_term t' >>= interpret_kont_dep rec (GTVal_inv G)
+      fun G => interpret_val_term t' >>= interpret_kont_dep self (GTVal_inv G)
   | TApp t1 t2 =>
-      fun G => interpret_app rec k
+      fun G => interpret_app self k
                  (interpret_val_term t1)
                  (interpret_val_term t2)
-                 (interpret_kont_dep rec (GTApp_inv G))
+                 (interpret_kont_dep self (GTApp_inv G))
   | TLet t1 t2 =>
-      fun G => interpret_let (fun env => interpret_term_dep rec (GTLet_inv G env))
+      fun G => interpret_let (fun env => interpret_term_dep self (GTLet_inv G env))
   | TIf t1 t2 t3 =>
       fun G => interpret_if
                  (interpret_val_term t1)
-                 (interpret_term_dep rec (GTIf_inv1 G))
-                 (interpret_term_dep rec (GTIf_inv2 G))
+                 (interpret_term_dep self (GTIf_inv1 G))
+                 (interpret_term_dep self (GTIf_inv2 G))
   | TSplit t1 t2 =>
       fun G => interpret_split
                  (interpret_val_term t1)
-                 (interpret_term2_dep rec (GTSplit_inv G))
+                 (interpret_term2_dep self (GTSplit_inv G))
   | TCase t1 t2 t3 =>
       fun G => interpret_case
                  (interpret_val_term t1)
-                 (interpret_term1_dep rec (GTCase_inv1 G))
-                 (interpret_term1_dep rec (GTCase_inv2 G))
+                 (interpret_term1_dep self (GTCase_inv1 G))
+                 (interpret_term1_dep self (GTCase_inv2 G))
   | TShift tag t' =>
-      fun G => interpret_shift k tag (fun env => interpret_clo1_dep rec (GTShift_inv G env))
+      fun G => interpret_shift k tag (fun env => interpret_clo1_dep self (GTShift_inv G env))
   | TReset tag t' =>
       fun G => interpret_reset k tag
-                 (interpret_term_dep rec (GTReset_inv1 G))
-                 (interpret_kont_dep rec (GTReset_inv2 G))
+                 (interpret_term_dep self (GTReset_inv1 G))
+                 (interpret_kont_dep self (GTReset_inv2 G))
   | TControl tag t' =>
-      fun G => interpret_control k tag (fun env => interpret_clo1_dep rec (GTControl_inv G env))
+      fun G => interpret_control k tag (fun env => interpret_clo1_dep self (GTControl_inv G env))
   | TPrompt tag t' =>
       fun G => interpret_prompt k tag
-                 (interpret_term_dep rec (GTPrompt_inv1 G))
-                 (interpret_kont_dep rec (GTPrompt_inv2 G))
+                 (interpret_term_dep self (GTPrompt_inv1 G))
+                 (interpret_kont_dep self (GTPrompt_inv2 G))
   | TRaise t' =>
       fun G => interpret_raise (interpret_val_term t')
   | TTry t1 t2 =>
       fun G => interpret_try k t2
-                 (interpret_term_dep rec (GTTry_inv1 G))
-                 (interpret_kont_dep rec (GTTry_inv2 G))
-                 (interpret_exn_term_dep rec (GTTry_inv3 G))
+                 (interpret_term_dep self (GTTry_inv1 G))
+                 (interpret_kont_dep self (GTTry_inv2 G))
+                 (interpret_exn_term_dep self (GTTry_inv3 G))
   | TPerform t' =>
       fun G => interpret_perform k (interpret_val_term t')
   | THandle t1 t2 t3 =>
       fun G => interpret_handle k t2 t3
-                 (interpret_term_dep rec (GTHandle_inv1 G))
-                 (interpret_ret_term_dep rec (GTHandle_inv2 G))
-                 (interpret_eff_term_dep rec (GTHandle_inv3 G))
+                 (interpret_term_dep self (GTHandle_inv1 G))
+                 (interpret_ret_term_dep self (GTHandle_inv2 G))
+                 (interpret_eff_term_dep self (GTHandle_inv3 G))
   | TShallowHandle t1 t2 t3 =>
       fun G => interpret_shallow_handle k t2 t3
-                 (interpret_term_dep rec (GTShallowHandle_inv1 G))
-                 (interpret_ret_term_dep rec (GTShallowHandle_inv2 G))
-                 (interpret_eff_term_dep rec (GTShallowHandle_inv3 G))
+                 (interpret_term_dep self (GTShallowHandle_inv1 G))
+                 (interpret_ret_term_dep self (GTShallowHandle_inv2 G))
+                 (interpret_eff_term_dep self (GTShallowHandle_inv3 G))
   end G
-with interpret_term1_dep (rec : interpreter) (k : kont) (t : term1) (G : term1_graph k t) (v : val) {struct G} : imonad iresult :=
+with interpret_term1_dep (self : interpreter) (k : kont) (t : term1) (G : term1_graph k t) (v : val) {struct G} : imonad iresult :=
   match t return term1_graph k t -> imonad iresult with
-  | T1 b t' => fun G => with_binder b v (interpret_term_dep rec (GT1_inv G))
+  | T1 b t' => fun G => with_binder b v (interpret_term_dep self (GT1_inv G))
   end G
-with interpret_term2_dep (rec : interpreter) (k : kont) (t : term2) (G : term2_graph k t) (v1 v2 : val) {struct G} : imonad iresult :=
+with interpret_term2_dep (self : interpreter) (k : kont) (t : term2) (G : term2_graph k t) (v1 v2 : val) {struct G} : imonad iresult :=
   match t return term2_graph k t -> imonad iresult with
-  | T2 b1 b2 t' => fun G => with_binder b1 v1 (with_binder b2 v2 (interpret_term_dep rec (GT2_inv G)))
+  | T2 b1 b2 t' => fun G => with_binder b1 v1 (with_binder b2 v2 (interpret_term_dep self (GT2_inv G)))
   end G
-with interpret_ret_term_dep (rec : interpreter) (k : kont) (t : ret_term) (G : ret_term_graph k t) (v : val) {struct G} : imonad iresult :=
+with interpret_ret_term_dep (self : interpreter) (k : kont) (t : ret_term) (G : ret_term_graph k t) (v : val) {struct G} : imonad iresult :=
   match t return ret_term_graph k t -> imonad iresult with
-  | TRet0 => fun G => interpret_kont_dep rec (GTRet0_inv G) v
-  | TRet1 b t' => fun G => with_binder b v (interpret_term_dep rec (GTRet1_inv G))
+  | TRet0 => fun G => interpret_kont_dep self (GTRet0_inv G) v
+  | TRet1 b t' => fun G => with_binder b v (interpret_term_dep self (GTRet1_inv G))
   end G
-with interpret_exn_term_dep (rec : interpreter) (k : kont) (t : exn_term) (G : exn_term_graph k t) (exn : exn) {struct G} :
+with interpret_exn_term_dep (self : interpreter) (k : kont) (t : exn_term) (G : exn_term_graph k t) (exn : exn) {struct G} :
   option (imonad iresult) :=
   match t return exn_term_graph k t -> option (imonad iresult) with
   | TExnBase p t' =>
-      fun G => match_exn p exn (interpret_term_dep rec (GTExnBase_inv G))
+      fun G => match_exn p exn (interpret_term_dep self (GTExnBase_inv G))
   | TExnCons p t1 t2 =>
-      fun G => match match_exn p exn (interpret_term_dep rec (GTExnCons_inv1 G)) with
+      fun G => match match_exn p exn (interpret_term_dep self (GTExnCons_inv1 G)) with
                | Some _ as r => r
-               | None => interpret_exn_term_dep rec (GTExnCons_inv2 G) exn
+               | None => interpret_exn_term_dep self (GTExnCons_inv2 G) exn
                end
   end G
-with interpret_eff_term_dep (rec : interpreter) (k : kont) (t : eff_term) (G : eff_term_graph k t) (eff : eff) (v : val) {struct G} :
+with interpret_eff_term_dep (self : interpreter) (k : kont) (t : eff_term) (G : eff_term_graph k t) (eff : eff) (v : val) {struct G} :
   option (imonad iresult) :=
   match t return eff_term_graph k t -> option (imonad iresult) with
   | TEffBase p b t' =>
-      fun G => match_eff p b eff v (interpret_term_dep rec (GTEffBase_inv G))
+      fun G => match_eff p b eff v (interpret_term_dep self (GTEffBase_inv G))
   | TEffCons p b t1 t2 =>
-      fun G => match match_eff p b eff v (interpret_term_dep rec (GTEffCons_inv1 G)) with
+      fun G => match match_eff p b eff v (interpret_term_dep self (GTEffCons_inv1 G)) with
                | Some _ as r => r
-               | None => interpret_eff_term_dep rec (GTEffCons_inv2 G) eff v
+               | None => interpret_eff_term_dep self (GTEffCons_inv2 G) eff v
                end
   end G
-with interpret_clo1_dep (rec : interpreter) (k : kont) (c : clo1) (G : clo1_graph k c) (v : val) {struct G} : imonad iresult :=
+with interpret_clo1_dep (self : interpreter) (k : kont) (c : clo1) (G : clo1_graph k c) (v : val) {struct G} : imonad iresult :=
   match c return clo1_graph k c -> imonad iresult with
-  | C1 env t => fun G => imonad_use_env env (interpret_term1_dep rec (GC1_inv G) v)
+  | C1 env t => fun G => imonad_use_env env (interpret_term1_dep self (GC1_inv G) v)
   end G
-with interpret_kont_dep (rec : interpreter) (k : kont) (G : kont_graph k) (v : val) {struct G} : imonad iresult :=
+with interpret_kont_dep (self : interpreter) (k : kont) (G : kont_graph k) (v : val) {struct G} : imonad iresult :=
   match k return kont_graph k -> imonad iresult with
   | KNil => fun G => imonad_pure (RReturn v)
-  | KCons c k' => fun G => interpret_clo1_dep rec (GKCons_inv G) v
+  | KCons c k' => fun G => interpret_clo1_dep self (GKCons_inv G) v
   end G.
 
 Unset Implicit Arguments.
@@ -720,8 +734,8 @@ Fixpoint build_kont_graph (k : kont) : kont_graph k :=
 Definition build_term_graph (k : kont) (t : term) : term_graph k t :=
   build_term_graph_dep (build_kont_graph k) t.
 
-Definition interpret_term_aux (rec : interpreter) (k : kont) (t : term) : imonad iresult :=
-  interpret_term_dep rec (build_term_graph k t).
+Definition interpret_term_aux (self : interpreter) (k : kont) (t : term) : imonad iresult :=
+  interpret_term_dep self (build_term_graph k t).
 
 Fixpoint interpret_term (fuel : nat) (k : kont) (t : term) : imonad iresult :=
   match fuel with

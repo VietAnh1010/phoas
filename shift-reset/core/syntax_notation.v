@@ -20,7 +20,14 @@ Notation "'_'" := PAny (in custom pattern' at level 0) : term_scope.
 Notation "x" := x (in custom pattern' at level 0, x constr at level 0) : term_scope.
 
 Notation "' ( tag x )" :=
-  (PTag tag x) (in custom pattern' at level 10, tag at level 0, x custom binder') : term_scope.
+  (PConstr tag x) (in custom pattern' at level 10, tag at level 0, x custom binder') : term_scope.
+
+Notation "' ( tag x 'as' y )" :=
+  (PAlias (PConstr tag x) y)
+    (in custom pattern' at level 10,
+        tag at level 0,
+        x custom binder',
+        y constr at level 0) : term_scope.
 
 Notation "<{ t }>" := t (t custom term at level 99) : term_scope.
 Notation "( t )" := t (in custom term, t at level 99) : term_scope.
@@ -247,14 +254,14 @@ Notation "'Inl' t" :=
 Notation "'Inr' t" :=
   (TVInr t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "'match' t1 'with' | 'Inl' x1 => t2 | 'Inr' x2 => t3 'end'" :=
-  (TCase t1 (T1 x1 t2) (T1 x2 t3))
+Notation "'match' t0 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
+  (TCase t0 (T1 x1 t1) (T1 x2 t2))
     (in custom term at level 69,
-        t1 custom term,
+        t0 custom term,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,
-        t2 custom term,
-        t3 custom term) : term_scope.
+        t1 custom term,
+        t2 custom term) : term_scope.
 
 Notation "'exception' tag t" :=
   (TVExn tag t)

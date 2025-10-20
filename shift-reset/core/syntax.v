@@ -37,34 +37,36 @@ Inductive pattern : Type :=
 | PTag : tag -> binder -> pattern.
 
 Inductive term : Type :=
-| TAtom : atom -> term
-| TFun : term1 -> term
-| TFix : term2 -> term
-| TApp : atom -> atom -> term
+| TVal : val_term -> term
+| TApp : val_term -> val_term -> term
 | TLet : term -> term1 -> term
-| TIf : atom -> term -> term -> term
-| TPrim1 : prim1 -> atom -> term
-| TPrim2 : prim2 -> atom -> atom -> term
-| TPair : atom -> atom -> term
-| TSplit : atom -> term2 -> term
-| TInl : atom -> term
-| TInr : atom -> term
-| TCase : atom -> term1 -> term1 -> term
-| TRef : atom -> term
-| TGet : atom -> term
-| TSet : atom -> atom -> term
-| TFree : atom -> term
+| TIf : val_term -> term -> term -> term
+| TSplit : val_term -> term2 -> term
+| TCase : val_term -> term1 -> term1 -> term
 | TShift : tag -> term1 -> term
 | TReset : tag -> term -> term
 | TControl : tag -> term1 -> term
 | TPrompt : tag -> term -> term
-| TExn : tag -> atom -> term
-| TRaise : atom -> term
+| TRaise : val_term -> term
 | TTry : term -> exn_term -> term
-| TEff : tag -> atom -> term
-| TPerform : atom -> term
+| TPerform : val_term -> term
 | THandle : term -> ret_term -> eff_term -> term
 | TShallowHandle : term -> ret_term -> eff_term -> term
+with val_term : Type :=
+| TVAtom : atom -> val_term
+| TVFun : term1 -> val_term
+| TVFix : term2 -> val_term
+| TVPrim1 : prim1 -> val_term -> val_term
+| TVPrim2 : prim2 -> val_term -> val_term -> val_term
+| TVPair : val_term -> val_term -> val_term
+| TVInl : val_term -> val_term
+| TVInr : val_term -> val_term
+| TVRef : val_term -> val_term
+| TVGet : val_term -> val_term
+| TVSet : val_term -> val_term -> val_term
+| TVFree : val_term -> val_term
+| TVExn : tag -> val_term -> val_term
+| TVEff : tag -> val_term -> val_term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
@@ -151,6 +153,7 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 Hint Resolve pattern_eq_dec : eq_dec_db.
 
 Fixpoint term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
+with val_term_eq_dec : forall (t1 t2 : val_term), {t1 = t2} + {t1 <> t2}
 with term1_eq_dec : forall (t1 t2 : term1), {t1 = t2} + {t1 <> t2}
 with term2_eq_dec : forall (t1 t2 : term2), {t1 = t2} + {t1 <> t2}
 with ret_term_eq_dec : forall (t1 t2 : ret_term), {t1 = t2} + {t1 <> t2}
@@ -159,6 +162,7 @@ with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve term_eq_dec : eq_dec_db.
+Hint Resolve val_term_eq_dec : eq_dec_db.
 Hint Resolve term1_eq_dec : eq_dec_db.
 Hint Resolve term2_eq_dec : eq_dec_db.
 Hint Resolve ret_term_eq_dec : eq_dec_db.
@@ -199,5 +203,6 @@ Module Coerce.
   Coercion AInt : Z >-> atom.
   Coercion ABool : bool >-> atom.
   Coercion AVar : var >-> atom.
-  Coercion TAtom : atom >-> term.
+  Coercion TVAtom : atom >-> val_term.
+  Coercion TVal : val_term >-> term.
 End Coerce.

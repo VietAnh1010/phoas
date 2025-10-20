@@ -3,6 +3,7 @@ From shift_reset.core Require Import syntax tag.
 Declare Scope term_scope.
 Delimit Scope term_scope with term.
 Bind Scope term_scope with term.
+Local Open Scope term_scope.
 
 Declare Custom Entry binder'.
 Declare Custom Entry pattern'.
@@ -68,15 +69,15 @@ Notation "( 'fun' x , k => t1 ) ; t2" :=
         t2 custom eff_term,
         right associativity) : term_scope.
 
-Notation "a1 a2" :=
-  (TApp a1 a2) (in custom term at level 10, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 t2" :=
+  (TApp t1 t2) (in custom term at level 10, t1 custom term, t2 custom term) : term_scope.
 
-Notation "'if' a 'then' t1 'else' t2" :=
-  (TIf a t1 t2)
+Notation "'if' t1 'then' t2 'else' t3" :=
+  (TIf t1 t2 t3)
     (in custom term at level 69,
-        a custom term,
         t1 custom term,
-        t2 custom term) : term_scope.
+        t2 custom term,
+        t3 custom term) : term_scope.
 
 Notation "'let' x := t1 'in' t2" :=
   (TLet t1 (T1 x t2))
@@ -87,7 +88,7 @@ Notation "'let' x := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' f x1 .. xn := t1 'in' t2" :=
-  (TLet (TFun (T1 x1 .. (TFun (T1 xn t1)) ..)) (T1 f t2))
+  (TLet (TVFun (T1 x1 .. (TVFun (T1 xn t1)) ..)) (T1 f t2))
     (in custom term at level 69,
         f custom binder' at level 0,
         x1 custom binder' at level 0,
@@ -97,7 +98,7 @@ Notation "'let' f x1 .. xn := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f x := t1 'in' t2" :=
-  (TLet (TFix (T2 f x t1)) (T1 f t2))
+  (TLet (TVFix (T2 f x t1)) (T1 f t2))
     (in custom term at level 69,
         f custom binder' at level 0,
         x custom binder' at level 0,
@@ -106,7 +107,7 @@ Notation "'let' 'fix' f x := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f x1 x2 .. xn := t1 'in' t2" :=
-  (TLet (TFix (T2 f x1 (TFun (T1 x2 .. (TFun (T1 xn t1)) ..)))) (T1 f t2))
+  (TLet (TVFix (T2 f x1 (TVFun (T1 x2 .. (TVFun (T1 xn t1)) ..)))) (T1 f t2))
     (in custom term at level 69,
         f custom binder' at level 0,
         x1 custom binder' at level 0,
@@ -141,21 +142,21 @@ Notation "'prompt' 'at' tag t" :=
   (TPrompt tag t) (in custom term at level 69, tag at level 0, t custom term) : term_scope.
 
 Notation "'fun' x1 .. xn => t" :=
-  (TFun (T1 x1 .. (TFun (T1 xn t)) ..))
+  (TVFun (T1 x1 .. (TVFun (T1 xn t)) ..))
     (in custom term at level 69,
         x1 custom binder' at level 0,
         xn custom binder' at level 0,
         t custom term at level 99) : term_scope.
 
 Notation "'fix' f x := t" :=
-  (TFix (T2 f x t))
+  (TVFix (T2 f x t))
     (in custom term at level 69,
         f custom binder' at level 0,
         x custom binder' at level 0,
         t custom term at level 99) : term_scope.
 
 Notation "'fix' f x1 x2 .. xn := t" :=
-  (TFix (T2 f x1 (TFun (T1 x2 .. (TFun (T1 xn t)) ..))))
+  (TVFix (T2 f x1 (TVFun (T1 x2 .. (TVFun (T1 xn t)) ..))))
     (in custom term at level 69,
         f custom binder' at level 0,
         x1 custom binder' at level 0,
@@ -165,104 +166,104 @@ Notation "'fix' f x1 x2 .. xn := t" :=
 
 Notation "()" := AUnit (in custom term at level 0) : term_scope.
 
-Notation "'not' a" :=
-  (TPrim1 P1Not a) (in custom term at level 23, a custom term at level 0) : term_scope.
+Notation "'not' t" :=
+  (TVPrim1 P1Not t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "- a" :=
-  (TPrim1 P1Neg a) (in custom term at level 23, a custom term at level 0) : term_scope.
+Notation "- t" :=
+  (TVPrim1 P1Neg t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "'ref' a" :=
-  (TRef a) (in custom term at level 23, a custom term at level 0) : term_scope.
+Notation "'ref' t" :=
+  (TVRef t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "! a" :=
-  (TGet a) (in custom term at level 23, a custom term at level 0) : term_scope.
+Notation "! t" :=
+  (TVGet t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "'free' a" :=
-  (TFree a) (in custom term at level 23, a custom term at level 0) : term_scope.
+Notation "'free' t" :=
+  (TVFree t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "a1 + a2" :=
-  (TPrim2 P2Add a1 a2) (in custom term at level 40, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 + t2" :=
+  (TVPrim2 P2Add t1 t2) (in custom term at level 40, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 - a2" :=
-  (TPrim2 P2Sub a1 a2) (in custom term at level 40, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 - t2" :=
+  (TVPrim2 P2Sub t1 t2) (in custom term at level 40, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 * a2" :=
-  (TPrim2 P2Mul a1 a2) (in custom term at level 39, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 * t2" :=
+  (TVPrim2 P2Mul t1 t2) (in custom term at level 39, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 = a2" :=
-  (TPrim2 P2Eq a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 = t2" :=
+  (TVPrim2 P2Eq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 <> a2" :=
-  (TPrim2 P2Neq a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 <> t2" :=
+  (TVPrim2 P2Neq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 < a2" :=
-  (TPrim2 P2Lt a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 < t2" :=
+  (TVPrim2 P2Lt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 <= a2" :=
-  (TPrim2 P2Le a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 <= t2" :=
+  (TVPrim2 P2Le t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 > a2" :=
-  (TPrim2 P2Gt a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 > t2" :=
+  (TVPrim2 P2Gt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 >= a2" :=
-  (TPrim2 P2Ge a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 >= t2" :=
+  (TVPrim2 P2Ge t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 && a2" :=
-  (TPrim2 P2And a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 && t2" :=
+  (TVPrim2 P2And t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 || a2" :=
-  (TPrim2 P2Or a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 || t2" :=
+  (TVPrim2 P2Or t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 'xor' a2" :=
-  (TPrim2 P2Xor a1 a2) (in custom term at level 50, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 'xor' t2" :=
+  (TVPrim2 P2Xor t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 <- a2" :=
-  (TSet a1 a2) (in custom term at level 65, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 <- t2" :=
+  (TVSet t1 t2) (in custom term at level 65, t1 custom term, t2 custom term) : term_scope.
 
-Notation "a1 , a2" :=
-  (TPair a1 a2) (in custom term at level 65, a1 custom term, a2 custom term) : term_scope.
+Notation "t1 , t2" :=
+  (TVPair t1 t2) (in custom term at level 65, t1 custom term, t2 custom term) : term_scope.
 
-Notation "'let' ( x1 , x2 ) := a 'in' t" :=
-  (TSplit a (T2 x1 x2 t))
+Notation "'let' ( x1 , x2 ) := t1 'in' t2" :=
+  (TSplit t1 (T2 x1 x2 t2))
     (in custom term at level 69,
-        x1 custom binder' at level 0,
-        x2 custom binder' at level 0,
-        a custom term,
-        t custom term,
-        right associativity) : term_scope.
-
-Notation "'let' x1 , x2 := a 'in' t" :=
-  (TSplit a (T2 x1 x2 t))
-    (in custom term at level 69,
-        x1 custom binder' at level 0,
-        x2 custom binder' at level 0,
-        a custom term,
-        t custom term,
-        right associativity) : term_scope.
-
-Notation "'Inl' a" :=
-  (TInl a) (in custom term at level 23, a custom term at level 0) : term_scope.
-
-Notation "'Inr' a" :=
-  (TInr a) (in custom term at level 23, a custom term at level 0) : term_scope.
-
-Notation "'match' a 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
-  (TCase a (T1 x1 t1) (T1 x2 t2))
-    (in custom term at level 69,
-        a custom term,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,
         t1 custom term,
-        t2 custom term) : term_scope.
+        t2 custom term,
+        right associativity) : term_scope.
 
-Notation "'exception' tag a" :=
-  (TExn tag a)
+Notation "'let' x1 , x2 := t1 'in' t2" :=
+  (TSplit t1 (T2 x1 x2 t2))
+    (in custom term at level 69,
+        x1 custom binder' at level 0,
+        x2 custom binder' at level 0,
+        t1 custom term,
+        t2 custom term,
+        right associativity) : term_scope.
+
+Notation "'Inl' t" :=
+  (TVInl t) (in custom term at level 23, t custom term at level 0) : term_scope.
+
+Notation "'Inr' t" :=
+  (TVInr t) (in custom term at level 23, t custom term at level 0) : term_scope.
+
+Notation "'match' t1 'with' | 'Inl' x1 => t2 | 'Inr' x2 => t3 'end'" :=
+  (TCase t1 (T1 x1 t2) (T1 x2 t3))
+    (in custom term at level 69,
+        t1 custom term,
+        x1 custom binder' at level 0,
+        x2 custom binder' at level 0,
+        t2 custom term,
+        t3 custom term) : term_scope.
+
+Notation "'exception' tag t" :=
+  (TVExn tag t)
     (in custom term at level 23,
         tag at level 0,
-        a custom term at level 0) : term_scope.
+        t custom term at level 0) : term_scope.
 
-Notation "'raise' a" :=
-  (TRaise a) (in custom term at level 23, a custom term at level 0) : term_scope.
+Notation "'raise' t" :=
+  (TRaise t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
 Notation "'try' t1 ; t2" :=
   (TTry t1 t2)
@@ -270,14 +271,14 @@ Notation "'try' t1 ; t2" :=
         t1 custom term,
         t2 custom exn_term) : term_scope.
 
-Notation "'effect' tag a" :=
-  (TEff tag a)
+Notation "'effect' tag t" :=
+  (TVEff tag t)
     (in custom term at level 23,
         tag at level 0,
-        a custom term at level 0) : term_scope.
+        t custom term at level 0) : term_scope.
 
-Notation "'perform' a" :=
-  (TPerform a) (in custom term at level 23, a custom term at level 0) : term_scope.
+Notation "'perform' t" :=
+  (TPerform t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
 Notation "'handle' t1 ; t2 ; t3" :=
   (THandle t1 t2 t3)

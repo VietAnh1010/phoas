@@ -54,31 +54,31 @@ Definition interpret_atom (a : atom) : imonad val :=
       end
   end.
 
-Definition interpret_i2i (f : Z -> Z) (a : atom) : imonad val :=
-  imonad_map (fun i => VInt (f i)) (interpret_atom a >>= unwrap_VInt).
+Definition interpret_i2i (f : Z -> Z) (m : imonad val) : imonad val :=
+  imonad_map (fun i => VInt (f i)) (m >>= unwrap_VInt).
 
-Definition interpret_b2b (f : bool -> bool) (a : atom) : imonad val :=
-  imonad_map (fun b => VBool (f b)) (interpret_atom a >>= unwrap_VBool).
+Definition interpret_b2b (f : bool -> bool) (m : imonad val) : imonad val :=
+  imonad_map (fun b => VBool (f b)) (m >>= unwrap_VBool).
 
-Definition interpret_prim1 (p : prim1) : atom -> imonad val :=
+Definition interpret_prim1 (p : prim1) : imonad val -> imonad val :=
   match p with
   | P1Neg => interpret_i2i Z.opp
   | P1Not => interpret_b2b negb
   end.
 
-Definition interpret_ii2i (f : Z -> Z -> Z) (a1 a2 : atom) : imonad val :=
-  imonad_lift2 (fun i1 i2 => VInt (f i1 i2)) (interpret_atom a1 >>= unwrap_VInt) (interpret_atom a2 >>= unwrap_VInt).
+Definition interpret_ii2i (f : Z -> Z -> Z) (m1 m2 : imonad val) : imonad val :=
+  imonad_lift2 (fun i1 i2 => VInt (f i1 i2)) (m1 >>= unwrap_VInt) (m2 >>= unwrap_VInt).
 
-Definition interpret_ii2b (f : Z -> Z -> bool) (a1 a2 : atom) : imonad val :=
-  imonad_lift2 (fun i1 i2 => VBool (f i1 i2)) (interpret_atom a1 >>= unwrap_VInt) (interpret_atom a2 >>= unwrap_VInt).
+Definition interpret_ii2b (f : Z -> Z -> bool) (m1 m2 : imonad val) : imonad val :=
+  imonad_lift2 (fun i1 i2 => VBool (f i1 i2)) (m1 >>= unwrap_VInt) (m2 >>= unwrap_VInt).
 
-Definition interpret_bb2b (f : bool -> bool -> bool) (a1 a2 : atom) : imonad val :=
-  imonad_lift2 (fun b1 b2 => VBool (f b1 b2)) (interpret_atom a1 >>= unwrap_VBool) (interpret_atom a2 >>= unwrap_VBool).
+Definition interpret_bb2b (f : bool -> bool -> bool) (m1 m2 : imonad val) : imonad val :=
+  imonad_lift2 (fun b1 b2 => VBool (f b1 b2)) (m1 >>= unwrap_VBool) (m2 >>= unwrap_VBool).
 
-Definition interpret_vv2b (f : val -> val -> bool) (a1 a2 : atom) : imonad val :=
-  imonad_lift2 (fun v1 v2 => VBool (f v1 v2)) (interpret_atom a1) (interpret_atom a2).
+Definition interpret_vv2b (f : val -> val -> bool) : imonad val -> imonad val -> imonad val :=
+  imonad_lift2 (fun v1 v2 => VBool (f v1 v2)).
 
-Definition interpret_prim2 (p : prim2) : atom -> atom -> imonad val :=
+Definition interpret_prim2 (p : prim2) : imonad val -> imonad val -> imonad val :=
   match p with
   | P2Add => interpret_ii2i Z.add
   | P2Sub => interpret_ii2i Z.sub
@@ -102,70 +102,88 @@ Definition interpret_fun (t : term1) : imonad val :=
 Definition interpret_fix (t : term2) : imonad val :=
   imonad_reader_env (VFix' t).
 
-Definition interpret_pair (a1 a2 : atom) : imonad val :=
-  imonad_lift2 VPair (interpret_atom a1) (interpret_atom a2).
+Definition interpret_pair : imonad val -> imonad val -> imonad val :=
+  imonad_lift2 VPair.
 
-Definition interpret_inl (a : atom) : imonad val :=
-  VInl <$> interpret_atom a.
+Definition interpret_inl : imonad val -> imonad val :=
+  imonad_map VInl.
 
-Definition interpret_inr (a : atom) : imonad val :=
-  VInr <$> interpret_atom a.
+Definition interpret_inr : imonad val -> imonad val :=
+  imonad_map VInr.
 
-Definition interpret_exn (tag : tag) (a : atom) : imonad val :=
-  VExn' tag <$> interpret_atom a.
-
-Definition interpret_eff (tag : tag) (a : atom) : imonad val :=
-  VEff' tag <$> interpret_atom a.
-
-Definition interpret_ref (a : atom) : imonad val :=
-  v <- interpret_atom a;
+Definition interpret_ref (m : imonad val) : imonad val :=
+  v <- m;
   h <- imonad_get_heap;
   match iheap_ref v h with
   | None => imonad_throw (MemoryError "")
   | Some (l, h') => VLoc l <$ imonad_set_heap h'
   end.
 
-Definition interpret_get (a : atom) : imonad val :=
-  l <- interpret_atom a >>= unwrap_VLoc;
+Definition interpret_get (m : imonad val) : imonad val :=
+  l <- m >>= unwrap_VLoc;
   h <- imonad_get_heap;
   match iheap_get l h with
   | None => imonad_throw (MemoryError "")
   | Some v => imonad_pure v
   end.
 
-Definition interpret_set (a1 a2 : atom) : imonad val :=
-  l <- interpret_atom a1 >>= unwrap_VLoc;
-  v <- interpret_atom a2;
+Definition interpret_set (m1 m2 : imonad val) : imonad val :=
+  l <- m1 >>= unwrap_VLoc;
+  v <- m2;
   h <- imonad_get_heap;
   match iheap_set l v h with
   | None => imonad_throw (MemoryError "")
   | Some h' => VUnit <$ imonad_set_heap h'
   end.
 
-Definition interpret_free (a : atom) : imonad val :=
-  l <- interpret_atom a >>= unwrap_VLoc;
+Definition interpret_free (m : imonad val) : imonad val :=
+  l <- m >>= unwrap_VLoc;
   h <- imonad_get_heap;
   match iheap_free l h with
   | None => imonad_throw (MemoryError "")
   | Some h' => VUnit <$ imonad_set_heap h'
   end.
 
+Definition interpret_exn (tag : tag) : imonad val -> imonad val :=
+  imonad_map (VExn' tag).
+
+Definition interpret_eff (tag : tag) : imonad val -> imonad val :=
+  imonad_map (VEff' tag).
+
+Fixpoint interpret_val_term (t : val_term) : imonad val :=
+  match t with
+  | TVAtom a => interpret_atom a
+  | TVFun t' => interpret_fun t'
+  | TVFix t' => interpret_fix t'
+  | TVPrim1 p t' => interpret_prim1 p (interpret_val_term t')
+  | TVPrim2 p t1 t2 => interpret_prim2 p (interpret_val_term t1) (interpret_val_term t2)
+  | TVPair t1 t2 => interpret_pair (interpret_val_term t1) (interpret_val_term t2)
+  | TVInl t' => interpret_inl (interpret_val_term t')
+  | TVInr t' => interpret_inr (interpret_val_term t')
+  | TVRef t' => interpret_ref (interpret_val_term t')
+  | TVGet t' => interpret_get (interpret_val_term t')
+  | TVSet t1 t2 => interpret_set (interpret_val_term t1) (interpret_val_term t2)
+  | TVFree t' => interpret_free (interpret_val_term t')
+  | TVExn tag t' => interpret_exn tag (interpret_val_term t')
+  | TVEff tag t' => interpret_eff tag (interpret_val_term t')
+  end.
+
 Definition interpret_let : (env -> imonad iresult) -> imonad iresult :=
   imonad_bind imonad_ask_env.
 
-Definition interpret_if (a : atom) (m1 m2 : imonad iresult) : imonad iresult :=
-  b <- interpret_atom a >>= unwrap_VBool;
-  if b then m1 else m2.
+Definition interpret_if (m1 : imonad val) (m2 m3 : imonad iresult) : imonad iresult :=
+  b <- m1 >>= unwrap_VBool;
+  if b then m2 else m3.
 
-Definition interpret_split (a : atom) (f : val -> val -> imonad iresult) : imonad iresult :=
-  v <- interpret_atom a;
+Definition interpret_split (m : imonad val) (f : val -> val -> imonad iresult) : imonad iresult :=
+  v <- m;
   match v with
   | VPair v1 v2 => f v1 v2
   | _ => imonad_throw (TypeError "")
   end.
 
-Definition interpret_case (a : atom) (f1 f2 : val -> imonad iresult) : imonad iresult :=
-  v <- interpret_atom a;
+Definition interpret_case (m : imonad val) (f1 f2 : val -> imonad iresult) : imonad iresult :=
+  v <- m;
   match v with
   | VInl v' => f1 v'
   | VInr v' => f2 v'
@@ -257,15 +275,15 @@ Definition interpret_shift (k : kont) (tag : tag) (f : env -> val -> imonad ires
 Definition interpret_control (k : kont) (tag : tag) (f : env -> val -> imonad iresult) : imonad iresult :=
   imonad_reader_env (fun env => RControl tag (f env) (MKPure k)).
 
-Definition interpret_raise (a : atom) : imonad iresult :=
-  v <- interpret_atom a;
+Definition interpret_raise (m : imonad val) : imonad iresult :=
+  v <- m;
   match v with
   | VExn exn => imonad_pure (RRaise exn)
   | _ => imonad_throw (TypeError "")
   end.
 
-Definition interpret_perform (k : kont) (a : atom) : imonad iresult :=
-  v <- interpret_atom a;
+Definition interpret_perform (k : kont) (m : imonad val) : imonad iresult :=
+  v <- m;
   match v with
   | VEff eff => imonad_pure (RPerform eff (MKPure k))
   | _ => imonad_throw (TypeError "")
@@ -389,46 +407,33 @@ Fixpoint interpret_metakont_with (rec : interpreter) (mk : metakont) (v : val) :
   | MKShallowHandle mk' c k => interpret_metakont_with rec mk' v >>= interpret_shallow_handle_clo_with rec k c
   end.
 
-Definition interpret_app (rec : interpreter) (k : kont) (a1 a2 : atom) (f : val -> imonad iresult) : imonad iresult :=
-  v <- interpret_atom a1;
+Definition interpret_app (rec : interpreter) (k : kont) (m1 m2 : imonad val) (f : val -> imonad iresult) : imonad iresult :=
+  v <- m1;
   match v with
-  | VFun c => interpret_atom a2 >>= interpret_clo1_with rec k c
-  | VFix c => interpret_atom a2 >>= interpret_clo2_with rec k c v
-  | VKontReset mk tag => interpret_reset k tag (interpret_atom a2 >>= interpret_metakont_with rec mk) f
-  | VKont mk => interpret_atom a2 >>= interpret_metakont_with rec (metakont_extend mk k)
-  | VKontHandle mk c => interpret_atom a2 >>= interpret_metakont_with rec mk >>= interpret_handle_clo_with rec k c
+  | VFun c => m2 >>= interpret_clo1_with rec k c
+  | VFix c => m2 >>= interpret_clo2_with rec k c v
+  | VKontReset mk tag => interpret_reset k tag (m2 >>= interpret_metakont_with rec mk) f
+  | VKont mk => m2 >>= interpret_metakont_with rec (metakont_extend mk k)
+  | VKontHandle mk c => m2 >>= interpret_metakont_with rec mk >>= interpret_handle_clo_with rec k c
   | _ => imonad_throw (TypeError "")
   end.
 
 Set Implicit Arguments.
 
 Inductive term_graph : kont -> term -> Prop :=
-| GTAtom k a : kont_graph k -> term_graph k (TAtom a)
-| GTFun k t' : kont_graph k -> term_graph k (TFun t')
-| GTFix k t' : kont_graph k -> term_graph k (TFix t')
-| GTApp k a1 a2 : kont_graph k -> term_graph k (TApp a1 a2)
+| GTVal k t' : kont_graph k -> term_graph k (TVal t')
+| GTApp k t1 t2 : kont_graph k -> term_graph k (TApp t1 t2)
 | GTLet k t1 t2 : (forall env, term_graph (KCons (C1 env t2) k) t1) -> term_graph k (TLet t1 t2)
-| GTIf k a t1 t2 : term_graph k t1 -> term_graph k t2 -> term_graph k (TIf a t1 t2)
-| GTPrim1 k p a : kont_graph k -> term_graph k (TPrim1 p a)
-| GTPrim2 k p a1 a2 : kont_graph k -> term_graph k (TPrim2 p a1 a2)
-| GTPair k a1 a2 : kont_graph k -> term_graph k (TPair a1 a2)
-| GTSplit k a t' : term2_graph k t' -> term_graph k (TSplit a t')
-| GTInl k a : kont_graph k -> term_graph k (TInl a)
-| GTInr k a : kont_graph k -> term_graph k (TInr a)
-| GTCase k a t1 t2 : term1_graph k t1 -> term1_graph k t2 -> term_graph k (TCase a t1 t2)
-| GTRef k a : kont_graph k -> term_graph k (TRef a)
-| GTGet k a : kont_graph k -> term_graph k (TGet a)
-| GTSet k a1 a2 : kont_graph k -> term_graph k (TSet a1 a2)
-| GTFree k a : kont_graph k -> term_graph k (TFree a)
+| GTIf k t1 t2 t3 : term_graph k t2 -> term_graph k t3 -> term_graph k (TIf t1 t2 t3)
+| GTSplit k t1 t2 : term2_graph k t2 -> term_graph k (TSplit t1 t2)
+| GTCase k t1 t2 t3 : term1_graph k t2 -> term1_graph k t3 -> term_graph k (TCase t1 t2 t3)
 | GTShift k tag t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TShift tag t')
 | GTReset k tag t' : term_graph KNil t' -> kont_graph k -> term_graph k (TReset tag t')
 | GTControl k tag t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TControl tag t')
 | GTPrompt k tag t' : term_graph KNil t' -> kont_graph k -> term_graph k (TPrompt tag t')
-| GTExn k tag a : kont_graph k -> term_graph k (TExn tag a)
-| GTRaise k a : term_graph k (TRaise a)
+| GTRaise k t' : term_graph k (TRaise t')
 | GTTry k t1 t2 : term_graph KNil t1 -> kont_graph k -> exn_term_graph k t2 -> term_graph k (TTry t1 t2)
-| GTEff k tag a : kont_graph k -> term_graph k (TEff tag a)
-| GTPerform k a : term_graph k (TPerform a)
+| GTPerform k t' : term_graph k (TPerform t')
 | GTHandle k t1 t2 t3 : term_graph KNil t1 -> ret_term_graph k t2 -> eff_term_graph k t3 -> term_graph k (THandle t1 t2 t3)
 | GTShallowHandle k t1 t2 t3 : term_graph KNil t1 -> ret_term_graph k t2 -> eff_term_graph k t3 -> term_graph k (TShallowHandle t1 t2 t3)
 with term1_graph : kont -> term1 -> Prop :=
@@ -450,61 +455,28 @@ with kont_graph : kont -> Prop :=
 | GKNil : kont_graph KNil
 | GKCons c k' : clo1_graph k' c -> kont_graph (KCons c k').
 
-Lemma GTAtom_inv k a : term_graph k (TAtom a) -> kont_graph k.
+Lemma GTVal_inv k t' : term_graph k (TVal t') -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTFun_inv k t' : term_graph k (TFun t') -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTFix_inv k t' : term_graph k (TFix t') -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTApp_inv k a1 a2 : term_graph k (TApp a1 a2) -> kont_graph k.
+Lemma GTApp_inv k t1 t2 : term_graph k (TApp t1 t2) -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTLet_inv k t1 t2 : term_graph k (TLet t1 t2) -> forall env, term_graph (KCons (C1 env t2) k) t1.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTIf_inv1 k a t1 t2 : term_graph k (TIf a t1 t2) -> term_graph k t1.
+Lemma GTIf_inv1 k t1 t2 t3 : term_graph k (TIf t1 t2 t3) -> term_graph k t2.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTIf_inv2 k a t1 t2 : term_graph k (TIf a t1 t2) -> term_graph k t2.
+Lemma GTIf_inv2 k t1 t2 t3 : term_graph k (TIf t1 t2 t3) -> term_graph k t3.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPrim1_inv k p a : term_graph k (TPrim1 p a) -> kont_graph k.
+Lemma GTSplit_inv k t1 t2 : term_graph k (TSplit t1 t2) -> term2_graph k t2.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPrim2_inv k p a1 a2 : term_graph k (TPrim2 p a1 a2) -> kont_graph k.
+Lemma GTCase_inv1 k t1 t2 t3 : term_graph k (TCase t1 t2 t3) -> term1_graph k t2.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTPair_inv k a1 a2 : term_graph k (TPair a1 a2) -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTSplit_inv k a t' : term_graph k (TSplit a t') -> term2_graph k t'.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTInl_inv k a : term_graph k (TInl a) -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTInr_inv k a : term_graph k (TInr a) -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTCase_inv1 k a t1 t2 : term_graph k (TCase a t1 t2) -> term1_graph k t1.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTCase_inv2 k a t1 t2 : term_graph k (TCase a t1 t2) -> term1_graph k t2.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTRef_inv k a : term_graph k (TRef a) -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTGet_inv k a : term_graph k (TGet a) -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTSet_inv k a1 a2 : term_graph k (TSet a1 a2) -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTFree_inv k a : term_graph k (TFree a) -> kont_graph k.
+Lemma GTCase_inv2 k t1 t2 t3 : term_graph k (TCase t1 t2 t3) -> term1_graph k t3.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTShift_inv k tag t' : term_graph k (TShift tag t') -> forall env, clo1_graph KNil (C1 env t').
@@ -525,9 +497,6 @@ Proof. inversion 1; auto. Defined.
 Lemma GTPrompt_inv2 k tag t' : term_graph k (TPrompt tag t') -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTExn_inv k tag a : term_graph k (TExn tag a) -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
 Lemma GTTry_inv1 k t1 t2 : term_graph k (TTry t1 t2) -> term_graph KNil t1.
 Proof. inversion 1; auto. Defined.
 
@@ -535,9 +504,6 @@ Lemma GTTry_inv2 k t1 t2 : term_graph k (TTry t1 t2) -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTTry_inv3 k t1 t2 : term_graph k (TTry t1 t2) -> exn_term_graph k t2.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTEff_inv k tag a : term_graph k (TEff tag a) -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTHandle_inv1 k t1 t2 t3 : term_graph k (THandle t1 t2 t3) -> term_graph KNil t1.
@@ -596,32 +562,19 @@ Proof. inversion 1; auto. Defined.
 
 Fixpoint build_term_graph_dep (k : kont) (G : kont_graph k) (t : term) : term_graph k t :=
   match t with
-  | TAtom a => GTAtom a G
-  | TFun t' => GTFun t' G
-  | TFix t' => GTFix t' G
-  | TApp a1 a2 => GTApp a1 a2 G
+  | TVal t' => GTVal t' G
+  | TApp t1 t2 => GTApp t1 t2 G
   | TLet t1 t2 => GTLet (fun env => build_term_graph_dep (GKCons (GC1 env (build_term1_graph_dep G t2))) t1)
-  | TIf a t1 t2 => GTIf a (build_term_graph_dep G t1) (build_term_graph_dep G t2)
-  | TPrim1 p a => GTPrim1 p a G
-  | TPrim2 p a1 a2 => GTPrim2 p a1 a2 G
-  | TPair a1 a2 => GTPair a1 a2 G
-  | TSplit a t' => GTSplit a (build_term2_graph_dep G t')
-  | TInl a => GTInl a G
-  | TInr a => GTInr a G
-  | TCase a t1 t2 => GTCase a (build_term1_graph_dep G t1) (build_term1_graph_dep G t2)
-  | TRef a => GTRef a G
-  | TGet a => GTGet a G
-  | TSet a1 a2 => GTSet a1 a2 G
-  | TFree a => GTFree a G
+  | TIf t1 t2 t3 => GTIf t1 (build_term_graph_dep G t2) (build_term_graph_dep G t3)
+  | TSplit t1 t2 => GTSplit t1 (build_term2_graph_dep G t2)
+  | TCase t1 t2 t3 => GTCase t1 (build_term1_graph_dep G t2) (build_term1_graph_dep G t3)
   | TShift tag t' => GTShift k tag (fun env => GC1 env (build_term1_graph_dep GKNil t'))
   | TReset tag t' => GTReset tag (build_term_graph_dep GKNil t') G
   | TControl tag t' => GTControl k tag (fun env => GC1 env (build_term1_graph_dep GKNil t'))
   | TPrompt tag t' => GTPrompt tag (build_term_graph_dep GKNil t') G
-  | TExn tag a => GTExn tag a G
-  | TRaise a => GTRaise k a
+  | TRaise t' => GTRaise k t'
   | TTry t1 t2 => GTTry (build_term_graph_dep GKNil t1) G (build_exn_term_graph_dep G t2)
-  | TEff tag a => GTEff tag a G
-  | TPerform a => GTPerform k a
+  | TPerform t' => GTPerform k t'
   | THandle t1 t2 t3 => GTHandle (build_term_graph_dep GKNil t1) (build_ret_term_graph_dep G t2) (build_eff_term_graph_dep G t3)
   | TShallowHandle t1 t2 t3 => GTShallowHandle (build_term_graph_dep GKNil t1) (build_ret_term_graph_dep G t2) (build_eff_term_graph_dep G t3)
   end
@@ -656,48 +609,50 @@ Definition build_clo1_graph_dep (k : kont) (G : kont_graph k) (c : clo1) : clo1_
 
 Fixpoint interpret_term_dep (rec : interpreter) (k : kont) (t : term) (G : term_graph k t) {struct G} : imonad iresult :=
   match t return term_graph k t -> imonad iresult with
-  | TAtom a => fun G => interpret_atom a >>= interpret_kont_dep rec (GTAtom_inv G)
-  | TFun t' => fun G => interpret_fun t' >>= interpret_kont_dep rec (GTFun_inv G)
-  | TFix t' => fun G => interpret_fix t' >>= interpret_kont_dep rec (GTFix_inv G)
-  | TApp a1 a2 => fun G => interpret_app rec k a1 a2 (interpret_kont_dep rec (GTApp_inv G))
-  | TLet t1 t2 => fun G => interpret_let (fun env => interpret_term_dep rec (GTLet_inv G env))
-  | TIf a t1 t2 =>
-      fun G => interpret_if a
+  | TVal t' =>
+      fun G => interpret_val_term t' >>= interpret_kont_dep rec (GTVal_inv G)
+  | TApp t1 t2 =>
+      fun G => interpret_app rec k
+                 (interpret_val_term t1)
+                 (interpret_val_term t2)
+                 (interpret_kont_dep rec (GTApp_inv G))
+  | TLet t1 t2 =>
+      fun G => interpret_let (fun env => interpret_term_dep rec (GTLet_inv G env))
+  | TIf t1 t2 t3 =>
+      fun G => interpret_if
+                 (interpret_val_term t1)
                  (interpret_term_dep rec (GTIf_inv1 G))
                  (interpret_term_dep rec (GTIf_inv2 G))
-  | TPrim1 p a => fun G => interpret_prim1 p a >>= interpret_kont_dep rec (GTPrim1_inv G)
-  | TPrim2 p a1 a2 => fun G => interpret_prim2 p a1 a2 >>= interpret_kont_dep rec (GTPrim2_inv G)
-  | TPair a1 a2 => fun G => interpret_pair a1 a2 >>= interpret_kont_dep rec (GTPair_inv G)
-  | TSplit a t' => fun G => interpret_split a (interpret_term2_dep rec (GTSplit_inv G))
-  | TInl a => fun G => interpret_inl a >>= interpret_kont_dep rec (GTInl_inv G)
-  | TInr a => fun G => interpret_inr a >>= interpret_kont_dep rec (GTInr_inv G)
-  | TCase a t1 t2 =>
-      fun G => interpret_case a
+  | TSplit t1 t2 =>
+      fun G => interpret_split
+                 (interpret_val_term t1)
+                 (interpret_term2_dep rec (GTSplit_inv G))
+  | TCase t1 t2 t3 =>
+      fun G => interpret_case
+                 (interpret_val_term t1)
                  (interpret_term1_dep rec (GTCase_inv1 G))
                  (interpret_term1_dep rec (GTCase_inv2 G))
-  | TRef a => fun G => interpret_ref a >>= interpret_kont_dep rec (GTRef_inv G)
-  | TGet a => fun G => interpret_get a >>= interpret_kont_dep rec (GTGet_inv G)
-  | TSet a1 a2 => fun G => interpret_set a1 a2 >>= interpret_kont_dep rec (GTSet_inv G)
-  | TFree a => fun G => interpret_free a >>= interpret_kont_dep rec (GTFree_inv G)
-  | TShift tag t' => fun G => interpret_shift k tag (fun env => interpret_clo1_dep rec (GTShift_inv G env))
+  | TShift tag t' =>
+      fun G => interpret_shift k tag (fun env => interpret_clo1_dep rec (GTShift_inv G env))
   | TReset tag t' =>
       fun G => interpret_reset k tag
                  (interpret_term_dep rec (GTReset_inv1 G))
                  (interpret_kont_dep rec (GTReset_inv2 G))
-  | TControl tag t' => fun G => interpret_control k tag (fun env => interpret_clo1_dep rec (GTControl_inv G env))
+  | TControl tag t' =>
+      fun G => interpret_control k tag (fun env => interpret_clo1_dep rec (GTControl_inv G env))
   | TPrompt tag t' =>
       fun G => interpret_prompt k tag
                  (interpret_term_dep rec (GTPrompt_inv1 G))
                  (interpret_kont_dep rec (GTPrompt_inv2 G))
-  | TExn tag a => fun G => interpret_exn tag a >>= interpret_kont_dep rec (GTExn_inv G)
-  | TRaise a => fun G => interpret_raise a
+  | TRaise t' =>
+      fun G => interpret_raise (interpret_val_term t')
   | TTry t1 t2 =>
       fun G => interpret_try k t2
                  (interpret_term_dep rec (GTTry_inv1 G))
                  (interpret_kont_dep rec (GTTry_inv2 G))
                  (interpret_exn_term_dep rec (GTTry_inv3 G))
-  | TEff tag a => fun G => interpret_eff tag a >>= interpret_kont_dep rec (GTEff_inv G)
-  | TPerform a => fun G => interpret_perform k a
+  | TPerform t' =>
+      fun G => interpret_perform k (interpret_val_term t')
   | THandle t1 t2 t3 =>
       fun G => interpret_handle k t2 t3
                  (interpret_term_dep rec (GTHandle_inv1 G))
@@ -725,7 +680,8 @@ with interpret_ret_term_dep (rec : interpreter) (k : kont) (t : ret_term) (G : r
 with interpret_exn_term_dep (rec : interpreter) (k : kont) (t : exn_term) (G : exn_term_graph k t) (exn : exn) {struct G} :
   option (imonad iresult) :=
   match t return exn_term_graph k t -> option (imonad iresult) with
-  | TExnBase p t' => fun G => match_exn p exn (interpret_term_dep rec (GTExnBase_inv G))
+  | TExnBase p t' =>
+      fun G => match_exn p exn (interpret_term_dep rec (GTExnBase_inv G))
   | TExnCons p t1 t2 =>
       fun G => match match_exn p exn (interpret_term_dep rec (GTExnCons_inv1 G)) with
                | Some _ as r => r
@@ -735,7 +691,8 @@ with interpret_exn_term_dep (rec : interpreter) (k : kont) (t : exn_term) (G : e
 with interpret_eff_term_dep (rec : interpreter) (k : kont) (t : eff_term) (G : eff_term_graph k t) (eff : eff) (v : val) {struct G} :
   option (imonad iresult) :=
   match t return eff_term_graph k t -> option (imonad iresult) with
-  | TEffBase p b t' => fun G => match_eff p b eff v (interpret_term_dep rec (GTEffBase_inv G))
+  | TEffBase p b t' =>
+      fun G => match_eff p b eff v (interpret_term_dep rec (GTEffBase_inv G))
   | TEffCons p b t1 t2 =>
       fun G => match match_eff p b eff v (interpret_term_dep rec (GTEffCons_inv1 G)) with
                | Some _ as r => r

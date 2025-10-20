@@ -28,36 +28,27 @@ Example append_aux :=
        | Inr "xs" =>
            let ("x", "xs'") := "xs" in
            let "r" := "append_aux" "xs'" in
-           let "r" := ("x", "r") in
-           Inr "r"
+           Inr ("x", "r")
        end }>.
 
 Example append :=
-  <{ let "append_aux" := append_aux in
-     fun "xs" => reset ("append_aux" "xs") }>.
+  <{ fun "xs" => reset (append_aux "xs") }>.
 
 Fixpoint term_of_list (xs : list Z) :=
   match xs with
   | [] => <{ Inl () }>
-  | x :: xs' => <{ let "xs'" := {term_of_list xs'} in
-                   let "xs" := (x, "xs'") in
-                   Inr "xs" }>
+  | x :: xs' => <{ Inr (x, {term_of_list xs'}) }>
   end.
 
 Example append1 xs :=
-  <{ let "append" := append in
-     let "xs" := xs in
-     "append" "xs" }>.
+  <{ let "append" := append in "append" xs }>.
 
 Example append2 xs ys :=
-  <{ let "append" := append in
-     let "xs" := xs in
-     let "ys" := ys in
-     let "append1" := "append" "xs" in
-     "append1" "ys" }>.
+  <{ let "append" := {append1 xs} in "append" ys }>.
 
 Compute (eval_term 3 (append1 (term_of_list []))).
 Compute (eval_term 4 (append1 (term_of_list [1]))).
+Compute (eval_term 5 (append1 (term_of_list [1; 2]))).
 Compute (eval_term 3 (append2 (term_of_list []) (term_of_list [1]))).
 Compute (eval_term 4 (append2 (term_of_list [1]) (term_of_list [2]))).
 
@@ -73,50 +64,33 @@ Example append_direct :=
        | Inl _ => "ys"
        | Inr "xs" =>
            let ("x", "xs'") := "xs" in
-           let "append_direct1" := "append_direct" "xs'" in
-           let "r" := "append_direct1" "ys" in
-           let "r" := ("x", "r") in
-           Inr "r"
+           let "append_direct" := "append_direct" "xs'" in
+           let "r" := "append_direct" "ys" in
+           Inr ("x", "r")
        end }>.
 
 Example append_direct1 xs :=
-  <{ let "append_direct" := append_direct in
-     let "xs" := xs in
-     "append_direct" "xs" }>.
+  <{ let "append_direct" := append_direct in "append_direct" xs }>.
 
 Example append_direct2 xs ys :=
-  <{ let "append_direct" := append_direct in
-     let "xs" := xs in
-     let "ys" := ys in
-     let "append_direct1" := "append_direct" "xs" in
-     "append_direct1" "ys" }>.
+  <{ let "append_direct" := {append_direct1 xs} in "append_direct" ys }>.
 
 Compute (eval_term 2 (append_direct1 (term_of_list []))).
 Compute (eval_term 2 (append_direct1 (term_of_list [1]))).
 Compute (eval_term 3 (append_direct2 (term_of_list []) (term_of_list [1]))).
 Compute (eval_term 5 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 
-Time Compute (eval_term 2000 (term_of_list (sequence 0 1000))).
-
 Example either :=
   <{ fun "x" "y" => shift (fun "k" => let _ := "k" "x" in "k" "y") }>.
 
 Example ex2 :=
-  <{ let "either" := either in
-     let "result" := ref false in
+  <{ let "result" := ref false in
      let _ :=
        reset
-         let "either1" := "either" true in
+         let "either1" := either true in
          let "p" := "either1" false in
          let "q" := "either1" false in
-         let "not_p" := not "p" in
-         let "not_q" := not "q" in
-         let "c1" := "p" || "q" in
-         let "c2" := "p" || "not_q" in
-         let "c3" := "not_p" || "not_q" in
-         let "r" := "c1" && "c2" in
-         let "r" := "r" && "c3" in
-         if "r" then "result" <- true else ()
+         if ("p" || "q") && ("p" || not "q") && (not "p" || not "q") then "result" <- true else ()
      in !"result" }>.
 
 Compute (eval_term 6 ex2).
@@ -136,12 +110,10 @@ Example choice :=
             in "go" "xs") }>.
 
 Example sum xs :=
-  <{ let "choice" := choice in
-     let "xs" := xs in
-     let "result" := ref 0 in
+  <{ let "result" := ref 0 in
      let _ :=
        reset
-         let "x" := "choice" "xs" in
+         let "x" := choice xs in
          let "r" := !"result" in
          let "r" := "r" + "x" in
          "result" <- "r"
@@ -154,13 +126,12 @@ Compute (eval_term 5 (sum (term_of_list [1; 2]))).
 Time Compute (eval_term 503 (sum (term_of_list (sequence 0 500)))).
 
 Example yield :=
-  <{ fun "x" => shift (fun "k" => let "p" := ("x", "k") in Inr "p") }>.
+  <{ fun "x" => shift (fun "k" => Inr ("x", "k")) }>.
 
 Example walk_aux :=
-  <{ let "yield" := yield in
-     fix "walk_aux" "t" :=
+  <{ fix "walk_aux" "t" :=
        match "t" with
-       | Inl "x" => "yield" "x"
+       | Inl "x" => yield "x"
        | Inr "p" =>
            let ("l", "r") := "p" in
            let _ := "walk_aux" "l" in
@@ -168,12 +139,10 @@ Example walk_aux :=
        end }>.
 
 Example walk  :=
-  <{ let "walk_aux" := walk_aux in
-     fun "t" => reset (let _ := "walk_aux" "t" in Inl ()) }>.
+  <{ fun "t" => reset (let _ := walk_aux "t" in Inl ()) }>.
 
 Example sum_tree :=
-  <{ let "walk" := walk in
-     fun "t" =>
+  <{ fun "t" =>
        let fix "go" "r" :=
          match "r" with
          | Inl _ => 0
@@ -184,7 +153,7 @@ Example sum_tree :=
              "x" + "r"
          end
        in
-       let "r" := "walk" "t" in
+       let "r" := walk "t" in
        "go" "r" }>.
 
 Inductive tree (A : Type) :=
@@ -194,19 +163,15 @@ Inductive tree (A : Type) :=
 Arguments Leaf {A} _.
 Arguments Node {A} _ _.
 
-Fixpoint term_of_tree (t : tree Z) :=
+Fixpoint term_of_tree (t : tree Z) : val_term :=
   match t with
   | Leaf x => <{ Inl x }>
-  | Node l r => <{ let "l" := {term_of_tree l} in
-                   let "r" := {term_of_tree r} in
-                   let "p" := ("l", "r") in
-                   Inr "p" }>
+  | Node l r => <{ Inr ({term_of_tree l}, {term_of_tree r}) }>
   end.
 
 Example sum_tree1 t :=
   <{ let "sum_tree" := sum_tree in
-     let "t" := {term_of_tree t} in
-     "sum_tree" "t" }>.
+     "sum_tree" {term_of_tree t} }>.
 
 Compute (eval_term 100 (sum_tree1 (Leaf 0))).
 Compute (eval_term 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).
@@ -221,8 +186,7 @@ Example copy :=
              shift
                (fun "k" =>
                   let "xs'" := "k" "xs'" in
-                  let "xs" := ("x", "xs'") in
-                  Inr "xs")
+                  Inr ("x", "xs'"))
            in
            "copy" "xs"
        end }>.
@@ -237,37 +201,29 @@ Example reverse :=
              control
                (fun "k" =>
                   let "xs'" := "k" "xs'" in
-                  let "xs" := ("x", "xs'") in
-                  Inr "xs")
+                  Inr ("x", "xs'"))
            in
            "reverse" "xs"
        end }>.
 
 Example copy1 xs :=
-  <{ let "copy" := copy in
-     let "xs" := xs in
-     reset ("copy" "xs") }>.
+  <{ let "copy" := copy in reset ("copy" xs) }>.
 
 Example reverse1 xs :=
-  <{ let "reverse" := reverse in
-     let "xs" := xs in
-     prompt ("reverse" "xs") }>.
+  <{ let "reverse" := reverse in prompt ("reverse" xs) }>.
 
-Time Compute (eval_term 1000 (copy1 (term_of_list (sequence 0 5)))).
-Time Compute (eval_term 1000 (reverse1 (term_of_list (sequence 0 5)))).
+Time Compute (eval_term 10000 (copy1 (term_of_list (sequence 0 1000)))).
+Time Compute (eval_term 10000 (reverse1 (term_of_list (sequence 0 1000)))).
 
 Example unhandled_exception :=
-  <{ let "exn" := exception "Segfault" 139 in
-     raise "exn" }>.
+  <{ raise (exception "Segfault" 139) }>.
 
 Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
      try
-       let "exn" := exception tag 10 in
-       raise "exn";
+       raise (exception tag 10);
      (fun '("Segfault" "code") =>
-        let "b" := "code" = 10 in
-        let _ := "r" <- "b" in
+        let _ := "r" <- "code" = 10 in
         !"r");
      (fun '("StackOverflow" _) => false);
      (fun "exn" => raise "exn") }>.
@@ -281,17 +237,14 @@ Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle
-       (let "eff" := effect "Effect0" 0 in
-        perform "eff");;
+       perform (effect "Effect0" 0);;
      (fun '("Effect1" _), _ => ());
      (fun '("Effect2" _), _ => ()) }>.
 
 Compute (eval_term 1 unhandled_effect).
 
 Example print stdout x :=
-  <{ let "y" := !stdout in
-     let "y" := (x, "y") in
-     stdout <- "y" }>.
+  <{ stdout <- (x, !stdout) }>.
 
 Example basic_exn_eff :=
   <{ let "stdout" := ref () in
@@ -306,23 +259,18 @@ Example basic_exn_eff :=
                     let "eff" := effect "Effect1" 1 in
                     let _ := perform "eff" in
                     let _ := {print "stdout" "eff"} in
-                    let "exn" := exception "Exception0" () in
-                    raise "exn");
-                 (fun '("Exception0" _) =>
-                    let "exn" := exception "Exception0" () in
-                    {print "stdout" "exn"}));;
-              (fun '("Effect1" "x"), "k" =>
-                 let _ := {print "stdout" "x"} in
-                 "k" ());
+                    let "exn" := exception "Exception2" 2 in
+                    let _ := raise "exn" in
+                    {print "stdout" "exn"});
+                 (fun '("Exception2" "x") => {print "stdout" "x"}));;
+              (fun '("Effect1" "x"), "k" => let _ := {print "stdout" "x"} in "k" ());
               (fun '("Effect2" _), _ => 2);
               (fun _, "k" => "k" ()))
            in
            let "final_msg" := 69 in
            {print "stdout" "final_msg"});;
-        (fun '("Effect0" "x"), "k" =>
-           let _ := {print "stdout" "x"} in
-           "k" ());
-        (fun _, "k" => {print "stdout" "k"}))
+        (fun '("Effect0" "x"), "k" => let _ := {print "stdout" "x"} in "k" ());
+        (fun _, "k" => let _ := {print "stdout" "k"} in "k" ()))
      in
      !"stdout" }>.
 

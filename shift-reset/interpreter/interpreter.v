@@ -150,6 +150,10 @@ Definition interpret_exn (tag : tag) : imonad val -> imonad val :=
 Definition interpret_eff (tag : tag) : imonad val -> imonad val :=
   imonad_map (VEff' tag).
 
+Definition interpret_assert (m : imonad val) : imonad val :=
+  b <- m >>= unwrap_VBool;
+  if b then imonad_pure VUnit else imonad_throw (ControlError "assertion failure").
+
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
   | TVAtom a => interpret_atom a
@@ -166,9 +170,13 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
   | TVFree t' => interpret_free (interpret_val_term t')
   | TVExn tag t' => interpret_exn tag (interpret_val_term t')
   | TVEff tag t' => interpret_eff tag (interpret_val_term t')
+  | TVAssert t' => interpret_assert (interpret_val_term t')
   end.
 
 Definition interpret_let : (env -> imonad iresult) -> imonad iresult :=
+  imonad_bind imonad_ask_env.
+
+Definition interpret_seq : (env -> imonad iresult) -> imonad iresult :=
   imonad_bind imonad_ask_env.
 
 Definition interpret_if (m1 : imonad val) (m2 m3 : imonad iresult) : imonad iresult :=
@@ -337,10 +345,16 @@ Definition interpret_clo1_with (self : interpreter) (k : kont) (c : clo1) (v : v
 Definition interpret_clo2_with (self : interpreter) (k : kont) (c : clo2) (v1 v2 : val) : imonad iresult :=
   let (env, t) := c in imonad_use_env env (interpret_term2_with self k t v1 v2).
 
+Definition interpret_ctx_clo_with (self : interpreter) (k : kont) (c : ctx_clo) (v : val) : imonad iresult :=
+  match c with
+  | CCtx0 env t => imonad_use_env env (self k t)
+  | CCtx1 env t => imonad_use_env env (interpret_term1_with self k t v)
+  end.
+
 Definition interpret_kont_with (self : interpreter) (k : kont) (v : val) : imonad iresult :=
   match k with
   | KNil => imonad_pure (RReturn v)
-  | KCons c k' => interpret_clo1_with self k' c v
+  | KCons c k' => interpret_ctx_clo_with self k' c v
   end.
 
 Definition interpret_ret_term_with (self : interpreter) (k : kont) (t : ret_term) (v : val) : imonad iresult :=
@@ -437,13 +451,14 @@ Set Implicit Arguments.
 Inductive term_graph : kont -> term -> Prop :=
 | GTVal k t' : kont_graph k -> term_graph k (TVal t')
 | GTApp k t1 t2 : kont_graph k -> term_graph k (TApp t1 t2)
-| GTLet k t1 t2 : (forall env, term_graph (KCons (C1 env t2) k) t1) -> term_graph k (TLet t1 t2)
+| GTLet k t1 t2 : (forall env, term_graph (KCons (CCtx1 env t2) k) t1) -> term_graph k (TLet t1 t2)
+| GTSeq k t1 t2 : (forall env, term_graph (KCons (CCtx0 env t2) k) t1) -> term_graph k (TSeq t1 t2)
 | GTIf k t1 t2 t3 : term_graph k t2 -> term_graph k t3 -> term_graph k (TIf t1 t2 t3)
 | GTSplit k t1 t2 : term2_graph k t2 -> term_graph k (TSplit t1 t2)
 | GTCase k t1 t2 t3 : term1_graph k t2 -> term1_graph k t3 -> term_graph k (TCase t1 t2 t3)
-| GTShift k tag t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TShift tag t')
+| GTShift k tag t' : (forall env, ctx_clo_graph KNil (CCtx1 env t')) -> term_graph k (TShift tag t')
 | GTReset k tag t' : term_graph KNil t' -> kont_graph k -> term_graph k (TReset tag t')
-| GTControl k tag t' : (forall env, clo1_graph KNil (C1 env t')) -> term_graph k (TControl tag t')
+| GTControl k tag t' : (forall env, ctx_clo_graph KNil (CCtx1 env t')) -> term_graph k (TControl tag t')
 | GTPrompt k tag t' : term_graph KNil t' -> kont_graph k -> term_graph k (TPrompt tag t')
 | GTRaise k t' : term_graph k (TRaise t')
 | GTTry k t1 t2 : term_graph KNil t1 -> kont_graph k -> exn_term_graph k t2 -> term_graph k (TTry t1 t2)
@@ -463,11 +478,12 @@ with exn_term_graph : kont -> exn_term -> Prop :=
 with eff_term_graph : kont -> eff_term -> Prop :=
 | GTEffBase k p b t' : term_graph k t' -> eff_term_graph k (TEffBase p b t')
 | GTEffCons k p b t1 t2 : term_graph k t1 -> eff_term_graph k t2 -> eff_term_graph k (TEffCons p b t1 t2)
-with clo1_graph : kont -> clo1 -> Prop :=
-| GC1 k env t : term1_graph k t -> clo1_graph k (C1 env t)
+with ctx_clo_graph : kont -> ctx_clo -> Prop :=
+| GCCtx0 k env t : term_graph k t -> ctx_clo_graph k (CCtx0 env t)
+| GCCtx1 k env t : term1_graph k t -> ctx_clo_graph k (CCtx1 env t)
 with kont_graph : kont -> Prop :=
 | GKNil : kont_graph KNil
-| GKCons c k' : clo1_graph k' c -> kont_graph (KCons c k').
+| GKCons c k' : ctx_clo_graph k' c -> kont_graph (KCons c k').
 
 Lemma GTVal_inv k t' : term_graph k (TVal t') -> kont_graph k.
 Proof. inversion 1; auto. Defined.
@@ -475,7 +491,10 @@ Proof. inversion 1; auto. Defined.
 Lemma GTApp_inv k t1 t2 : term_graph k (TApp t1 t2) -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTLet_inv k t1 t2 : term_graph k (TLet t1 t2) -> forall env, term_graph (KCons (C1 env t2) k) t1.
+Lemma GTLet_inv k t1 t2 : term_graph k (TLet t1 t2) -> forall env, term_graph (KCons (CCtx1 env t2) k) t1.
+Proof. inversion 1; auto. Defined.
+
+Lemma GTSeq_inv k t1 t2 : term_graph k (TSeq t1 t2) -> forall env, term_graph (KCons (CCtx0 env t2) k) t1.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTIf_inv1 k t1 t2 t3 : term_graph k (TIf t1 t2 t3) -> term_graph k t2.
@@ -493,7 +512,7 @@ Proof. inversion 1; auto. Defined.
 Lemma GTCase_inv2 k t1 t2 t3 : term_graph k (TCase t1 t2 t3) -> term1_graph k t3.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTShift_inv k tag t' : term_graph k (TShift tag t') -> forall env, clo1_graph KNil (C1 env t').
+Lemma GTShift_inv k tag t' : term_graph k (TShift tag t') -> forall env, ctx_clo_graph KNil (CCtx1 env t').
 Proof. inversion 1; auto. Defined.
 
 Lemma GTReset_inv1 k tag t' : term_graph k (TReset tag t') -> term_graph KNil t'.
@@ -502,7 +521,7 @@ Proof. inversion 1; auto. Defined.
 Lemma GTReset_inv2 k tag t' : term_graph k (TReset tag t') -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
-Lemma GTControl_inv k tag t' : term_graph k (TControl tag t') -> forall env, clo1_graph KNil (C1 env t').
+Lemma GTControl_inv k tag t' : term_graph k (TControl tag t') -> forall env, ctx_clo_graph KNil (CCtx1 env t').
 Proof. inversion 1; auto. Defined.
 
 Lemma GTPrompt_inv1 k tag t' : term_graph k (TPrompt tag t') -> term_graph KNil t'.
@@ -568,23 +587,27 @@ Proof. inversion 1; auto. Defined.
 Lemma GTEffCons_inv2 k p b t1 t2 : eff_term_graph k (TEffCons p b t1 t2) -> eff_term_graph k t2.
 Proof. inversion 1; auto. Defined.
 
-Lemma GC1_inv k env t : clo1_graph k (C1 env t) -> term1_graph k t.
+Lemma GCCtx0_inv k env t : ctx_clo_graph k (CCtx0 env t) -> term_graph k t.
 Proof. inversion 1; auto. Defined.
 
-Lemma GKCons_inv c k' : kont_graph (KCons c k') -> clo1_graph k' c.
+Lemma GCCtx1_inv k env t : ctx_clo_graph k (CCtx1 env t) -> term1_graph k t.
+Proof. inversion 1; auto. Defined.
+
+Lemma GKCons_inv c k' : kont_graph (KCons c k') -> ctx_clo_graph k' c.
 Proof. inversion 1; auto. Defined.
 
 Fixpoint build_term_graph_dep (k : kont) (G : kont_graph k) (t : term) : term_graph k t :=
   match t with
   | TVal t' => GTVal t' G
   | TApp t1 t2 => GTApp t1 t2 G
-  | TLet t1 t2 => GTLet (fun env => build_term_graph_dep (GKCons (GC1 env (build_term1_graph_dep G t2))) t1)
+  | TLet t1 t2 => GTLet (fun env => build_term_graph_dep (GKCons (GCCtx1 env (build_term1_graph_dep G t2))) t1)
+  | TSeq t1 t2 => GTSeq (fun env => build_term_graph_dep (GKCons (GCCtx0 env (build_term_graph_dep G t2))) t1)
   | TIf t1 t2 t3 => GTIf t1 (build_term_graph_dep G t2) (build_term_graph_dep G t3)
   | TSplit t1 t2 => GTSplit t1 (build_term2_graph_dep G t2)
   | TCase t1 t2 t3 => GTCase t1 (build_term1_graph_dep G t2) (build_term1_graph_dep G t3)
-  | TShift tag t' => GTShift k tag (fun env => GC1 env (build_term1_graph_dep GKNil t'))
+  | TShift tag t' => GTShift k tag (fun env => GCCtx1 env (build_term1_graph_dep GKNil t'))
   | TReset tag t' => GTReset tag (build_term_graph_dep GKNil t') G
-  | TControl tag t' => GTControl k tag (fun env => GC1 env (build_term1_graph_dep GKNil t'))
+  | TControl tag t' => GTControl k tag (fun env => GCCtx1 env (build_term1_graph_dep GKNil t'))
   | TPrompt tag t' => GTPrompt tag (build_term_graph_dep GKNil t') G
   | TRaise t' => GTRaise k t'
   | TTry t1 t2 => GTTry (build_term_graph_dep GKNil t1) G (build_exn_term_graph_dep G t2)
@@ -616,9 +639,10 @@ with build_eff_term_graph_dep (k : kont) (G : kont_graph k) (t : eff_term) : eff
   | TEffCons p b t1 t2 => GTEffCons p b (build_term_graph_dep G t1) (build_eff_term_graph_dep G t2)
   end.
 
-Definition build_clo1_graph_dep (k : kont) (G : kont_graph k) (c : clo1) : clo1_graph k c :=
+Definition build_ctx_clo_graph_dep (k : kont) (G : kont_graph k) (c : ctx_clo) : ctx_clo_graph k c :=
   match c with
-  | C1 env t => GC1 env (build_term1_graph_dep G t)
+  | CCtx0 env t => GCCtx0 env (build_term_graph_dep G t)
+  | CCtx1 env t => GCCtx1 env (build_term1_graph_dep G t)
   end.
 
 Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term_graph k t) {struct G} : imonad iresult :=
@@ -632,6 +656,8 @@ Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term
                  (interpret_kont_dep self (GTApp_inv G))
   | TLet t1 t2 =>
       fun G => interpret_let (fun env => interpret_term_dep self (GTLet_inv G env))
+  | TSeq t1 t2 =>
+      fun G => interpret_seq (fun env => interpret_term_dep self (GTSeq_inv G env))
   | TIf t1 t2 t3 =>
       fun G => interpret_if
                  (interpret_val_term t1)
@@ -647,13 +673,13 @@ Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term
                  (interpret_term1_dep self (GTCase_inv1 G))
                  (interpret_term1_dep self (GTCase_inv2 G))
   | TShift tag t' =>
-      fun G => interpret_shift k tag (fun env => interpret_clo1_dep self (GTShift_inv G env))
+      fun G => interpret_shift k tag (fun env => interpret_ctx_clo_dep self (GTShift_inv G env))
   | TReset tag t' =>
       fun G => interpret_reset k tag
                  (interpret_term_dep self (GTReset_inv1 G))
                  (interpret_kont_dep self (GTReset_inv2 G))
   | TControl tag t' =>
-      fun G => interpret_control k tag (fun env => interpret_clo1_dep self (GTControl_inv G env))
+      fun G => interpret_control k tag (fun env => interpret_ctx_clo_dep self (GTControl_inv G env))
   | TPrompt tag t' =>
       fun G => interpret_prompt k tag
                  (interpret_term_dep self (GTPrompt_inv1 G))
@@ -713,14 +739,15 @@ with interpret_eff_term_dep (self : interpreter) (k : kont) (t : eff_term) (G : 
                | None => interpret_eff_term_dep self (GTEffCons_inv2 G) eff v
                end
   end G
-with interpret_clo1_dep (self : interpreter) (k : kont) (c : clo1) (G : clo1_graph k c) (v : val) {struct G} : imonad iresult :=
-  match c return clo1_graph k c -> imonad iresult with
-  | C1 env t => fun G => imonad_use_env env (interpret_term1_dep self (GC1_inv G) v)
+with interpret_ctx_clo_dep (self : interpreter) (k : kont) (c : ctx_clo) (G : ctx_clo_graph k c) (v : val) {struct G} : imonad iresult :=
+  match c return ctx_clo_graph k c -> imonad iresult with
+  | CCtx0 env t => fun G => imonad_use_env env (interpret_term_dep self (GCCtx0_inv G))
+  | CCtx1 env t => fun G => imonad_use_env env (interpret_term1_dep self (GCCtx1_inv G) v)
   end G
 with interpret_kont_dep (self : interpreter) (k : kont) (G : kont_graph k) (v : val) {struct G} : imonad iresult :=
   match k return kont_graph k -> imonad iresult with
   | KNil => fun G => imonad_pure (RReturn v)
-  | KCons c k' => fun G => interpret_clo1_dep self (GKCons_inv G) v
+  | KCons c k' => fun G => interpret_ctx_clo_dep self (GKCons_inv G) v
   end G.
 
 Unset Implicit Arguments.
@@ -728,7 +755,7 @@ Unset Implicit Arguments.
 Fixpoint build_kont_graph (k : kont) : kont_graph k :=
   match k with
   | KNil => GKNil
-  | KCons c k' => GKCons (build_clo1_graph_dep (build_kont_graph k') c)
+  | KCons c k' => GKCons (build_ctx_clo_graph_dep (build_kont_graph k') c)
   end.
 
 Definition build_term_graph (k : kont) (t : term) : term_graph k t :=

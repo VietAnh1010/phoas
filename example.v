@@ -81,17 +81,18 @@ Compute (eval_term 3 (append_direct2 (term_of_list []) (term_of_list [1]))).
 Compute (eval_term 5 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 
 Example either :=
-  <{ fun "x" "y" => shift (fun "k" => let _ := "k" "x" in "k" "y") }>.
+  <{ fun "x" "y" => shift (fun "k" => "k" "x"; "k" "y") }>.
 
 Example ex2 :=
   <{ let "result" := ref false in
-     let _ :=
-       reset
-         let "either1" := either true in
-         let "p" := "either1" false in
-         let "q" := "either1" false in
-         if ("p" || "q") && ("p" || not "q") && (not "p" || not "q") then "result" <- true else ()
-     in !"result" }>.
+     reset
+       (let "either1" := either true in
+        let "p" := "either1" false in
+        let "q" := "either1" false in
+        if ("p" || "q") && ("p" || not "q") && (not "p" || not "q") then "result" <- true else ());
+     !"result" }>.
+
+Print ex2.
 
 Compute (eval_term 6 ex2).
 
@@ -104,26 +105,21 @@ Example choice :=
               | Inl _ => ()
               | Inr "xs" =>
                   let ("x", "xs'") := "xs" in
-                  let _ := "k" "x" in
+                  "k" "x";
                   "go" "xs'"
               end
             in "go" "xs") }>.
 
 Example sum xs :=
   <{ let "result" := ref 0 in
-     let _ :=
-       reset
-         let "x" := choice xs in
-         let "r" := !"result" in
-         let "r" := "r" + "x" in
-         "result" <- "r"
-     in !"result" }>.
+     reset (let "x" := choice xs in "result" <- "x" + !"result");
+     !"result" }>.
 
 Compute (eval_term 3 (sum (term_of_list []))).
 Compute (eval_term 4 (sum (term_of_list [1]))).
 Compute (eval_term 5 (sum (term_of_list [1; 2]))).
 
-Time Compute (eval_term 503 (sum (term_of_list (sequence 0 500)))).
+Time Compute (eval_term 5003 (sum (term_of_list (sequence 0 5000)))).
 
 Example yield :=
   <{ fun "x" => shift (fun "k" => Inr ("x", "k")) }>.
@@ -133,13 +129,13 @@ Example walk_aux :=
        match "t" with
        | Inl "x" => yield "x"
        | Inr "p" =>
-           let ("l", "r") := "p" in
-           let _ := "walk_aux" "l" in
-           "walk_aux" "r"
+           (let ("l", "r") := "p" in
+            "walk_aux" "l";
+            "walk_aux" "r")
        end }>.
 
-Example walk  :=
-  <{ fun "t" => reset (let _ := walk_aux "t" in Inl ()) }>.
+Example walk :=
+  <{ fun "t" => reset (walk_aux "t"; Inl ()) }>.
 
 Example sum_tree :=
   <{ fun "t" =>
@@ -221,7 +217,7 @@ Example unhandled_exception :=
 Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
      try
-       raise (exception tag 10);
+       (raise (exception tag 10));;
      (fun '("Segfault" "code") =>
         let _ := "r" <- "code" = 10 in
         !"r");
@@ -237,41 +233,41 @@ Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle
-       perform (effect "Effect0" 0);;
+       perform (effect "Effect0" 0);;;
      (fun '("Effect1" _), _ => ());
      (fun '("Effect2" _), _ => ()) }>.
 
 Compute (eval_term 1 unhandled_effect).
 
-Example print stdout x :=
-  <{ stdout <- (x, !stdout) }>.
+Example print :=
+  <{ fun "x" => "stdout" <- ("x", !"stdout") }>.
 
 Example basic_exn_eff :=
   <{ let "stdout" := ref () in
-     let _ :=
-       (handle
-          (let _ :=
-             (shallow handle
-                (try
-                   (let "eff" := effect "Effect0" 0 in
-                    let _ := perform "eff" in
-                    let _ := {print "stdout" "eff"} in
-                    let "eff" := effect "Effect1" 1 in
-                    let _ := perform "eff" in
-                    let _ := {print "stdout" "eff"} in
-                    let "exn" := exception "Exception2" 2 in
-                    let _ := raise "exn" in
-                    {print "stdout" "exn"});
-                 (fun '("Exception2" "x") => {print "stdout" "x"}));;
-              (fun '("Effect1" "x"), "k" => let _ := {print "stdout" "x"} in "k" ());
-              (fun '("Effect2" _), _ => 2);
-              (fun _, "k" => "k" ()))
-           in
-           let "final_msg" := 69 in
-           {print "stdout" "final_msg"});;
-        (fun '("Effect0" "x"), "k" => let _ := {print "stdout" "x"} in "k" ());
-        (fun _, "k" => let _ := {print "stdout" "k"} in "k" ()))
-     in
+     let "print" := print in
+     (handle
+        ((handle
+            (try
+               (let "eff0" := effect "Effect0" 0 in
+                let "eff1" := effect "Effect1" 1 in
+                let "exn" := exception "Exception" () in
+                perform "eff0";
+                "print" "eff0";
+                perform "eff1";
+                "print" "eff1";
+                raise "exn";
+                "print" "exn");;
+             (fun '("RuntimeException" "x") => "print" "x");
+             (fun '("Exception" _ as "exn") => "print" "exn"));;;
+          (fun '("Effect1" "x"), "k" => "print" "x"; "k" ());
+          (fun '("Effect2" _ as "eff"), _ => "print" "eff"));
+         let "eff2" := effect "Effect2" 2 in
+         perform "eff2";
+         "print" "eff2";
+         let "final_msg" := 69 in
+         "print" "final_msg");;;
+      (fun '("Effect0" "x"), "k" => "print" "x"; "k" ());
+      (fun '("Effect2" _ as "eff"), "k" => "print" ("eff", "k"); "k" ()));
      !"stdout" }>.
 
 Compute (eval_term 10 basic_exn_eff).

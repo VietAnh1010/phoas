@@ -41,6 +41,7 @@ Inductive term : Type :=
 | TVal : val_term -> term
 | TApp : val_term -> val_term -> term
 | TLet : term -> term1 -> term
+| TSeq : term -> term -> term
 | TIf : val_term -> term -> term -> term
 | TSplit : val_term -> term2 -> term
 | TCase : val_term -> term1 -> term1 -> term
@@ -68,6 +69,7 @@ with val_term : Type :=
 | TVFree : val_term -> val_term
 | TVExn : tag -> val_term -> val_term
 | TVEff : tag -> val_term -> val_term
+| TVAssert : val_term -> val_term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
@@ -101,13 +103,16 @@ with clo1 : Type :=
 | C1 : env -> term1 -> clo1
 with clo2 : Type :=
 | C2 : env -> term2 -> clo2
+with ctx_clo : Type :=
+| CCtx0 : env -> term -> ctx_clo
+| CCtx1 : env -> term1 -> ctx_clo
 with try_clo : Type :=
 | CTry : env -> exn_term -> try_clo
 with handle_clo : Type :=
 | CHandle : env -> ret_term -> eff_term -> handle_clo
 with kont : Type :=
 | KNil : kont
-| KCons : clo1 -> kont -> kont
+| KCons : ctx_clo -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> tag -> kont -> metakont
@@ -173,6 +178,7 @@ Hint Resolve eff_term_eq_dec : eq_dec_db.
 Fixpoint val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with clo1_eq_dec : forall (c1 c2 : clo1), {c1 = c2} + {c1 <> c2}
 with clo2_eq_dec : forall (c1 c2 : clo2), {c1 = c2} + {c1 <> c2}
+with ctx_clo_eq_dec : forall (c1 c2 : ctx_clo), {c1 = c2} + {c1 <> c2}
 with try_clo_eq_dec : forall (c1 c2 : try_clo), {c1 = c2} + {c1 <> c2}
 with handle_clo_eq_dec : forall (c1 c2 : handle_clo), {c1 = c2} + {c1 <> c2}
 with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
@@ -185,6 +191,7 @@ Proof. all: decide equality; auto with eq_dec_db. Defined.
 Hint Resolve val_eq_dec : eq_dec_db.
 Hint Resolve clo1_eq_dec : eq_dec_db.
 Hint Resolve clo2_eq_dec : eq_dec_db.
+Hint Resolve ctx_clo_eq_dec : eq_dec_db.
 Hint Resolve try_clo_eq_dec : eq_dec_db.
 Hint Resolve handle_clo_eq_dec : eq_dec_db.
 Hint Resolve kont_eq_dec : eq_dec_db.

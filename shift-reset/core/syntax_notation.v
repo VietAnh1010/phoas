@@ -94,6 +94,13 @@ Notation "'let' x := t1 'in' t2" :=
         t2 custom term,
         right associativity) : term_scope.
 
+Notation "t1 ; t2" :=
+  (TSeq t1 t2)
+    (in custom term at level 69,
+        t1 custom term,
+        t2 custom term,
+        right associativity) : term_scope.
+
 Notation "'let' f x1 .. xn := t1 'in' t2" :=
   (TLet (TVFun (T1 x1 .. (TVFun (T1 xn t1)) ..)) (T1 f t2))
     (in custom term at level 69,
@@ -188,6 +195,9 @@ Notation "! t" :=
 Notation "'free' t" :=
   (TVFree t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
+Notation "'assert' t" :=
+  (TVAssert t) (in custom term at level 23, t custom term at level 0) : term_scope.
+
 Notation "t1 + t2" :=
   (TVPrim2 P2Add t1 t2) (in custom term at level 40, t1 custom term, t2 custom term) : term_scope.
 
@@ -272,7 +282,7 @@ Notation "'exception' tag t" :=
 Notation "'raise' t" :=
   (TRaise t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "'try' t1 ; t2" :=
+Notation "'try' t1 ;; t2" :=
   (TTry t1 t2)
     (in custom term at level 69,
         t1 custom term,
@@ -287,27 +297,27 @@ Notation "'effect' tag t" :=
 Notation "'perform' t" :=
   (TPerform t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "'handle' t1 ; t2 ; t3" :=
+Notation "'handle' t1 ;; t2 ;; t3" :=
   (THandle t1 t2 t3)
     (in custom term at level 23,
         t1 custom term,
         t2 custom ret_term,
         t3 custom eff_term) : term_scope.
 
-Notation "'handle' t1 ;; t2" :=
+Notation "'handle' t1 ;;; t2" :=
   (THandle t1 TRet0 t2)
     (in custom term at level 23,
         t1 custom term,
         t2 custom eff_term) : term_scope.
 
-Notation "'shallow' 'handle' t1 ; t2 ; t3" :=
+Notation "'shallow' 'handle' t1 ;; t2 ;; t3" :=
   (TShallowHandle t1 t2 t3)
     (in custom term at level 23,
         t1 custom term,
         t2 custom ret_term,
         t3 custom eff_term) : term_scope.
 
-Notation "'shallow' 'handle' t1 ;; t2" :=
+Notation "'shallow' 'handle' t1 ;;; t2" :=
   (TShallowHandle t1 TRet0 t2)
     (in custom term at level 23,
         t1 custom term,

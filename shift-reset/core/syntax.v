@@ -93,7 +93,7 @@ Inductive val : Type :=
 | VPair : val -> val -> val
 | VInl : val -> val
 | VInr : val -> val
-| VLoc : loc -> val
+| VRef : loc -> val
 | VKontReset : metakont -> tag -> val
 | VKont : metakont -> val
 | VKontHandle : metakont -> handle_clo -> val

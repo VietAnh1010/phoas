@@ -13,7 +13,7 @@ Definition imonad_ask_env : imonad env :=
 Definition imonad_local_env {A} (f : env -> env) (m : imonad A) : imonad A :=
   IMonad (fun env => imonad_run m (f env)).
 
-Definition imonad_reader_env {A} (f : env -> A) : imonad A :=
+Definition imonad_asks_env {A} (f : env -> A) : imonad A :=
   IMonad (fun env h => (inr (f env), h)).
 
 Definition imonad_use_env {A} (env : env) (m : imonad A) : imonad A :=
@@ -34,8 +34,49 @@ Definition imonad_gets_heap {A} (f : iheap -> A) : imonad A :=
 Definition imonad_modify_heap (f : iheap -> iheap) : imonad unit :=
   IMonad (fun _ h => (inr tt, f h)).
 
-Definition imonad_throw {A} (e : ierror) : imonad A :=
+Definition imonad_map_heap {A B} (f : A * iheap -> B * iheap) (m : imonad A) : imonad B :=
+  IMonad (fun env h =>
+            let (r, h) := imonad_run m env h in
+            match r with
+            | inl e => (inl e, h)
+            | inr x => let (y, h) := f (x, h) in (inr y, h)
+            end).
+
+Definition imonad_with_heap {A} (f : iheap -> iheap) (m : imonad A) : imonad A :=
+  IMonad (fun env h => imonad_run m env (f h)).
+
+Definition imonad_throw_error {A} (e : ierror) : imonad A :=
   IMonad (fun _ h => (inl e, h)).
+
+Definition imonad_catch_error {A} (m : imonad A) (f : ierror -> imonad A) : imonad A :=
+  IMonad (fun env h =>
+            let p := imonad_run m env h in
+            let (r, h) := p in
+            match r with
+            | inl e => imonad_run (f e) env h
+            | inr _ => p
+            end).
+
+Definition imonad_handle_error {A} (f : ierror -> imonad A) (m : imonad A) : imonad A :=
+  imonad_catch_error m f.
+
+Definition imonad_try_error {A} (m : imonad A) : imonad (ierror + A) :=
+  IMonad (fun env h => let (r, h) := imonad_run m env h in (inr r, h)).
+
+Definition imonad_except_error {A} (r : ierror + A) : imonad A :=
+  IMonad (fun _ h => (r, h)).
+
+Definition imonad_with_error {A} (f : ierror -> ierror) (m : imonad A) : imonad A :=
+  IMonad (fun env h =>
+            let p := imonad_run m env h in
+            let (r, h) := p in
+            match r with
+            | inl e => (inl (f e), h)
+            | inr _ => p
+            end).
+
+Definition imonad_map_error {A B} (f : ierror + A -> ierror + B) (m : imonad A) : imonad B :=
+  IMonad (fun env h => let (r, h) := imonad_run m env h in (f r, h)).
 
 Definition imonad_map {A B} (f : A -> B) (m : imonad A) :=
   IMonad (fun env h =>

@@ -17,28 +17,28 @@ Inductive iresult : Type :=
 Definition unwrap_RReturn (r : iresult) : imonad val :=
   match r with
   | RReturn v => imonad_pure v
-  | RShift tag _ _ => imonad_throw (Undelimited_shift tag)
-  | RControl tag _ _ => imonad_throw (Undelimited_control tag)
-  | RRaise exn => imonad_throw (Unhandled_exception exn)
-  | RPerform eff _ => imonad_throw (Unhandled_effect eff)
+  | RShift tag _ _ => imonad_throw_error (Undelimited_shift tag)
+  | RControl tag _ _ => imonad_throw_error (Undelimited_control tag)
+  | RRaise exn => imonad_throw_error (Unhandled_exception exn)
+  | RPerform eff _ => imonad_throw_error (Unhandled_effect eff)
   end.
 
 Definition unwrap_VInt (v : val) : imonad Z :=
   match v with
   | VInt i => imonad_pure i
-  | _ => imonad_throw (Type_error "")
+  | _ => imonad_throw_error (Type_error "")
   end.
 
 Definition unwrap_VBool (v : val) : imonad bool :=
   match v with
   | VBool b => imonad_pure b
-  | _ => imonad_throw (Type_error "")
+  | _ => imonad_throw_error (Type_error "")
   end.
 
-Definition unwrap_VLoc (v : val) : imonad loc :=
+Definition unwrap_VRef (v : val) : imonad loc :=
   match v with
-  | VLoc l => imonad_pure l
-  | _ => imonad_throw (Type_error "")
+  | VRef l => imonad_pure l
+  | _ => imonad_throw_error (Type_error "")
   end.
 
 Definition interpret_atom (a : atom) : imonad val :=
@@ -49,7 +49,7 @@ Definition interpret_atom (a : atom) : imonad val :=
   | AVar x =>
       env <- imonad_ask_env;
       match env_lookup x env with
-      | None => imonad_throw (Name_error x)
+      | None => imonad_throw_error (Name_error x)
       | Some v => imonad_pure v
       end
   end.
@@ -97,10 +97,10 @@ Definition interpret_prim2 (p : prim2) : imonad val -> imonad val -> imonad val 
   end.
 
 Definition interpret_fun (t : term1) : imonad val :=
-  imonad_reader_env (VFun' t).
+  imonad_asks_env (VFun' t).
 
 Definition interpret_fix (t : term2) : imonad val :=
-  imonad_reader_env (VFix' t).
+  imonad_asks_env (VFix' t).
 
 Definition interpret_pair : imonad val -> imonad val -> imonad val :=
   imonad_lift2 VPair.
@@ -115,32 +115,32 @@ Definition interpret_ref (m : imonad val) : imonad val :=
   v <- m;
   h <- imonad_get_heap;
   match iheap_ref v h with
-  | None => imonad_throw (Memory_error "")
-  | Some (l, h') => VLoc l <$ imonad_set_heap h'
+  | None => imonad_throw_error (Memory_error "")
+  | Some (l, h') => VRef l <$ imonad_set_heap h'
   end.
 
 Definition interpret_get (m : imonad val) : imonad val :=
-  l <- m >>= unwrap_VLoc;
+  l <- m >>= unwrap_VRef;
   h <- imonad_get_heap;
   match iheap_get l h with
-  | None => imonad_throw (Memory_error "")
+  | None => imonad_throw_error (Memory_error "")
   | Some v => imonad_pure v
   end.
 
 Definition interpret_set (m1 m2 : imonad val) : imonad val :=
-  l <- m1 >>= unwrap_VLoc;
+  l <- m1 >>= unwrap_VRef;
   v <- m2;
   h <- imonad_get_heap;
   match iheap_set l v h with
-  | None => imonad_throw (Memory_error "")
+  | None => imonad_throw_error (Memory_error "")
   | Some h' => VUnit <$ imonad_set_heap h'
   end.
 
 Definition interpret_free (m : imonad val) : imonad val :=
-  l <- m >>= unwrap_VLoc;
+  l <- m >>= unwrap_VRef;
   h <- imonad_get_heap;
   match iheap_free l h with
-  | None => imonad_throw (Memory_error "")
+  | None => imonad_throw_error (Memory_error "")
   | Some h' => VUnit <$ imonad_set_heap h'
   end.
 
@@ -152,7 +152,7 @@ Definition interpret_eff (tag : tag) : imonad val -> imonad val :=
 
 Definition interpret_assert (m : imonad val) : imonad val :=
   b <- m >>= unwrap_VBool;
-  if b then imonad_pure VUnit else imonad_throw (Assert_failure "").
+  if b then imonad_pure VUnit else imonad_throw_error (Assert_failure "").
 
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
@@ -187,7 +187,7 @@ Definition interpret_split (m : imonad val) (f : val -> val -> imonad iresult) :
   v <- m;
   match v with
   | VPair v1 v2 => f v1 v2
-  | _ => imonad_throw (Type_error "")
+  | _ => imonad_throw_error (Type_error "")
   end.
 
 Definition interpret_case (m : imonad val) (f1 f2 : val -> imonad iresult) : imonad iresult :=
@@ -195,7 +195,7 @@ Definition interpret_case (m : imonad val) (f1 f2 : val -> imonad iresult) : imo
   match v with
   | VInl v' => f1 v'
   | VInr v' => f2 v'
-  | _ => imonad_throw (Type_error "")
+  | _ => imonad_throw_error (Type_error "")
   end.
 
 Fixpoint delimit_reset (tag : tag) (r : iresult) : imonad iresult :=
@@ -235,14 +235,14 @@ Definition interpret_try (k : kont) (t : exn_term) (m : imonad iresult) (f : val
   r <- m;
   match r with
   | RReturn v => f v
-  | RShift tag f' mk => imonad_reader_env (fun env => RShift tag f' (MKTry' mk t k env))
-  | RControl tag f' mk => imonad_reader_env (fun env => RControl tag f' (MKTry' mk t k env))
+  | RShift tag f' mk => imonad_asks_env (fun env => RShift tag f' (MKTry' mk t k env))
+  | RControl tag f' mk => imonad_asks_env (fun env => RControl tag f' (MKTry' mk t k env))
   | RRaise exn =>
       match h exn with
       | Some m => m
       | None => imonad_pure r
       end
-  | RPerform eff mk => imonad_reader_env (fun env => RPerform eff (MKTry' mk t k env))
+  | RPerform eff mk => imonad_asks_env (fun env => RPerform eff (MKTry' mk t k env))
   end.
 
 Definition interpret_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imonad iresult) (f : val -> imonad iresult)
@@ -250,8 +250,8 @@ Definition interpret_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (m : imon
   r <- m;
   match r with
   | RReturn v => f v
-  | RShift tag f' mk => imonad_reader_env (fun env => RShift tag f' (MKHandle' mk t1 t2 k env))
-  | RControl tag f' mk => imonad_reader_env (fun env => RControl tag f' (MKHandle' mk t1 t2 k env))
+  | RShift tag f' mk => imonad_asks_env (fun env => RShift tag f' (MKHandle' mk t1 t2 k env))
+  | RControl tag f' mk => imonad_asks_env (fun env => RControl tag f' (MKHandle' mk t1 t2 k env))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       env <- imonad_ask_env;
@@ -267,34 +267,34 @@ Definition interpret_shallow_handle (k : kont) (t1 : ret_term) (t2 : eff_term) (
   r <- m;
   match r with
   | RReturn v => f v
-  | RShift tag f' mk => imonad_reader_env (fun env => RShift tag f' (MKShallowHandle' mk t1 t2 k env))
-  | RControl tag f' mk => imonad_reader_env (fun env => RControl tag f' (MKShallowHandle' mk t1 t2 k env))
+  | RShift tag f' mk => imonad_asks_env (fun env => RShift tag f' (MKShallowHandle' mk t1 t2 k env))
+  | RControl tag f' mk => imonad_asks_env (fun env => RControl tag f' (MKShallowHandle' mk t1 t2 k env))
   | RRaise _ => imonad_pure r
   | RPerform eff mk =>
       match h eff (VKont mk) with
       | Some m => m
-      | None => imonad_reader_env (fun env => RPerform eff (MKShallowHandle' mk t1 t2 k env))
+      | None => imonad_asks_env (fun env => RPerform eff (MKShallowHandle' mk t1 t2 k env))
       end
   end.
 
 Definition interpret_shift (k : kont) (tag : tag) (f : env -> val -> imonad iresult) : imonad iresult :=
-  imonad_reader_env (fun env => RShift tag (f env) (MKPure k)).
+  imonad_asks_env (fun env => RShift tag (f env) (MKPure k)).
 
 Definition interpret_control (k : kont) (tag : tag) (f : env -> val -> imonad iresult) : imonad iresult :=
-  imonad_reader_env (fun env => RControl tag (f env) (MKPure k)).
+  imonad_asks_env (fun env => RControl tag (f env) (MKPure k)).
 
 Definition interpret_raise (m : imonad val) : imonad iresult :=
   v <- m;
   match v with
   | VExn exn => imonad_pure (RRaise exn)
-  | _ => imonad_throw (Type_error "")
+  | _ => imonad_throw_error (Type_error "")
   end.
 
 Definition interpret_perform (k : kont) (m : imonad val) : imonad iresult :=
   v <- m;
   match v with
   | VEff eff => imonad_pure (RPerform eff (MKPure k))
-  | _ => imonad_throw (Type_error "")
+  | _ => imonad_throw_error (Type_error "")
   end.
 
 Definition with_binder (b : binder) (v : val) (m : imonad iresult) : imonad iresult :=
@@ -367,8 +367,9 @@ Fixpoint interpret_exn_term_with (self : interpreter) (k : kont) (t : exn_term) 
   match t with
   | TExnBase p t' => match_exn p exn (self k t')
   | TExnCons p t1 t2 =>
-      match match_exn p exn (self k t1) with
-      | Some _ as r => r
+      let r := match_exn p exn (self k t1) in
+      match r with
+      | Some _ => r
       | None => interpret_exn_term_with self k t2 exn
       end
   end.
@@ -377,8 +378,9 @@ Fixpoint interpret_eff_term_with (self : interpreter) (k : kont) (t : eff_term) 
   match t with
   | TEffBase p b t' => match_eff p b eff v (self k t')
   | TEffCons p b t1 t2 =>
-      match match_eff p b eff v (self k t1) with
-      | Some _ as r => r
+      let r := match_eff p b eff v (self k t1) in
+      match r with
+      | Some _ => r
       | None => interpret_eff_term_with self k t2 eff v
       end
   end.
@@ -443,7 +445,7 @@ Definition interpret_app (self : interpreter) (k : kont) (m1 m2 : imonad val) (f
   | VKontReset mk tag => interpret_reset k tag (m2 >>= interpret_metakont_with self mk) f
   | VKont mk => m2 >>= interpret_metakont_with self (metakont_extend mk k)
   | VKontHandle mk c => m2 >>= interpret_metakont_with self mk >>= interpret_handle_clo_with self k c
-  | _ => imonad_throw (Type_error "")
+  | _ => imonad_throw_error (Type_error "")
   end.
 
 Set Implicit Arguments.
@@ -723,8 +725,9 @@ with interpret_exn_term_dep (self : interpreter) (k : kont) (t : exn_term) (G : 
   | TExnBase p t' =>
       fun G => match_exn p exn (interpret_term_dep self (GTExnBase_inv G))
   | TExnCons p t1 t2 =>
-      fun G => match match_exn p exn (interpret_term_dep self (GTExnCons_inv1 G)) with
-               | Some _ as r => r
+      fun G => let r := match_exn p exn (interpret_term_dep self (GTExnCons_inv1 G)) in
+               match r with
+               | Some _ => r
                | None => interpret_exn_term_dep self (GTExnCons_inv2 G) exn
                end
   end G
@@ -734,8 +737,9 @@ with interpret_eff_term_dep (self : interpreter) (k : kont) (t : eff_term) (G : 
   | TEffBase p b t' =>
       fun G => match_eff p b eff v (interpret_term_dep self (GTEffBase_inv G))
   | TEffCons p b t1 t2 =>
-      fun G => match match_eff p b eff v (interpret_term_dep self (GTEffCons_inv1 G)) with
-               | Some _ as r => r
+      fun G => let r := match_eff p b eff v (interpret_term_dep self (GTEffCons_inv1 G)) in
+               match r with
+               | Some _ => r
                | None => interpret_eff_term_dep self (GTEffCons_inv2 G) eff v
                end
   end G
@@ -766,7 +770,7 @@ Definition interpret_term_aux (self : interpreter) (k : kont) (t : term) : imona
 
 Fixpoint interpret_term (fuel : nat) (k : kont) (t : term) : imonad iresult :=
   match fuel with
-  | O => imonad_throw Out_of_fuel
+  | O => imonad_throw_error Out_of_fuel
   | S fuel' => interpret_term_aux (interpret_term fuel') k t
   end.
 

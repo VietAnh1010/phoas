@@ -21,12 +21,6 @@ Inductive prim2 : Type :=
 | P2Eq : prim2
 | P2Neq : prim2.
 
-Inductive atom : Type :=
-| AUnit : atom
-| AInt : Z -> atom
-| ABool : bool -> atom
-| AVar : var -> atom.
-
 Inductive binder : Type :=
 | BAny : binder
 | BVar : var -> binder.
@@ -55,7 +49,10 @@ Inductive term : Type :=
 | THandle : term -> ret_term -> eff_term -> term
 | TShallowHandle : term -> ret_term -> eff_term -> term
 with val_term : Type :=
-| TVAtom : atom -> val_term
+| TVVar : var -> val_term
+| TVUnit : val_term
+| TVInt : Z -> val_term
+| TVBool : bool -> val_term
 | TVFun : term1 -> val_term
 | TVFix : term2 -> val_term
 | TVPrim1 : prim1 -> val_term -> val_term
@@ -75,44 +72,44 @@ with term1 : Type :=
 with term2 : Type :=
 | T2 : binder -> binder -> term -> term2
 with ret_term : Type :=
-| TRet0 : ret_term
-| TRet1 : binder -> term -> ret_term
+| TRetNone : ret_term
+| TRetSome : binder -> term -> ret_term
 with exn_term : Type :=
-| TExnBase : pattern -> term -> exn_term
+| TExnLast : pattern -> term -> exn_term
 | TExnCons : pattern -> term -> exn_term -> exn_term
 with eff_term : Type :=
-| TEffBase : pattern -> binder -> term -> eff_term
+| TEffLast : pattern -> binder -> term -> eff_term
 | TEffCons : pattern -> binder -> term -> eff_term -> eff_term.
 
 Inductive val : Type :=
 | VUnit : val
 | VInt : Z -> val
 | VBool : bool -> val
-| VFun : clo1 -> val
-| VFix : clo2 -> val
+| VFun : fun_clo -> val
+| VFix : fix_clo -> val
 | VPair : val -> val -> val
 | VInl : val -> val
 | VInr : val -> val
 | VRef : loc -> val
-| VKontReset : metakont -> tag -> val
-| VKont : metakont -> val
-| VKontHandle : metakont -> handle_clo -> val
 | VExn : exn -> val
 | VEff : eff -> val
-with clo1 : Type :=
-| C1 : env -> term1 -> clo1
-with clo2 : Type :=
-| C2 : env -> term2 -> clo2
-with ctx_clo : Type :=
-| CCtx0 : env -> term -> ctx_clo
-| CCtx1 : env -> term1 -> ctx_clo
+| VMKPure : metakont -> val
+| VMKReset : metakont -> tag -> val
+| VMKHandle : metakont -> handle_clo -> val
+with fun_clo : Type :=
+| CFun : env -> term1 -> fun_clo
+with fix_clo : Type :=
+| CFix : env -> term2 -> fix_clo
+with kont_clo : Type :=
+| CKSeq : env -> term -> kont_clo
+| CKLet : env -> term1 -> kont_clo
 with try_clo : Type :=
 | CTry : env -> exn_term -> try_clo
 with handle_clo : Type :=
 | CHandle : env -> ret_term -> eff_term -> handle_clo
 with kont : Type :=
 | KNil : kont
-| KCons : ctx_clo -> kont -> kont
+| KCons : kont_clo -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> tag -> kont -> metakont
@@ -142,15 +139,11 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 Definition prim2_eq_dec : forall (p1 p2 : prim2), {p1 = p2} + {p1 <> p2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Definition atom_eq_dec : forall (a1 a2 : atom), {a1 = a2} + {a1 <> a2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
 Definition binder_eq_dec : forall (b1 b2 : binder), {b1 = b2} + {b1 <> b2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve prim1_eq_dec : eq_dec_db.
 Hint Resolve prim2_eq_dec : eq_dec_db.
-Hint Resolve atom_eq_dec : eq_dec_db.
 Hint Resolve binder_eq_dec : eq_dec_db.
 
 Definition pattern_eq_dec : forall (p1 p2 : pattern), {p1 = p2} + {p1 <> p2}.
@@ -176,9 +169,9 @@ Hint Resolve exn_term_eq_dec : eq_dec_db.
 Hint Resolve eff_term_eq_dec : eq_dec_db.
 
 Fixpoint val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
-with clo1_eq_dec : forall (c1 c2 : clo1), {c1 = c2} + {c1 <> c2}
-with clo2_eq_dec : forall (c1 c2 : clo2), {c1 = c2} + {c1 <> c2}
-with ctx_clo_eq_dec : forall (c1 c2 : ctx_clo), {c1 = c2} + {c1 <> c2}
+with fun_clo_eq_dec : forall (c1 c2 : fun_clo), {c1 = c2} + {c1 <> c2}
+with fix_clo_eq_dec : forall (c1 c2 : fix_clo), {c1 = c2} + {c1 <> c2}
+with kont_clo_eq_dec : forall (c1 c2 : kont_clo), {c1 = c2} + {c1 <> c2}
 with try_clo_eq_dec : forall (c1 c2 : try_clo), {c1 = c2} + {c1 <> c2}
 with handle_clo_eq_dec : forall (c1 c2 : handle_clo), {c1 = c2} + {c1 <> c2}
 with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
@@ -189,9 +182,9 @@ with eff_eq_dec : forall (eff1 eff2 : eff), {eff1 = eff2} + {eff1 <> eff2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve val_eq_dec : eq_dec_db.
-Hint Resolve clo1_eq_dec : eq_dec_db.
-Hint Resolve clo2_eq_dec : eq_dec_db.
-Hint Resolve ctx_clo_eq_dec : eq_dec_db.
+Hint Resolve fun_clo_eq_dec : eq_dec_db.
+Hint Resolve fix_clo_eq_dec : eq_dec_db.
+Hint Resolve kont_clo_eq_dec : eq_dec_db.
 Hint Resolve try_clo_eq_dec : eq_dec_db.
 Hint Resolve handle_clo_eq_dec : eq_dec_db.
 Hint Resolve kont_eq_dec : eq_dec_db.
@@ -200,17 +193,13 @@ Hint Resolve env_eq_dec : eq_dec_db.
 Hint Resolve exn_eq_dec : eq_dec_db.
 Hint Resolve eff_eq_dec : eq_dec_db.
 
-Definition val_eqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then true else false.
-Definition val_neqb (v1 v2 : val) : bool := if val_eq_dec v1 v2 then false else true.
-
 Module Coerce.
   Coercion Tag : string >-> tag.
   Coercion Var : string >-> var.
   Coercion BVar : var >-> binder.
   Coercion PVar : var >-> pattern.
-  Coercion AInt : Z >-> atom.
-  Coercion ABool : bool >-> atom.
-  Coercion AVar : var >-> atom.
-  Coercion TVAtom : atom >-> val_term.
+  Coercion TVVar : var >-> val_term.
+  Coercion TVInt : Z >-> val_term.
+  Coercion TVBool : bool >-> val_term.
   Coercion TVal : val_term >-> term.
 End Coerce.

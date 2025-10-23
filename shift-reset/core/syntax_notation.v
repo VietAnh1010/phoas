@@ -12,7 +12,7 @@ Declare Custom Entry term1.
 Declare Custom Entry ret_term.
 Declare Custom Entry exn_term.
 Declare Custom Entry eff_term.
-
+(*
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
 
@@ -322,3 +322,4 @@ Notation "'shallow' 'handle' t1 ;;; t2" :=
     (in custom term at level 23,
         t1 custom term,
         t2 custom eff_term) : term_scope.
+*)

@@ -1,25 +1,7 @@
-From Stdlib Require Import Bool String ZArith.
+From Stdlib Require Import Qcanon ZArith.
 From shift_reset.core Require Import loc tag var.
 
-Inductive prim1 : Type :=
-| P1Not : prim1
-| P1Neg : prim1.
-
-Inductive prim2 : Type :=
-| P2Add : prim2
-| P2Sub : prim2
-| P2Mul : prim2
-| P2Div : prim2
-| P2Rem : prim2
-| P2Lt : prim2
-| P2Le : prim2
-| P2Gt : prim2
-| P2Ge : prim2
-| P2And : prim2
-| P2Or : prim2
-| P2Xor : prim2
-| P2Eq : prim2
-| P2Neq : prim2.
+Close Scope Qc_scope.
 
 Inductive binder : Type :=
 | BAny : binder
@@ -52,11 +34,19 @@ with val_term : Type :=
 | TVVar : var -> val_term
 | TVUnit : val_term
 | TVInt : Z -> val_term
+| TVFloat : Qc -> val_term
+| TVNeg : val_term -> val_term
+| TVAdd : val_term -> val_term -> val_term
+| TVSub : val_term -> val_term -> val_term
+| TVMul : val_term -> val_term -> val_term
+| TVDiv : val_term -> val_term -> val_term
+| TVMod : val_term -> val_term -> val_term
 | TVBool : bool -> val_term
+| TVNot : val_term -> val_term
+| TVAnd : val_term -> val_term -> val_term
+| TVOr : val_term -> val_term -> val_term
 | TVFun : term1 -> val_term
 | TVFix : term2 -> val_term
-| TVPrim1 : prim1 -> val_term -> val_term
-| TVPrim2 : prim2 -> val_term -> val_term -> val_term
 | TVPair : val_term -> val_term -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
@@ -67,6 +57,12 @@ with val_term : Type :=
 | TVExn : tag -> val_term -> val_term
 | TVEff : tag -> val_term -> val_term
 | TVAssert : val_term -> val_term
+| TVLt : val_term -> val_term -> val_term
+| TVLe : val_term -> val_term -> val_term
+| TVGt : val_term -> val_term -> val_term
+| TVGe : val_term -> val_term -> val_term
+| TVEq : val_term -> val_term -> val_term
+| TVNeq : val_term -> val_term -> val_term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
@@ -84,6 +80,7 @@ with eff_term : Type :=
 Inductive val : Type :=
 | VUnit : val
 | VInt : Z -> val
+| VFloat : Qc -> val
 | VBool : bool -> val
 | VFun : fun_clo -> val
 | VFix : fix_clo -> val
@@ -107,6 +104,8 @@ with try_clo : Type :=
 | CTry : env -> exn_term -> try_clo
 with handle_clo : Type :=
 | CHandle : env -> ret_term -> eff_term -> handle_clo
+with shallow_handle_clo : Type :=
+| CShallowHandle : env -> ret_term -> eff_term -> shallow_handle_clo
 with kont : Type :=
 | KNil : kont
 | KCons : kont_clo -> kont -> kont
@@ -116,7 +115,7 @@ with metakont : Type :=
 | MKPrompt : metakont -> tag -> kont -> metakont
 | MKTry : metakont -> try_clo -> kont -> metakont
 | MKHandle : metakont -> handle_clo -> kont -> metakont
-| MKShallowHandle : metakont -> handle_clo -> kont -> metakont
+| MKShallowHandle : metakont -> shallow_handle_clo -> kont -> metakont
 with env : Type :=
 | EnvNil : env
 | EnvCons : var -> val -> env -> env
@@ -124,82 +123,3 @@ with exn : Type :=
 | Exn : tag -> val -> exn
 with eff : Type :=
 | Eff : tag -> val -> eff.
-
-Create HintDb eq_dec_db discriminated.
-
-Hint Resolve Z.eq_dec : eq_dec_db.
-Hint Resolve bool_dec : eq_dec_db.
-Hint Resolve loc_eq_dec : eq_dec_db.
-Hint Resolve tag_eq_dec : eq_dec_db.
-Hint Resolve var_eq_dec : eq_dec_db.
-
-Definition prim1_eq_dec : forall (p1 p2 : prim1), {p1 = p2} + {p1 <> p2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
-Definition prim2_eq_dec : forall (p1 p2 : prim2), {p1 = p2} + {p1 <> p2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
-Definition binder_eq_dec : forall (b1 b2 : binder), {b1 = b2} + {b1 <> b2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
-Hint Resolve prim1_eq_dec : eq_dec_db.
-Hint Resolve prim2_eq_dec : eq_dec_db.
-Hint Resolve binder_eq_dec : eq_dec_db.
-
-Definition pattern_eq_dec : forall (p1 p2 : pattern), {p1 = p2} + {p1 <> p2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
-Hint Resolve pattern_eq_dec : eq_dec_db.
-
-Fixpoint term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
-with val_term_eq_dec : forall (t1 t2 : val_term), {t1 = t2} + {t1 <> t2}
-with term1_eq_dec : forall (t1 t2 : term1), {t1 = t2} + {t1 <> t2}
-with term2_eq_dec : forall (t1 t2 : term2), {t1 = t2} + {t1 <> t2}
-with ret_term_eq_dec : forall (t1 t2 : ret_term), {t1 = t2} + {t1 <> t2}
-with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}
-with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}.
-Proof. all: decide equality; auto with eq_dec_db. Defined.
-
-Hint Resolve term_eq_dec : eq_dec_db.
-Hint Resolve val_term_eq_dec : eq_dec_db.
-Hint Resolve term1_eq_dec : eq_dec_db.
-Hint Resolve term2_eq_dec : eq_dec_db.
-Hint Resolve ret_term_eq_dec : eq_dec_db.
-Hint Resolve exn_term_eq_dec : eq_dec_db.
-Hint Resolve eff_term_eq_dec : eq_dec_db.
-
-Fixpoint val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
-with fun_clo_eq_dec : forall (c1 c2 : fun_clo), {c1 = c2} + {c1 <> c2}
-with fix_clo_eq_dec : forall (c1 c2 : fix_clo), {c1 = c2} + {c1 <> c2}
-with kont_clo_eq_dec : forall (c1 c2 : kont_clo), {c1 = c2} + {c1 <> c2}
-with try_clo_eq_dec : forall (c1 c2 : try_clo), {c1 = c2} + {c1 <> c2}
-with handle_clo_eq_dec : forall (c1 c2 : handle_clo), {c1 = c2} + {c1 <> c2}
-with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
-with metakont_eq_dec : forall (mk1 mk2 : metakont), {mk1 = mk2} + {mk1 <> mk2}
-with env_eq_dec : forall (env1 env2 : env), {env1 = env2} + {env1 <> env2}
-with exn_eq_dec : forall (exn1 exn2 : exn), {exn1 = exn2} + {exn1 <> exn2}
-with eff_eq_dec : forall (eff1 eff2 : eff), {eff1 = eff2} + {eff1 <> eff2}.
-Proof. all: decide equality; auto with eq_dec_db. Defined.
-
-Hint Resolve val_eq_dec : eq_dec_db.
-Hint Resolve fun_clo_eq_dec : eq_dec_db.
-Hint Resolve fix_clo_eq_dec : eq_dec_db.
-Hint Resolve kont_clo_eq_dec : eq_dec_db.
-Hint Resolve try_clo_eq_dec : eq_dec_db.
-Hint Resolve handle_clo_eq_dec : eq_dec_db.
-Hint Resolve kont_eq_dec : eq_dec_db.
-Hint Resolve metakont_eq_dec : eq_dec_db.
-Hint Resolve env_eq_dec : eq_dec_db.
-Hint Resolve exn_eq_dec : eq_dec_db.
-Hint Resolve eff_eq_dec : eq_dec_db.
-
-Module Coerce.
-  Coercion Tag : string >-> tag.
-  Coercion Var : string >-> var.
-  Coercion BVar : var >-> binder.
-  Coercion PVar : var >-> pattern.
-  Coercion TVVar : var >-> val_term.
-  Coercion TVInt : Z >-> val_term.
-  Coercion TVBool : bool >-> val_term.
-  Coercion TVal : val_term >-> term.
-End Coerce.

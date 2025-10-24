@@ -1,5 +1,5 @@
 From Stdlib Require Import PArith.
-From shift_reset Require option.
+From shift_reset.lib Require option.
 
 Local Open Scope positive_scope.
 Local Unset Elimination Schemes.

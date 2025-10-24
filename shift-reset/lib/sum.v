@@ -18,7 +18,7 @@ Definition fold {E A B} (f : A -> B) (g : E -> B) (s : E + A) : B :=
   | inr x => f x
   end.
 
-Definition eq_dec :
+Lemma eq_dec :
   forall {E A : Type}
          (E_eq_dec : forall (x y : E), {x = y} + {x <> y})
          (A_eq_dec : forall (x y : A), {x = y} + {x <> y})

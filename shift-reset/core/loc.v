@@ -1,35 +1,30 @@
-From Stdlib Require Import NArith.
+From Stdlib Require Import PArith.
 From shift_reset.lib Require gmap.
 
-Record loc : Type := Loc { loc_car : N }.
+Record loc : Type := Loc { loc_car : positive }.
 
-Definition loc_eq_dec : forall (l1 l2 : loc), {l1 = l2} + {l1 <> l2}.
-Proof. decide equality; auto using N.eq_dec. Defined.
+Lemma loc_eq_dec : forall (l1 l2 : loc), {l1 = l2} + {l1 <> l2}.
+Proof. decide equality; auto using Pos.eq_dec. Defined.
+
+Definition loc_eqb (l1 l2 : loc) : bool :=
+  Pos.eqb (loc_car l1) (loc_car l2).
 
 Definition loc_succ (l : loc) : loc :=
-  Loc (N.succ (loc_car l)).
+  Loc (Pos.succ (loc_car l)).
+
+Definition loc_init : loc := Loc xH.
 
 Module IsoPositiveLoc <: gmap.IsoPositiveType.
   Definition t := loc.
-  Definition encode x := N.succ_pos (loc_car x).
-  Definition decode x := Loc (Pos.pred_N x).
+
+  Definition encode := loc_car.
+  Definition decode := Loc.
 
   Lemma decode_encode : forall x, decode (encode x) = x.
-  Proof.
-    intros [x].
-    unfold decode, encode, loc_car.
-    exact (f_equal Loc (N.pos_pred_succ x)).
-  Qed.
+  Proof. exact (fun '(Loc _) => eq_refl). Qed.
 
   Lemma encode_decode : forall x, encode (decode x) = x.
-  Proof.
-    intros x.
-    unfold encode, decode, loc_car.
-    destruct x as [x' | x' |].
-    - simpl. reflexivity.
-    - simpl. exact (Pos.succ_pred_double x').
-    - simpl. reflexivity.
-  Qed.
+  Proof. exact (fun _ => eq_refl). Qed.
 End IsoPositiveLoc.
 
 Module LocMap := gmap.Make (IsoPositiveLoc).

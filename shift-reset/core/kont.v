@@ -23,4 +23,4 @@ Definition MKHandle' (mk : metakont) (t1 : ret_term) (t2 : eff_term) (k : kont) 
   MKHandle mk (CHandle env t1 t2) k.
 
 Definition MKShallowHandle' (mk : metakont) (t1 : ret_term) (t2 : eff_term) (k : kont) (env : env) : metakont :=
-  MKShallowHandle mk (CHandle env t1 t2) k.
+  MKShallowHandle mk (CShallowHandle env t1 t2) k.

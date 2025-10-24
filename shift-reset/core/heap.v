@@ -1,8 +1,5 @@
-From Stdlib Require Import NArith.
 From shift_reset.lib Require Import option.
-From shift_reset.core Require Import loc syntax.
-
-Local Open Scope N_scope.
+From shift_reset.core Require Import syntax loc.
 
 Record heap : Type := Heap { heap_car : LocMap.t val }.
 

@@ -24,7 +24,7 @@ Definition fold {A B} (f : A -> B) (z : B) (o : option A) : B :=
   | Some x => f x
   end.
 
-Definition eq_dec :
+Lemma eq_dec :
   forall {A : Type}
          (A_eq_dec : forall (x y : A), {x = y} + {x <> y})
          (o1 o2 : option A),

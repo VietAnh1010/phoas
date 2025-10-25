@@ -260,7 +260,7 @@ Set Implicit Arguments.
 
 Inductive term_graph : kont -> term -> Prop :=
 | GTVal k t' : kont_graph k -> term_graph k (TVal t')
-| GTApp k t1 t2 : kont_graph k -> term_graph k (TApp t1 t2)
+| GTApp k t1 t2 : term_graph k (TApp t1 t2)
 | GTSeq k t1 t2 : (forall env, term_graph (KCons (CKSeq env t2) k) t1) -> term_graph k (TSeq t1 t2)
 | GTLet k t1 t2 : (forall env, term_graph (KCons (CKLet env t2) k) t1) -> term_graph k (TLet t1 t2)
 | GTIf k t1 t2 t3 : term_graph k t2 -> term_graph k t3 -> term_graph k (TIf t1 t2 t3)
@@ -296,9 +296,6 @@ with kont_graph : kont -> Prop :=
 | GKCons c k' : kont_clo_graph k' c -> kont_graph (KCons c k').
 
 Lemma GTVal_inv k t' : term_graph k (TVal t') -> kont_graph k.
-Proof. inversion 1; auto. Defined.
-
-Lemma GTApp_inv k t1 t2 : term_graph k (TApp t1 t2) -> kont_graph k.
 Proof. inversion 1; auto. Defined.
 
 Lemma GTSeq_inv k t1 t2 : term_graph k (TSeq t1 t2) -> forall env, term_graph (KCons (CKSeq env t2) k) t1.
@@ -409,7 +406,7 @@ Proof. inversion 1; auto. Defined.
 Fixpoint build_term_graph_dep (k : kont) (G : kont_graph k) (t : term) : term_graph k t :=
   match t with
   | TVal t' => GTVal t' G
-  | TApp t1 t2 => GTApp t1 t2 G
+  | TApp t1 t2 => GTApp k t1 t2
   | TSeq t1 t2 => GTSeq (fun env => build_term_graph_dep (GKCons (GCKSeq env (build_term_graph_dep G t2))) t1)
   | TLet t1 t2 => GTLet (fun env => build_term_graph_dep (GKCons (GCKLet env (build_term1_graph_dep G t2))) t1)
   | TIf t1 t2 t3 => GTIf t1 (build_term_graph_dep G t2) (build_term_graph_dep G t3)
@@ -463,30 +460,8 @@ Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term
         | LFun c => let (env, t) := c in imonad_use_env env (interpret_term1_with self k t v)
         | LFix c => let (env, t) := c in imonad_use_env env (interpret_term2_with self k t u v)
         | LMKPure mk => interpret_metakont_with self (metakont_extend mk k) v
-        | LMKReset mk tag =>
-            r <- interpret_metakont_with self mk v;
-            r <- delimit_reset tag r;
-            match r with
-            | RVal v => interpret_kont_dep self (GTApp_inv G) v
-            | RShift mk f tag' => imonad_pure (RShift (MKReset mk tag k) f tag')
-            | RControl mk f tag' => imonad_pure (RControl (MKReset mk tag k) f tag')
-            | RRaise _ => imonad_pure r
-            | RPerform mk eff => imonad_pure (RPerform (MKReset mk tag k) eff)
-            end
-        | LMKHandle mk c =>
-            r <- interpret_metakont_with self mk v;
-            match r with
-            | RVal v => let (env, t, _) := c in imonad_use_env env (interpret_ret_term_with self k t v)
-            | RShift mk f tag => imonad_pure (RShift (MKHandle mk c k) f tag)
-            | RControl mk f tag => imonad_pure (RControl (MKHandle mk c k) f tag)
-            | RRaise _ => imonad_pure r
-            | RPerform mk eff =>
-                let (env, _, t) := c in
-                match interpret_eff_term_with self k t eff (VMKHandle mk c) with
-                | Some m => imonad_use_env env m
-                | None => imonad_pure (RPerform (MKHandle mk c k) eff)
-                end
-            end
+        | LMKReset mk tag => interpret_metakont_with self (MKReset mk tag k) v
+        | LMKHandle mk c => interpret_metakont_with self (MKHandle mk c k) v
         end
   | TSeq t1 t2 => fun G => env <- imonad_ask_env; interpret_term_dep self (GTSeq_inv G env)
   | TLet t1 t2 => fun G => env <- imonad_ask_env; interpret_term_dep self (GTLet_inv G env)

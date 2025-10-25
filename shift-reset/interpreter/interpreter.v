@@ -109,7 +109,7 @@ Definition with_binder2 (b1 b2 : binder) (v1 v2 : val) (m : imonad iresult) : im
 
 Fixpoint match_exn (p : pattern) (exn : exn) : option (imonad iresult -> imonad iresult) :=
   match p with
-  | PAny => Some id
+  | PAny => Some (fun m => m)
   | PVar x => Some (imonad_local_env (EnvCons x (VExn exn)))
   | PConstr tag b =>
       let (tag', v) := exn in

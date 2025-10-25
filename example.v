@@ -1,4 +1,4 @@
-From Stdlib Require Import Extraction List String ZArith.
+From Stdlib Require Import Extraction List String QArith Qcanon ZArith.
 Import ListNotations.
 
 From shift_reset.core Require Import syntax syntax_notation coerce.
@@ -7,6 +7,24 @@ From shift_reset.interpreter Require Import interpreter.
 Open Scope string_scope.
 Open Scope Z_scope.
 Open Scope term_scope.
+
+Example arith1 := <{ 1 + 2 * 3 }>.
+Compute (eval_term 1 arith1).
+
+Example arith2 := <{ 1 + 6 / 6 }>.
+Compute (eval_term 1 arith2).
+
+Example cmp1 := <{ 4 + 2 < 6 + 9 }>.
+Compute (eval_term 1 cmp1).
+
+Example cmp2 := <{ true < true }>.
+Compute (eval_term 1 cmp2).
+
+Example cmp3 := <{ (4, 2) < (6, 9) }>.
+Compute (eval_term 1 cmp3).
+
+Example arith3 := <{ {Q2Qc (4 # 6)} + {Q2Qc (4 # 5)} }>.
+Compute (eval_term 1 arith3).
 
 Example ex1 :=
   <{ let "f" :=
@@ -93,7 +111,7 @@ Example ex2 :=
      free "result"; "answer" }>.
 
 Print ex2.
-Compute (run_term 6 ex2).
+Compute (run_term 8 ex2).
 
 Example choice :=
   <{ fun "xs" =>
@@ -116,10 +134,10 @@ Example sum xs :=
      free "result"; "answer" }>.
 
 Compute (eval_term 3 (sum (term_of_list []))).
-Compute (eval_term 4 (sum (term_of_list [1]))).
-Compute (eval_term 5 (sum (term_of_list [1; 2]))).
+Compute (eval_term 5 (sum (term_of_list [1]))).
+Compute (eval_term 7 (sum (term_of_list [1; 2]))).
 
-Time Compute (eval_term 5003 (sum (term_of_list (sequence 0 5000)))).
+Time Compute (eval_term 20000 (sum (term_of_list (sequence 0 5000)))).
 
 Example yield :=
   <{ fun "x" => shift (fun "k" => Inr ("x", "k")) }>.
@@ -208,8 +226,8 @@ Example copy1 xs :=
 Example reverse1 xs :=
   <{ let "reverse" := reverse in prompt ("reverse" xs) }>.
 
-Time Compute (eval_term 10000 (copy1 (term_of_list (sequence 0 1000)))).
-Time Compute (eval_term 10000 (reverse1 (term_of_list (sequence 0 1000)))).
+Time Compute (eval_term 3000 (copy1 (term_of_list (sequence 0 1000)))).
+Time Compute (eval_term 3000 (reverse1 (term_of_list (sequence 0 1000)))).
 
 Example unhandled_exception :=
   <{ raise (exception "Segfault" 139) }>.
@@ -271,3 +289,7 @@ Example basic_exn_eff :=
      !"stdout" }>.
 
 Compute (eval_term 10 basic_exn_eff).
+
+(*Extraction Language Scheme.*)
+(*Extraction "interpreter.ml" run_term.*)
+Recursive Extraction run_term.

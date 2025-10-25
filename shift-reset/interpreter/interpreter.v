@@ -37,7 +37,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       v <- interpret_val_term t';
       h <- imonad_get_heap;
       match iheap_ref v h with
-      | None => imonad_throw_error (Memory_error "")
+      | None => imonad_throw_error (Memory_error "ref")
       | Some (l, h') => VRef l <$ imonad_set_heap h'
       end
   | TVGet t' =>
@@ -45,7 +45,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       l <- unwrap_vref v;
       h <- imonad_get_heap;
       match iheap_get l h with
-      | None => imonad_throw_error (Memory_error "")
+      | None => imonad_throw_error (Memory_error "get")
       | Some v' => imonad_pure v'
       end
   | TVSet t1 t2 =>
@@ -54,7 +54,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       v <- interpret_val_term t2;
       h <- imonad_get_heap;
       match iheap_set l v h with
-      | None => imonad_throw_error (Memory_error "")
+      | None => imonad_throw_error (Memory_error "set")
       | Some h' => VUnit <$ imonad_set_heap h'
       end
   | TVFree t' =>
@@ -62,7 +62,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       l <- unwrap_vref v;
       h <- imonad_get_heap;
       match iheap_free l h with
-      | None => imonad_throw_error (Memory_error "")
+      | None => imonad_throw_error (Memory_error "free")
       | Some h' => VUnit <$ imonad_set_heap h'
       end
   | TVExn tag t' => VExn' tag <$> interpret_val_term t'
@@ -505,8 +505,8 @@ Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term
         v <- interpret_val_term t1;
         s <- unwrap_vsum v;
         match s with
-        | inl v' => interpret_term1_dep self (GTCase_inv1 G) v
-        | inr v' => interpret_term1_dep self (GTCase_inv2 G) v
+        | inl v' => interpret_term1_dep self (GTCase_inv1 G) v'
+        | inr v' => interpret_term1_dep self (GTCase_inv2 G) v'
         end
   | TShift tag t' =>
       fun G => imonad_asks_env (fun env => RShift (MKPure k) (fun v => imonad_use_env env (interpret_term1_dep self (GTShift_inv G) v)) tag)

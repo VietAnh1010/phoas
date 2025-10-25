@@ -1,9 +1,8 @@
 From Stdlib Require Import Extraction List String ZArith.
 Import ListNotations.
 
-From shift_reset.core Require Import syntax syntax_notation.
+From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
-Import Coerce.
 
 Open Scope string_scope.
 Open Scope Z_scope.
@@ -90,11 +89,11 @@ Example ex2 :=
         let "p" := "either1" false in
         let "q" := "either1" false in
         if ("p" || "q") && ("p" || not "q") && (not "p" || not "q") then "result" <- true else ());
-     !"result" }>.
+     let "answer" := !"result" || "crash" in
+     free "result"; "answer" }>.
 
 Print ex2.
-
-Compute (eval_term 6 ex2).
+Compute (run_term 6 ex2).
 
 Example choice :=
   <{ fun "xs" =>
@@ -113,7 +112,8 @@ Example choice :=
 Example sum xs :=
   <{ let "result" := ref 0 in
      reset (let "x" := choice xs in "result" <- "x" + !"result");
-     !"result" }>.
+     let "answer" := !"result" in
+     free "result"; "answer" }>.
 
 Compute (eval_term 3 (sum (term_of_list []))).
 Compute (eval_term 4 (sum (term_of_list [1]))).
@@ -267,7 +267,7 @@ Example basic_exn_eff :=
          let "final_msg" := 69 in
          "print" "final_msg");;;
       (fun '("Effect0" "x"), "k" => "print" "x"; "k" ());
-      (fun '("Effect2" _ as "eff"), "k" => "print" ("eff", "k"); "k" ()));
+      (fun '("Effect2" _ as "eff"), "k" => "print" "eff"; "k" ()));
      !"stdout" }>.
 
 Compute (eval_term 10 basic_exn_eff).

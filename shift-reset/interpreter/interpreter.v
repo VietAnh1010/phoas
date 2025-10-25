@@ -26,8 +26,14 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
   | TVTrue => imonad_pure VTrue
   | TVFalse => imonad_pure VFalse
   | TVNot t' => interpret_val_term t' >>= dispatch_not
-  | TVAnd t1 t2 => v <- interpret_val_term t1; b <- unwrap_vbool v; if b then interpret_val_term t2 else imonad_pure v
-  | TVOr t1 t2 => v <- interpret_val_term t1; b <- unwrap_vbool v; if b then imonad_pure v else interpret_val_term t2
+  | TVAnd t1 t2 =>
+      v <- interpret_val_term t1;
+      b <- unwrap_vbool v;
+      if b then interpret_val_term t2 else imonad_pure VFalse
+  | TVOr t1 t2 =>
+      v <- interpret_val_term t1;
+      b <- unwrap_vbool v;
+      if b then imonad_pure VTrue else interpret_val_term t2
   | TVFun t' => imonad_asks_env (VFun' t')
   | TVFix t' => imonad_asks_env (VFix' t')
   | TVPair t1 t2 => v <- interpret_val_term t1; VPair v <$> interpret_val_term t2
@@ -484,7 +490,8 @@ Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term
         | inr v' => interpret_term1_dep self (GTCase_inv2 G) v'
         end
   | TShift tag t' =>
-      fun G => imonad_asks_env (fun env => RShift (MKPure k) (fun v => imonad_use_env env (interpret_term1_dep self (GTShift_inv G) v)) tag)
+      fun G =>
+        imonad_asks_env (fun env => RShift (MKPure k) (fun v => imonad_use_env env (interpret_term1_dep self (GTShift_inv G) v)) tag)
   | TReset tag t' =>
       fun G =>
         r <- interpret_term_dep self (GTReset_inv1 G);
@@ -497,7 +504,8 @@ Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term
         | RPerform mk eff => imonad_pure (RPerform (MKReset mk tag k) eff)
         end
   | TControl tag t' =>
-      fun G => imonad_asks_env (fun env => RControl (MKPure k) (fun v => imonad_use_env env (interpret_term1_dep self (GTControl_inv G) v)) tag)
+      fun G =>
+        imonad_asks_env (fun env => RControl (MKPure k) (fun v => imonad_use_env env (interpret_term1_dep self (GTControl_inv G) v)) tag)
   | TPrompt tag t' =>
       fun G =>
         r <- interpret_term_dep self (GTPrompt_inv1 G);
@@ -557,9 +565,11 @@ Fixpoint interpret_term_dep (self : interpreter) (k : kont) (t : term) (G : term
         end
   end G
 with interpret_term1_dep (self : interpreter) (k : kont) (t : term1) (G : term1_graph k t) (v : val) {struct G} : imonad iresult :=
-  (let 'T1 b t' := t return term1_graph k t -> _ in fun G => with_binder b v (interpret_term_dep self (GT1_inv G))) G
+  (let 'T1 b t' := t return term1_graph k t -> _ in
+   fun G => with_binder b v (interpret_term_dep self (GT1_inv G))) G
 with interpret_term2_dep (self : interpreter) (k : kont) (t : term2) (G : term2_graph k t) (v1 v2 : val) {struct G} : imonad iresult :=
-  (let 'T2 b1 b2 t' := t return term2_graph k t -> _ in fun G => with_binder2 b1 b2 v1 v2 (interpret_term_dep self (GT2_inv G))) G
+  (let 'T2 b1 b2 t' := t return term2_graph k t -> _ in
+   fun G => with_binder2 b1 b2 v1 v2 (interpret_term_dep self (GT2_inv G))) G
 with interpret_ret_term_dep (self : interpreter) (k : kont) (t : ret_term) (G : ret_term_graph k t) (v : val) {struct G} : imonad iresult :=
   match t return ret_term_graph k t -> _ with
   | TRetNone => fun G => interpret_kont_dep self (GTRetNone_inv G) v
@@ -568,26 +578,34 @@ with interpret_ret_term_dep (self : interpreter) (k : kont) (t : ret_term) (G : 
 with interpret_exn_term_dep (self : interpreter) (k : kont) (t : exn_term) (G : exn_term_graph k t) (exn : exn) {struct G} :
   option (imonad iresult) :=
   match t return exn_term_graph k t -> _ with
-  | TExnLast p t' => fun G => match match_exn p exn with
-                              | Some f => Some (f (interpret_term_dep self (GTExnLast_inv G)))
-                              | None => None
-                              end
-  | TExnCons p t1 t2 => fun G => match match_exn p exn with
-                                 | Some f => Some (f (interpret_term_dep self (GTExnCons_inv1 G)))
-                                 | None => interpret_exn_term_dep self (GTExnCons_inv2 G) exn
-                                 end
+  | TExnLast p t' =>
+      fun G =>
+        match match_exn p exn with
+        | Some f => Some (f (interpret_term_dep self (GTExnLast_inv G)))
+        | None => None
+        end
+  | TExnCons p t1 t2 =>
+      fun G =>
+        match match_exn p exn with
+        | Some f => Some (f (interpret_term_dep self (GTExnCons_inv1 G)))
+        | None => interpret_exn_term_dep self (GTExnCons_inv2 G) exn
+        end
   end G
 with interpret_eff_term_dep (self : interpreter) (k : kont) (t : eff_term) (G : eff_term_graph k t) (eff : eff) (v : val) {struct G} :
   option (imonad iresult) :=
   match t return eff_term_graph k t -> _ with
-  | TEffLast p b t' => fun G => match match_eff p b eff v with
-                                | Some f => Some (f (interpret_term_dep self (GTEffLast_inv G)))
-                                | None => None
-                                end
-  | TEffCons p b t1 t2 => fun G => match match_eff p b eff v with
-                                   | Some f => Some (f (interpret_term_dep self (GTEffCons_inv1 G)))
-                                   | None => interpret_eff_term_dep self (GTEffCons_inv2 G) eff v
-                                   end
+  | TEffLast p b t' =>
+      fun G =>
+        match match_eff p b eff v with
+        | Some f => Some (f (interpret_term_dep self (GTEffLast_inv G)))
+        | None => None
+        end
+  | TEffCons p b t1 t2 =>
+      fun G =>
+        match match_eff p b eff v with
+        | Some f => Some (f (interpret_term_dep self (GTEffCons_inv1 G)))
+        | None => interpret_eff_term_dep self (GTEffCons_inv2 G) eff v
+        end
   end G
 with interpret_kont_clo_dep (self : interpreter) (k : kont) (c : kont_clo) (G : kont_clo_graph k c) (v : val) {struct G} : imonad iresult :=
   match c return kont_clo_graph k c -> _ with

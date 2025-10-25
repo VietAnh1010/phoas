@@ -1,8 +1,6 @@
 From Stdlib Require Import Qcanon ZArith.
 From shift_reset.core Require Import loc tag var.
 
-Close Scope Qc_scope.
-
 Inductive binder : Type :=
 | BAny : binder
 | BVar : var -> binder.
@@ -16,8 +14,8 @@ Inductive pattern : Type :=
 Inductive term : Type :=
 | TVal : val_term -> term
 | TApp : val_term -> val_term -> term
-| TLet : term -> term1 -> term
 | TSeq : term -> term -> term
+| TLet : term -> term1 -> term
 | TIf : val_term -> term -> term -> term
 | TSplit : val_term -> term2 -> term
 | TCase : val_term -> term1 -> term1 -> term
@@ -41,7 +39,8 @@ with val_term : Type :=
 | TVMul : val_term -> val_term -> val_term
 | TVDiv : val_term -> val_term -> val_term
 | TVMod : val_term -> val_term -> val_term
-| TVBool : bool -> val_term
+| TVTrue : val_term
+| TVFalse : val_term
 | TVNot : val_term -> val_term
 | TVAnd : val_term -> val_term -> val_term
 | TVOr : val_term -> val_term -> val_term
@@ -81,7 +80,8 @@ Inductive val : Type :=
 | VUnit : val
 | VInt : Z -> val
 | VFloat : Qc -> val
-| VBool : bool -> val
+| VTrue : val
+| VFalse : val
 | VFun : fun_clo -> val
 | VFix : fix_clo -> val
 | VPair : val -> val -> val

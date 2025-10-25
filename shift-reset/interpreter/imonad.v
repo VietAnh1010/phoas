@@ -1,4 +1,3 @@
-From shift_reset.lib Require Import sum.
 From shift_reset.core Require Import syntax.
 From shift_reset.interpreter Require Import ierror iheap.
 
@@ -138,8 +137,8 @@ Declare Scope imonad_scope.
 Delimit Scope imonad_scope with imonad.
 Bind Scope imonad_scope with imonad.
 
-Notation "f <$> m" := (imonad_map f m) (at level 65, left associativity) : imonad_scope.
-Notation "x <$ m" := (imonad_replace x m) (at level 65, left associativity) : imonad_scope.
+Notation "f <$> m" := (imonad_map f m) (at level 65, right associativity) : imonad_scope.
+Notation "x <$ m" := (imonad_replace x m) (at level 65, right associativity) : imonad_scope.
 Notation "m >>= f" := (imonad_bind m f) (at level 50, left associativity) : imonad_scope.
 Notation "m1 >> m2" := (imonad_then m1 m2) (at level 50, left associativity) : imonad_scope.
 Notation "f1 >=> f2" := (imonad_kleisli_compose f1 f2) (at level 60, right associativity) : imonad_scope.

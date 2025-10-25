@@ -9,6 +9,9 @@ Proof. decide equality; auto using Pos.eq_dec. Defined.
 Definition loc_eqb (l1 l2 : loc) : bool :=
   Pos.eqb (loc_car l1) (loc_car l2).
 
+Definition loc_neqb (l1 l2 : loc) : bool :=
+  negb (loc_eqb l1 l2).
+
 Definition loc_succ (l : loc) : loc :=
   Loc (Pos.succ (loc_car l)).
 
@@ -16,7 +19,6 @@ Definition loc_init : loc := Loc xH.
 
 Module IsoPositiveLoc <: gmap.IsoPositiveType.
   Definition t := loc.
-
   Definition encode := loc_car.
   Definition decode := Loc.
 

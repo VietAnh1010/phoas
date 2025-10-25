@@ -1,5 +1,5 @@
 From Stdlib Require Import String.
-From shift_reset Require Import syntax tag var.
+From shift_reset.core Require Import syntax tag var.
 
 Local Unset Elimination Schemes.
 

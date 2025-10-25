@@ -12,7 +12,7 @@ Declare Custom Entry term1.
 Declare Custom Entry ret_term.
 Declare Custom Entry exn_term.
 Declare Custom Entry eff_term.
-(*
+
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
 
@@ -41,13 +41,13 @@ Notation "( 'fun' x => t )" :=
         t custom term) : term_scope.
 
 Notation "( 'fun' x => t )" :=
-  (TRet1 x t)
+  (TRetSome x t)
     (in custom ret_term at level 69,
         x custom binder' at level 0,
         t custom term) : term_scope.
 
 Notation "( 'fun' x => t )" :=
-  (TExnBase x t)
+  (TExnLast x t)
     (in custom exn_term at level 69,
         x custom pattern' at level 10,
         t custom term) : term_scope.
@@ -61,7 +61,7 @@ Notation "( 'fun' x => t1 ) ; t2" :=
         right associativity) : term_scope.
 
 Notation "( 'fun' x , k => t )" :=
-  (TEffBase x k t)
+  (TEffLast x k t)
     (in custom eff_term at level 69,
         x custom pattern' at level 10,
         k custom binder' at level 0,
@@ -178,13 +178,15 @@ Notation "'fix' f x1 x2 .. xn := t" :=
         xn custom binder' at level 0,
         t custom term at level 99) : term_scope.
 
-Notation "()" := AUnit (in custom term at level 0) : term_scope.
+Notation "()" := TVUnit (in custom term at level 0) : term_scope.
+Notation "'true'" := TVTrue (in custom term at level 0) : term_scope.
+Notation "'false'" := TVFalse (in custom term at level 0) : term_scope.
 
 Notation "'not' t" :=
-  (TVPrim1 P1Not t) (in custom term at level 23, t custom term at level 0) : term_scope.
+  (TVNot t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
 Notation "- t" :=
-  (TVPrim1 P1Neg t) (in custom term at level 23, t custom term at level 0) : term_scope.
+  (TVNeg t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
 Notation "'ref' t" :=
   (TVRef t) (in custom term at level 23, t custom term at level 0) : term_scope.
@@ -199,40 +201,43 @@ Notation "'assert' t" :=
   (TVAssert t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
 Notation "t1 + t2" :=
-  (TVPrim2 P2Add t1 t2) (in custom term at level 40, t1 custom term, t2 custom term) : term_scope.
+  (TVAdd t1 t2) (in custom term at level 40, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 - t2" :=
-  (TVPrim2 P2Sub t1 t2) (in custom term at level 40, t1 custom term, t2 custom term) : term_scope.
+  (TVSub t1 t2) (in custom term at level 40, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 * t2" :=
-  (TVPrim2 P2Mul t1 t2) (in custom term at level 39, t1 custom term, t2 custom term) : term_scope.
+  (TVMul t1 t2) (in custom term at level 39, t1 custom term, t2 custom term) : term_scope.
+
+Notation "t1 / t2" :=
+  (TVDiv t1 t2) (in custom term at level 39, t1 custom term, t2 custom term) : term_scope.
+
+Notation "t1 'mod' t2" :=
+  (TVMod t1 t2) (in custom term at level 39, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 = t2" :=
-  (TVPrim2 P2Eq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
-
-Notation "t1 <> t2" :=
-  (TVPrim2 P2Neq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
-
-Notation "t1 < t2" :=
-  (TVPrim2 P2Lt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (TVEq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 <= t2" :=
-  (TVPrim2 P2Le t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (TVLe t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 > t2" :=
-  (TVPrim2 P2Gt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (TVGt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 >= t2" :=
-  (TVPrim2 P2Ge t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (TVGe t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+
+Notation "t1 <> t2" :=
+  (TVNeq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+
+Notation "t1 < t2" :=
+  (TVLt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 && t2" :=
-  (TVPrim2 P2And t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (TVAnd t1 t2) (in custom term at level 50, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 || t2" :=
-  (TVPrim2 P2Or t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
-
-Notation "t1 'xor' t2" :=
-  (TVPrim2 P2Xor t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (TVOr t1 t2) (in custom term at level 50, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 <- t2" :=
   (TVSet t1 t2) (in custom term at level 65, t1 custom term, t2 custom term) : term_scope.
@@ -305,7 +310,7 @@ Notation "'handle' t1 ;; t2 ;; t3" :=
         t3 custom eff_term) : term_scope.
 
 Notation "'handle' t1 ;;; t2" :=
-  (THandle t1 TRet0 t2)
+  (THandle t1 TRetNone t2)
     (in custom term at level 23,
         t1 custom term,
         t2 custom eff_term) : term_scope.
@@ -318,8 +323,7 @@ Notation "'shallow' 'handle' t1 ;; t2 ;; t3" :=
         t3 custom eff_term) : term_scope.
 
 Notation "'shallow' 'handle' t1 ;;; t2" :=
-  (TShallowHandle t1 TRet0 t2)
+  (TShallowHandle t1 TRetNone t2)
     (in custom term at level 23,
         t1 custom term,
         t2 custom eff_term) : term_scope.
-*)

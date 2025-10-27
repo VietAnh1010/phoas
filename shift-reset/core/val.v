@@ -1,10 +1,10 @@
 From Stdlib Require Import Qcanon ZArith.
 From shift_reset.core Require Import syntax tag.
 
-Definition VFun' (t : term1) (env : env) : val :=
+Definition VFun' (t : abs_term) (env : env) : val :=
   VFun (CFun env t).
 
-Definition VFix' (t : term2) (env : env) : val :=
+Definition VFix' (t : abs2_term) (env : env) : val :=
   VFix (CFix env t).
 
 Definition VExn' (tag : tag) (v : val) : val :=

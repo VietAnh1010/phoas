@@ -8,7 +8,7 @@ Local Open Scope term_scope.
 Declare Custom Entry binder'.
 Declare Custom Entry pattern'.
 Declare Custom Entry term.
-Declare Custom Entry term1.
+Declare Custom Entry abs_term.
 Declare Custom Entry ret_term.
 Declare Custom Entry exn_term.
 Declare Custom Entry eff_term.
@@ -35,22 +35,13 @@ Notation "{ t }" := t (in custom term, t constr) : term_scope.
 Notation "t" := t (in custom term at level 0, t constr at level 0) : term_scope.
 
 Notation "( 'fun' x => t )" :=
-  (T1 x t)
-    (in custom term1 at level 69,
-        x custom binder' at level 0,
-        t custom term) : term_scope.
+  (TAbs x t) (in custom abs_term at level 69, x custom binder' at level 0, t custom term) : term_scope.
 
 Notation "( 'fun' x => t )" :=
-  (TRetSome x t)
-    (in custom ret_term at level 69,
-        x custom binder' at level 0,
-        t custom term) : term_scope.
+  (TRetSome x t) (in custom ret_term at level 69, x custom binder' at level 0, t custom term) : term_scope.
 
 Notation "( 'fun' x => t )" :=
-  (TExnLast x t)
-    (in custom exn_term at level 69,
-        x custom pattern' at level 10,
-        t custom term) : term_scope.
+  (TExnLast x t) (in custom exn_term at level 69, x custom pattern' at level 10, t custom term) : term_scope.
 
 Notation "( 'fun' x => t1 ) ; t2" :=
   (TExnCons x t1 t2)
@@ -87,7 +78,7 @@ Notation "'if' t1 'then' t2 'else' t3" :=
         t3 custom term) : term_scope.
 
 Notation "'let' x := t1 'in' t2" :=
-  (TLet t1 (T1 x t2))
+  (TLet t1 (TAbs x t2))
     (in custom term at level 69,
         x custom binder' at level 0,
         t1 custom term,
@@ -102,7 +93,7 @@ Notation "t1 ; t2" :=
         right associativity) : term_scope.
 
 Notation "'let' f x1 .. xn := t1 'in' t2" :=
-  (TLet (TVFun (T1 x1 .. (TVFun (T1 xn t1)) ..)) (T1 f t2))
+  (TLet (TVFun (TAbs x1 .. (TVFun (TAbs xn t1)) ..)) (TAbs f t2))
     (in custom term at level 69,
         f custom binder' at level 0,
         x1 custom binder' at level 0,
@@ -112,7 +103,7 @@ Notation "'let' f x1 .. xn := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f x := t1 'in' t2" :=
-  (TLet (TVFix (T2 f x t1)) (T1 f t2))
+  (TLet (TVFix (TAbs2 f x t1)) (TAbs f t2))
     (in custom term at level 69,
         f custom binder' at level 0,
         x custom binder' at level 0,
@@ -121,7 +112,7 @@ Notation "'let' 'fix' f x := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f x1 x2 .. xn := t1 'in' t2" :=
-  (TLet (TVFix (T2 f x1 (TVFun (T1 x2 .. (TVFun (T1 xn t1)) ..)))) (T1 f t2))
+  (TLet (TVFix (TAbs2 f x1 (TVFun (TAbs x2 .. (TVFun (TAbs xn t1)) ..)))) (TAbs f t2))
     (in custom term at level 69,
         f custom binder' at level 0,
         x1 custom binder' at level 0,
@@ -132,16 +123,16 @@ Notation "'let' 'fix' f x1 x2 .. xn := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'shift' t" :=
-  (TShift tag_empty t) (in custom term at level 69, t custom term1) : term_scope.
+  (TShift tag_empty t) (in custom term at level 69, t custom abs_term) : term_scope.
 
 Notation "'shift' 'at' tag t" :=
-  (TShift tag t) (in custom term at level 69, tag at level 0, t custom term1) : term_scope.
+  (TShift tag t) (in custom term at level 69, tag at level 0, t custom abs_term) : term_scope.
 
 Notation "'control' t" :=
-  (TControl tag_empty t) (in custom term at level 69, t custom term1) : term_scope.
+  (TControl tag_empty t) (in custom term at level 69, t custom abs_term) : term_scope.
 
 Notation "'control' 'at' tag t" :=
-  (TControl tag t) (in custom term at level 69, tag at level 0, t custom term1) : term_scope.
+  (TControl tag t) (in custom term at level 69, tag at level 0, t custom abs_term) : term_scope.
 
 Notation "'reset' t" :=
   (TReset tag_empty t) (in custom term at level 69, t custom term) : term_scope.
@@ -156,21 +147,21 @@ Notation "'prompt' 'at' tag t" :=
   (TPrompt tag t) (in custom term at level 69, tag at level 0, t custom term) : term_scope.
 
 Notation "'fun' x1 .. xn => t" :=
-  (TVFun (T1 x1 .. (TVFun (T1 xn t)) ..))
+  (TVFun (TAbs x1 .. (TVFun (TAbs xn t)) ..))
     (in custom term at level 69,
         x1 custom binder' at level 0,
         xn custom binder' at level 0,
         t custom term at level 99) : term_scope.
 
 Notation "'fix' f x := t" :=
-  (TVFix (T2 f x t))
+  (TVFix (TAbs2 f x t))
     (in custom term at level 69,
         f custom binder' at level 0,
         x custom binder' at level 0,
         t custom term at level 99) : term_scope.
 
 Notation "'fix' f x1 x2 .. xn := t" :=
-  (TVFix (T2 f x1 (TVFun (T1 x2 .. (TVFun (T1 xn t)) ..))))
+  (TVFix (TAbs2 f x1 (TVFun (TAbs x2 .. (TVFun (TAbs xn t)) ..))))
     (in custom term at level 69,
         f custom binder' at level 0,
         x1 custom binder' at level 0,
@@ -246,7 +237,7 @@ Notation "t1 , t2" :=
   (TVPair t1 t2) (in custom term at level 65, t1 custom term, t2 custom term) : term_scope.
 
 Notation "'let' ( x1 , x2 ) := t1 'in' t2" :=
-  (TSplit t1 (T2 x1 x2 t2))
+  (TSplit t1 (TAbs2 x1 x2 t2))
     (in custom term at level 69,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,
@@ -255,7 +246,7 @@ Notation "'let' ( x1 , x2 ) := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' x1 , x2 := t1 'in' t2" :=
-  (TSplit t1 (T2 x1 x2 t2))
+  (TSplit t1 (TAbs2 x1 x2 t2))
     (in custom term at level 69,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,
@@ -269,10 +260,10 @@ Notation "'Inl' t" :=
 Notation "'Inr' t" :=
   (TVInr t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "'match' t0 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
-  (TCase t0 (T1 x1 t1) (T1 x2 t2))
+Notation "'match' tv 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
+  (TCase tv (TAbs x1 t1) (TAbs x2 t2))
     (in custom term at level 69,
-        t0 custom term,
+        tv custom term,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,
         t1 custom term,

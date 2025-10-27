@@ -15,13 +15,13 @@ Inductive term : Type :=
 | TVal : val_term -> term
 | TApp : val_term -> val_term -> term
 | TSeq : term -> term -> term
-| TLet : term -> term1 -> term
+| TLet : term -> abs_term -> term
 | TIf : val_term -> term -> term -> term
-| TSplit : val_term -> term2 -> term
-| TCase : val_term -> term1 -> term1 -> term
-| TShift : tag -> term1 -> term
+| TSplit : val_term -> abs2_term -> term
+| TCase : val_term -> abs_term -> abs_term -> term
+| TShift : tag -> abs_term -> term
 | TReset : tag -> term -> term
-| TControl : tag -> term1 -> term
+| TControl : tag -> abs_term -> term
 | TPrompt : tag -> term -> term
 | TRaise : val_term -> term
 | TTry : term -> exn_term -> term
@@ -44,8 +44,8 @@ with val_term : Type :=
 | TVNot : val_term -> val_term
 | TVAnd : val_term -> val_term -> val_term
 | TVOr : val_term -> val_term -> val_term
-| TVFun : term1 -> val_term
-| TVFix : term2 -> val_term
+| TVFun : abs_term -> val_term
+| TVFix : abs2_term -> val_term
 | TVPair : val_term -> val_term -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
@@ -62,10 +62,10 @@ with val_term : Type :=
 | TVGe : val_term -> val_term -> val_term
 | TVEq : val_term -> val_term -> val_term
 | TVNeq : val_term -> val_term -> val_term
-with term1 : Type :=
-| T1 : binder -> term -> term1
-with term2 : Type :=
-| T2 : binder -> binder -> term -> term2
+with abs_term : Type :=
+| TAbs : binder -> term -> abs_term
+with abs2_term : Type :=
+| TAbs2 : binder -> binder -> term -> abs2_term
 with ret_term : Type :=
 | TRetNone : ret_term
 | TRetSome : binder -> term -> ret_term
@@ -94,12 +94,12 @@ Inductive val : Type :=
 | VMKReset : metakont -> tag -> val
 | VMKHandle : metakont -> handle_clo -> val
 with fun_clo : Type :=
-| CFun : env -> term1 -> fun_clo
+| CFun : env -> abs_term -> fun_clo
 with fix_clo : Type :=
-| CFix : env -> term2 -> fix_clo
+| CFix : env -> abs2_term -> fix_clo
 with kont_clo : Type :=
 | CKSeq : env -> term -> kont_clo
-| CKLet : env -> term1 -> kont_clo
+| CKLet : env -> abs_term -> kont_clo
 with try_clo : Type :=
 | CTry : env -> exn_term -> try_clo
 with handle_clo : Type :=

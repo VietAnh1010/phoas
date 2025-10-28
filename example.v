@@ -134,8 +134,8 @@ Example sum xs :=
      free "result"; "answer" }>.
 
 Compute (eval_term 3 (sum (term_of_list []))).
-Compute (eval_term 5 (sum (term_of_list [1]))).
-Compute (eval_term 7 (sum (term_of_list [1; 2]))).
+Compute (eval_term 4 (sum (term_of_list [1]))).
+Compute (eval_term 5 (sum (term_of_list [1; 2]))).
 
 Time Compute (eval_term 20000 (sum (term_of_list (sequence 0 5000)))).
 
@@ -288,7 +288,7 @@ Example basic_exn_eff :=
       (fun '("Effect2" _ as "eff"), "k" => "print" "eff"; "k" ()));
      !"stdout" }>.
 
-Compute (eval_term 10 basic_exn_eff).
+Compute (eval_term 4 basic_exn_eff).
 
 (*Extraction Language Scheme.*)
 (*Extraction "interpreter.ml" run_term.*)

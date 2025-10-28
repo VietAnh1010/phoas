@@ -2,6 +2,7 @@ From Stdlib Require Import String Qcanon ZArith.
 From shift_reset.core Require Import syntax env kont loc tag val var.
 From shift_reset.interpreter Require Import dispatch ierror iheap imonad unwrap.
 
+Local Open Scope list_scope.
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
 Local Unset Elimination Schemes.
@@ -129,7 +130,19 @@ Fixpoint match_eff (p : pattern) (b : binder) (eff : eff) (v : val) : option (im
       end
   end.
 
-Record ikont : Type := IKont { ikont_car :> kont; ikont_app :> val -> imonad iresult }.
+Record ikont : Type := IKont { ikont_head : kont; ikont_tail : list kont; ikont_app :> val -> imonad iresult }.
+
+Fixpoint ikont_car_aux (k : kont) (ks : list kont) : kont :=
+  match ks with
+  | nil => k
+  | k' :: ks' => kont_append k (ikont_car_aux k' ks')
+  end.
+
+Definition ikont_car (k : ikont) : kont :=
+  let (h, t, _) := k in ikont_car_aux h t.
+
+Local Coercion ikont_car : ikont >-> kont.
+
 Definition interpreter : Type := ikont -> term -> imonad iresult.
 
 Fixpoint unwind_reset (tag : tag) (k : ikont) (r : iresult) : imonad iresult :=
@@ -202,14 +215,6 @@ Definition interpret_kont_clo_with (self : interpreter) (k : ikont) (c : kont_cl
   | CKLet env t => imonad_use_env env (interpret_abs_term_with self k t v)
   end.
 
-Fixpoint append_ikont (self : interpreter) (k1 : kont) (k2 : ikont) : ikont :=
-  match k1 with
-  | KNil => k2
-  | KCons c k1' =>
-      let k := append_ikont self k1' k2 in
-      IKont (KCons c k) (interpret_kont_clo_with self k c)
-  end.
-
 Definition unwind_try (self : interpreter) (c : try_clo) (k : ikont) (r : iresult) : imonad iresult :=
   match r with
   | RVal v => k v
@@ -261,26 +266,28 @@ Definition unwind_shallow_handle (self : interpreter) (c : shallow_handle_clo) (
 Definition unwind_shallow_handle_clo (self : interpreter) (c : shallow_handle_clo) (k : ikont) (r : iresult) : imonad iresult :=
   let (env, _, _) := c in imonad_use_env env (unwind_shallow_handle self c k r).
 
-Fixpoint interpret_kont_with (self : interpreter) (k : kont) (v : val) : imonad iresult :=
+Fixpoint interpret_kont_with (self : interpreter) (k : kont) (ks : list kont) (f : val -> imonad iresult) (v : val) : imonad iresult :=
   match k with
-  | KNil => imonad_pure (RVal v)
-  | KCons c k' => interpret_kont_clo_with self (IKont k' (interpret_kont_with self k')) c v
+  | KNil => f v
+  | KCons c k' => interpret_kont_clo_with self (IKont k' ks (interpret_kont_with self k' ks f)) c v
   end.
 
-Definition refine_kont (self : interpreter) (k : kont) : ikont :=
-  IKont k (interpret_kont_with self k).
+Definition refine_kont (self : interpreter) (k1 : kont) (k2 : ikont) : ikont :=
+  let (h, t, f) := k2 in
+  let k2 := h :: t in
+  IKont k1 k2 (interpret_kont_with self k1 k2 f).
 
-Fixpoint interpret_metakont_with (self : interpreter) (mk : metakont) (v : val) : imonad iresult :=
+Definition ikont_nil : ikont := IKont KNil nil (fun v => imonad_pure (RVal v)).
+
+Fixpoint interpret_metakont_with (self : interpreter) (k : ikont) (mk : metakont) (v : val) : imonad iresult :=
   match mk with
-  | MKPure k => interpret_kont_with self k v
-  | MKReset mk' tag k => interpret_metakont_with self mk' v >>= unwind_reset tag (refine_kont self k)
-  | MKPrompt mk' tag k => interpret_metakont_with self mk' v >>= unwind_prompt tag (refine_kont self k)
-  | MKTry mk' c k => interpret_metakont_with self mk' v >>= unwind_try_clo self c (refine_kont self k)
-  | MKHandle mk' c k => interpret_metakont_with self mk' v >>= unwind_handle_clo self c (refine_kont self k)
-  | MKShallowHandle mk' c k => interpret_metakont_with self mk' v >>= unwind_shallow_handle_clo self c (refine_kont self k)
+  | MKPure k' => refine_kont self k' k v
+  | MKReset mk' tag k' => interpret_metakont_with self ikont_nil mk' v >>= unwind_reset tag (refine_kont self k' k)
+  | MKPrompt mk' tag k' => interpret_metakont_with self ikont_nil mk' v >>= unwind_prompt tag (refine_kont self k' k)
+  | MKTry mk' c k' => interpret_metakont_with self ikont_nil mk' v >>= unwind_try_clo self c (refine_kont self k' k)
+  | MKHandle mk' c k' => interpret_metakont_with self ikont_nil mk' v >>= unwind_handle_clo self c (refine_kont self k' k)
+  | MKShallowHandle mk' c k' => interpret_metakont_with self ikont_nil mk' v >>= unwind_shallow_handle_clo self c (refine_kont self k' k)
   end.
-
-Definition ikont_nil : ikont := IKont KNil (fun v => imonad_pure (RVal v)).
 
 Definition refine_term (self : interpreter) (k : ikont) (t : term) (env : env) (_ : val) : imonad iresult :=
   imonad_use_env env (self k t).
@@ -295,20 +302,13 @@ Definition app_LFix (self : interpreter) (k : ikont) (c : fix_clo) (u v : val) :
   let (env, t) := c in imonad_use_env env (interpret_abs2_term_with self k t u v).
 
 Definition app_LMKPure (self : interpreter) (k : ikont) (mk : metakont) (v : val) : imonad iresult :=
-  match mk with
-  | MKPure k' => append_ikont self k' k v
-  | MKReset mk' tag k' => interpret_metakont_with self mk' v >>= unwind_reset tag (append_ikont self k' k)
-  | MKPrompt mk' tag k' => interpret_metakont_with self mk' v >>= unwind_prompt tag (append_ikont self k' k)
-  | MKTry mk' c k' => interpret_metakont_with self mk' v >>= unwind_try_clo self c (append_ikont self k' k)
-  | MKHandle mk' c k' => interpret_metakont_with self mk' v >>= unwind_handle_clo self c (append_ikont self k' k)
-  | MKShallowHandle mk' c k' => interpret_metakont_with self mk' v >>= unwind_shallow_handle_clo self c (append_ikont self k' k)
-  end.
+  interpret_metakont_with self k mk v.
 
 Definition app_LMKReset (self : interpreter) (k : ikont) (mk : metakont) (tag : tag) (v : val) : imonad iresult :=
-  interpret_metakont_with self mk v >>= unwind_reset tag k.
+  interpret_metakont_with self ikont_nil mk v >>= unwind_reset tag k.
 
 Definition app_LMKHandle (self : interpreter) (k : ikont) (mk : metakont) (c : handle_clo) (v : val) : imonad iresult :=
-  interpret_metakont_with self mk v >>= unwind_handle_clo self c k.
+  interpret_metakont_with self ikont_nil mk v >>= unwind_handle_clo self c k.
 
 Definition interpret_term_aux (self' : interpreter) : ikont -> term -> imonad iresult :=
   fix self k t :=
@@ -325,8 +325,14 @@ Definition interpret_term_aux (self' : interpreter) : ikont -> term -> imonad ir
         | LMKReset mk tag => app_LMKReset self' k mk tag v
         | LMKHandle mk c => app_LMKHandle self' k mk c v
         end
-    | TSeq t1 t2 => env <- imonad_ask_env; self (IKont (KCons (CKSeq env t2) k) (refine_term self k t2 env)) t1
-    | TLet t1 t2 => env <- imonad_ask_env; self (IKont (KCons (CKLet env t2) k) (refine_abs_term self k t2 env)) t1
+    | TSeq t1 t2 =>
+        env <- imonad_ask_env;
+        let (h, t, _) := k in
+        self (IKont (KCons (CKSeq env t2) h) t (refine_term self k t2 env)) t1
+    | TLet t1 t2 =>
+        env <- imonad_ask_env;
+        let (h, t, _) := k in
+        self (IKont (KCons (CKLet env t2) k) t (refine_abs_term self k t2 env)) t1
     | TIf t1 t2 t3 =>
         v <- interpret_val_term t1;
         b <- unwrap_vbool v;

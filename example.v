@@ -94,8 +94,8 @@ Example append_direct2 xs ys :=
 
 Compute (eval_term 2 (append_direct1 (term_of_list []))).
 Compute (eval_term 2 (append_direct1 (term_of_list [1]))).
-Compute (eval_term 3 (append_direct2 (term_of_list []) (term_of_list [1]))).
-Compute (eval_term 5 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
+Compute (eval_term 2 (append_direct2 (term_of_list []) (term_of_list [1]))).
+Compute (eval_term 3 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 
 Example either :=
   <{ fun "x" "y" => shift (fun "k" => "k" "x"; "k" "y") }>.
@@ -111,7 +111,7 @@ Example ex2 :=
      free "result"; "answer" }>.
 
 Print ex2.
-Compute (run_term 8 ex2).
+Compute (eval_term 5 ex2).
 
 Example choice :=
   <{ fun "xs" =>
@@ -184,8 +184,7 @@ Fixpoint term_of_tree (t : tree Z) : val_term :=
   end.
 
 Example sum_tree1 t :=
-  <{ let "sum_tree" := sum_tree in
-     "sum_tree" {term_of_tree t} }>.
+  <{ let "sum_tree" := sum_tree in "sum_tree" {term_of_tree t} }>.
 
 Compute (eval_term 100 (sum_tree1 (Leaf 0))).
 Compute (eval_term 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).

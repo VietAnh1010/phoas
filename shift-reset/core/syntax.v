@@ -11,41 +11,56 @@ Inductive pattern : Type :=
 | PConstr : tag -> binder -> pattern
 | PAlias : pattern -> var -> pattern.
 
+Inductive op1 : Type :=
+| Op1Pos : op1
+| Op1Neg : op1
+| Op1Not : op1.
+
+Inductive op2 : Type :=
+| Op2Add : op2
+| Op2Sub : op2
+| Op2Mul : op2
+| Op2Div : op2
+| Op2Mod : op2
+| Op2Ltb : op2
+| Op2Leb : op2
+| Op2Gtb : op2
+| Op2Geb : op2
+| Op2Eqb : op2
+| Op2Neqb : op2.
+
 Inductive term : Type :=
 | TVal : val_term -> term
 | TApp : val_term -> val_term -> term
 | TSeq : term -> term -> term
-| TLet : term -> abs_term -> term
+| TLet : term -> term1 -> term
 | TIf : val_term -> term -> term -> term
-| TSplit : val_term -> abs2_term -> term
-| TCase : val_term -> abs_term -> abs_term -> term
-| TShift : tag -> abs_term -> term
+| TSplit : val_term -> term2 -> term
+| TCase : val_term -> term1 -> term1 -> term
+| TShift : tag -> term1 -> term
 | TReset : tag -> term -> term
-| TControl : tag -> abs_term -> term
+| TControl : tag -> term1 -> term
 | TPrompt : tag -> term -> term
 | TRaise : val_term -> term
 | TTry : term -> exn_term -> term
 | TPerform : val_term -> term
 | THandle : term -> ret_term -> eff_term -> term
 | TShallowHandle : term -> ret_term -> eff_term -> term
+with term1 : Type :=
+| T1 : binder -> term -> term1
+with term2 : Type :=
+| T2 : binder -> binder -> term -> term2
 with val_term : Type :=
 | TVVar : var -> val_term
 | TVUnit : val_term
 | TVInt : Z -> val_term
 | TVFloat : Qc -> val_term
-| TVNeg : val_term -> val_term
-| TVAdd : val_term -> val_term -> val_term
-| TVSub : val_term -> val_term -> val_term
-| TVMul : val_term -> val_term -> val_term
-| TVDiv : val_term -> val_term -> val_term
-| TVMod : val_term -> val_term -> val_term
 | TVTrue : val_term
 | TVFalse : val_term
-| TVNot : val_term -> val_term
 | TVAnd : val_term -> val_term -> val_term
 | TVOr : val_term -> val_term -> val_term
-| TVFun : abs_term -> val_term
-| TVFix : abs2_term -> val_term
+| TVFun : term1 -> val_term
+| TVFix : term2 -> val_term
 | TVPair : val_term -> val_term -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
@@ -56,16 +71,8 @@ with val_term : Type :=
 | TVExn : tag -> val_term -> val_term
 | TVEff : tag -> val_term -> val_term
 | TVAssert : val_term -> val_term
-| TVLt : val_term -> val_term -> val_term
-| TVLe : val_term -> val_term -> val_term
-| TVGt : val_term -> val_term -> val_term
-| TVGe : val_term -> val_term -> val_term
-| TVEq : val_term -> val_term -> val_term
-| TVNeq : val_term -> val_term -> val_term
-with abs_term : Type :=
-| TAbs : binder -> term -> abs_term
-with abs2_term : Type :=
-| TAbs2 : binder -> binder -> term -> abs2_term
+| TVOp1 : op1 -> val_term -> val_term
+| TVOp2 : op2 -> val_term -> val_term -> val_term
 with ret_term : Type :=
 | TRetNone : ret_term
 | TRetSome : binder -> term -> ret_term
@@ -94,12 +101,12 @@ Inductive val : Type :=
 | VMKReset : metakont -> tag -> val
 | VMKHandle : metakont -> handle_clo -> val
 with fun_clo : Type :=
-| CFun : env -> abs_term -> fun_clo
+| CFun : env -> term1 -> fun_clo
 with fix_clo : Type :=
-| CFix : env -> abs2_term -> fix_clo
+| CFix : env -> term2 -> fix_clo
 with kont_clo : Type :=
 | CKSeq : env -> term -> kont_clo
-| CKLet : env -> abs_term -> kont_clo
+| CKLet : env -> term1 -> kont_clo
 with try_clo : Type :=
 | CTry : env -> exn_term -> try_clo
 with handle_clo : Type :=
@@ -109,6 +116,7 @@ with shallow_handle_clo : Type :=
 with kont : Type :=
 | KNil : kont
 | KCons : kont_clo -> kont -> kont
+| KApp : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> tag -> kont -> metakont

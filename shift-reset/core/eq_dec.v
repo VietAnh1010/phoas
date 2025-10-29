@@ -19,19 +19,28 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve pattern_eq_dec : eq_dec_db.
 
+Lemma op1_eq_dec : forall (op1 op2 : op1), {op1 = op2} + {op1 <> op2}.
+Proof. decide equality; auto with eq_dec_db. Defined.
+
+Lemma op2_eq_dec : forall (op1 op2 : op2), {op1 = op2} + {op1 <> op2}.
+Proof. decide equality; auto with eq_dec_db. Defined.
+
+Hint Resolve op1_eq_dec : eq_dec_db.
+Hint Resolve op2_eq_dec : eq_dec_db.
+
 Lemma term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
+with term1_eq_dec : forall (t1 t2 : term1), {t1 = t2} + {t1 <> t2}
+with term2_eq_dec : forall (t1 t2 : term2), {t1 = t2} + {t1 <> t2}
 with val_term_eq_dec : forall (t1 t2 : val_term), {t1 = t2} + {t1 <> t2}
-with abs_term_eq_dec : forall (t1 t2 : abs_term), {t1 = t2} + {t1 <> t2}
-with abs2_term_eq_dec : forall (t1 t2 : abs2_term), {t1 = t2} + {t1 <> t2}
 with ret_term_eq_dec : forall (t1 t2 : ret_term), {t1 = t2} + {t1 <> t2}
 with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}
 with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve term_eq_dec : eq_dec_db.
+Hint Resolve term1_eq_dec : eq_dec_db.
+Hint Resolve term2_eq_dec : eq_dec_db.
 Hint Resolve val_term_eq_dec : eq_dec_db.
-Hint Resolve abs_term_eq_dec : eq_dec_db.
-Hint Resolve abs2_term_eq_dec : eq_dec_db.
 Hint Resolve ret_term_eq_dec : eq_dec_db.
 Hint Resolve exn_term_eq_dec : eq_dec_db.
 Hint Resolve eff_term_eq_dec : eq_dec_db.

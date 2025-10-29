@@ -1,3 +1,4 @@
+(*
 From Stdlib Require Import String Qcanon ZArith.
 From shift_reset.core Require Import syntax env kont loc tag val var.
 From shift_reset.interpreter Require Import dispatch ierror iheap imonad unwrap.
@@ -6,7 +7,6 @@ Local Open Scope string_scope.
 Local Open Scope imonad_scope.
 Local Unset Elimination Schemes.
 
-(*
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
   | TVVar x =>

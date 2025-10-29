@@ -37,6 +37,7 @@ Inductive term : Type :=
 | TIf : val_term -> term -> term -> term
 | TSplit : val_term -> term2 -> term
 | TCase : val_term -> term1 -> term1 -> term
+| TWhile : val_term -> term -> term
 | TShift : tag -> term1 -> term
 | TReset : tag -> term -> term
 | TControl : tag -> term1 -> term

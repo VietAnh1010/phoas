@@ -320,6 +320,13 @@ Definition interpret_term_aux (self : interpreter) : term -> ikont -> imonad ire
         | inl v' => interpret_term1_aux self' t2 k v'
         | inr v' => interpret_term1_aux self' t3 k v'
         end
+    | TWhile t1 t2 =>
+        v <- interpret_val_term t1;
+        b <- unwrap_vbool v;
+        if b then
+          env <- imonad_ask_env;
+          self' t2 (IKont (KCons (CKSeq env t) k) (fun _ => imonad_under_env env (self t k)))
+        else k VUnit
     | TShift tag t' => imonad_asks_env (fun env => IRShift (MKPure k) (interpret_term1_aux_under env self' t' ikont_nil) tag)
     | TReset tag t' => self' t' ikont_nil >>= unwind_reset tag k
     | TControl tag t' => imonad_asks_env (fun env => IRControl (MKPure k) (interpret_term1_aux_under env self' t' ikont_nil) tag)

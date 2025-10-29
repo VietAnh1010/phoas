@@ -130,6 +130,9 @@ Notation "'let' 'fix' f x1 x2 .. xn := t1 'in' t2" :=
         t2 custom term,
         right associativity) : term_scope.
 
+Notation "'while' t1 'do' t2" :=
+  (TWhile t1 t2) (in custom term at level 69, t1 custom term, t2 custom term) : term_scope.
+
 Notation "'shift' t" :=
   (TShift tag_empty t) (in custom term at level 69, t custom term1) : term_scope.
 
@@ -281,25 +284,16 @@ Notation "'match' tv 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
         t2 custom term) : term_scope.
 
 Notation "'exception' tag t" :=
-  (TVExn tag t)
-    (in custom term at level 23,
-        tag at level 0,
-        t custom term at level 0) : term_scope.
+  (TVExn tag t) (in custom term at level 23, tag at level 0, t custom term at level 0) : term_scope.
 
 Notation "'raise' t" :=
   (TRaise t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
 Notation "'try' t1 ;; t2" :=
-  (TTry t1 t2)
-    (in custom term at level 69,
-        t1 custom term,
-        t2 custom exn_term) : term_scope.
+  (TTry t1 t2) (in custom term at level 69, t1 custom term, t2 custom exn_term) : term_scope.
 
 Notation "'effect' tag t" :=
-  (TVEff tag t)
-    (in custom term at level 23,
-        tag at level 0,
-        t custom term at level 0) : term_scope.
+  (TVEff tag t) (in custom term at level 23, tag at level 0, t custom term at level 0) : term_scope.
 
 Notation "'perform' t" :=
   (TPerform t) (in custom term at level 23, t custom term at level 0) : term_scope.

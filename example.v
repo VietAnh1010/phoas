@@ -219,14 +219,33 @@ Example reverse :=
            "reverse" "xs"
        end }>.
 
+Example reverse_while :=
+  <{ fun "xs" =>
+       let "in" := ref "xs" in
+       let "out" := ref (Inl ()) in
+       try
+         (while true do
+            (match !"in" with
+             | Inl _ => raise (exception "Exit" ())
+             | Inr "xs" =>
+                 let ("x", "xs'") := "xs" in
+                 "in" <- "xs'";
+                 "out" <- Inr ("x", !"out")
+             end));;
+       (fun '("Exit" _) => !"out") }>.
+
 Example copy1 xs :=
   <{ let "copy" := copy in reset ("copy" xs) }>.
 
 Example reverse1 xs :=
   <{ let "reverse" := reverse in prompt ("reverse" xs) }>.
 
-Time Compute (eval_term 3000 (copy1 (term_of_list (sequence 0 1000)))).
-Time Compute (eval_term 3000 (reverse1 (term_of_list (sequence 0 1000)))).
+Example reverse_while1 xs :=
+  <{ let "reverse_while" := reverse_while in "reverse_while" xs }>.
+
+Time Compute (eval_term 2010 (copy1 (term_of_list (sequence 0 1000)))).
+Time Compute (eval_term 2010 (reverse1 (term_of_list (sequence 0 1000)))).
+Time Compute (eval_term 1010 (reverse_while1 (term_of_list (sequence 0 1000)))).
 
 Example unhandled_exception :=
   <{ raise (exception "Segfault" 139) }>.

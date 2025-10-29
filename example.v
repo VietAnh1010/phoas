@@ -94,8 +94,8 @@ Example append_direct2 xs ys :=
 
 Compute (eval_term 2 (append_direct1 (term_of_list []))).
 Compute (eval_term 2 (append_direct1 (term_of_list [1]))).
-Compute (eval_term 3 (append_direct2 (term_of_list []) (term_of_list [1]))).
-Compute (eval_term 5 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
+Compute (eval_term 2 (append_direct2 (term_of_list []) (term_of_list [1]))).
+Compute (eval_term 3 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 
 Example either :=
   <{ fun "x" "y" => shift (fun "k" => "k" "x"; "k" "y") }>.
@@ -111,7 +111,7 @@ Example ex2 :=
      free "result"; "answer" }>.
 
 Print ex2.
-Compute (run_term 8 ex2).
+Compute (eval_term 5 ex2).
 
 Example choice :=
   <{ fun "xs" =>
@@ -134,8 +134,8 @@ Example sum xs :=
      free "result"; "answer" }>.
 
 Compute (eval_term 3 (sum (term_of_list []))).
-Compute (eval_term 5 (sum (term_of_list [1]))).
-Compute (eval_term 7 (sum (term_of_list [1; 2]))).
+Compute (eval_term 4 (sum (term_of_list [1]))).
+Compute (eval_term 5 (sum (term_of_list [1; 2]))).
 
 Time Compute (eval_term 20000 (sum (term_of_list (sequence 0 5000)))).
 
@@ -184,8 +184,7 @@ Fixpoint term_of_tree (t : tree Z) : val_term :=
   end.
 
 Example sum_tree1 t :=
-  <{ let "sum_tree" := sum_tree in
-     "sum_tree" {term_of_tree t} }>.
+  <{ let "sum_tree" := sum_tree in "sum_tree" {term_of_tree t} }>.
 
 Compute (eval_term 100 (sum_tree1 (Leaf 0))).
 Compute (eval_term 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).
@@ -220,14 +219,33 @@ Example reverse :=
            "reverse" "xs"
        end }>.
 
+Example reverse_while :=
+  <{ fun "xs" =>
+       let "in" := ref "xs" in
+       let "out" := ref (Inl ()) in
+       try
+         (while true do
+            (match !"in" with
+             | Inl _ => raise (exception "Exit" ())
+             | Inr "xs" =>
+                 let ("x", "xs'") := "xs" in
+                 "in" <- "xs'";
+                 "out" <- Inr ("x", !"out")
+             end));;
+       (fun '("Exit" _) => !"out") }>.
+
 Example copy1 xs :=
   <{ let "copy" := copy in reset ("copy" xs) }>.
 
 Example reverse1 xs :=
   <{ let "reverse" := reverse in prompt ("reverse" xs) }>.
 
-Time Compute (eval_term 3000 (copy1 (term_of_list (sequence 0 1000)))).
-Time Compute (eval_term 3000 (reverse1 (term_of_list (sequence 0 1000)))).
+Example reverse_while1 xs :=
+  <{ let "reverse_while" := reverse_while in "reverse_while" xs }>.
+
+Time Compute (eval_term 2010 (copy1 (term_of_list (sequence 0 1000)))).
+Time Compute (eval_term 2010 (reverse1 (term_of_list (sequence 0 1000)))).
+Time Compute (eval_term 1010 (reverse_while1 (term_of_list (sequence 0 1000)))).
 
 Example unhandled_exception :=
   <{ raise (exception "Segfault" 139) }>.
@@ -288,7 +306,7 @@ Example basic_exn_eff :=
       (fun '("Effect2" _ as "eff"), "k" => "print" "eff"; "k" ()));
      !"stdout" }>.
 
-Compute (eval_term 10 basic_exn_eff).
+Compute (eval_term 4 basic_exn_eff).
 
 (*Extraction Language Scheme.*)
 (*Extraction "interpreter.ml" run_term.*)

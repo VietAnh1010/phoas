@@ -8,4 +8,6 @@ Coercion PVar : var >-> pattern.
 Coercion TVVar : var >-> val_term.
 Coercion TVInt : Z >-> val_term.
 Coercion TVFloat : Qc >-> val_term.
+Coercion TVOp1 : op1 >-> Funclass.
+Coercion TVOp2 : op2 >-> Funclass.
 Coercion TVal : val_term >-> term.

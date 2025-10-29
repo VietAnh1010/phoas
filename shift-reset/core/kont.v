@@ -1,3 +1,4 @@
+(*
 From shift_reset.core Require Import syntax.
 
 Fixpoint kont_append (k1 k2 : kont) : kont :=
@@ -24,3 +25,4 @@ Definition MKHandle' (mk : metakont) (t1 : ret_term) (t2 : eff_term) (k : kont) 
 
 Definition MKShallowHandle' (mk : metakont) (t1 : ret_term) (t2 : eff_term) (k : kont) (env : env) : metakont :=
   MKShallowHandle mk (CShallowHandle env t1 t2) k.
+*)

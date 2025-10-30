@@ -106,7 +106,8 @@ Example ex2 :=
        (let "either1" := either true in
         let "p" := "either1" false in
         let "q" := "either1" false in
-        if ("p" || "q") && ("p" || not "q") && (not "p" || not "q") then "result" <- true else ());
+        if ("p" || "q") && ("p" || not "q") && (not "p" || not "q")
+        then "result" <- true else ());
      let "answer" := !"result" || "crash" in
      free "result"; "answer" }>.
 
@@ -226,13 +227,13 @@ Example reverse_while :=
        try
          (while true do
             (match !"in" with
-             | Inl _ => raise (exception "Exit" ())
+             | Inl _ => raise (exception "Exit")
              | Inr "xs" =>
                  let ("x", "xs'") := "xs" in
                  "in" <- "xs'";
                  "out" <- Inr ("x", !"out")
              end));;
-       (fun '("Exit" _) => !"out") }>.
+       (fun '"Exit" => !"out") }>.
 
 Example copy1 xs :=
   <{ let "copy" := copy in reset ("copy" xs) }>.
@@ -242,6 +243,8 @@ Example reverse1 xs :=
 
 Example reverse_while1 xs :=
   <{ let "reverse_while" := reverse_while in "reverse_while" xs }>.
+
+Print reverse_while.
 
 Time Compute (eval_term 2010 (copy1 (term_of_list (sequence 0 1000)))).
 Time Compute (eval_term 2010 (reverse1 (term_of_list (sequence 0 1000)))).
@@ -254,10 +257,10 @@ Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
      try
        (raise (exception tag 10));;
-     (fun '("Segfault" "code") =>
+     (fun '"Segfault" "code" =>
         let _ := "r" <- "code" = 10 in
         !"r");
-     (fun '("StackOverflow" _) => false);
+     (fun '"StackOverflow" _ => false);
      (fun "exn" => raise "exn") }>.
 
 Print handle_exception.
@@ -269,10 +272,11 @@ Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle
-       perform (effect "Effect0" 0);;;
-     (fun '("Effect1" _), _ => ());
-     (fun '("Effect2" _), _ => ()) }>.
+       perform (effect "Effect0");;;
+     (fun '"Effect1", _ => ());
+     (fun '"Effect2", _ => ()) }>.
 
+Print unhandled_effect.
 Compute (eval_term 1 unhandled_effect).
 
 Example print :=
@@ -286,27 +290,87 @@ Example basic_exn_eff :=
             (try
                (let "eff0" := effect "Effect0" 0 in
                 let "eff1" := effect "Effect1" 1 in
-                let "exn" := exception "Exception" () in
+                let "exn" := exception "Exception" in
                 perform "eff0";
                 "print" "eff0";
                 perform "eff1";
                 "print" "eff1";
                 raise "exn";
                 "print" "exn");;
-             (fun '("RuntimeException" "x") => "print" "x");
-             (fun '("Exception" _ as "exn") => "print" "exn"));;;
-          (fun '("Effect1" "x"), "k" => "print" "x"; "k" ());
-          (fun '("Effect2" _ as "eff"), _ => "print" "eff"));
+             (fun '"RuntimeException" "x" => "print" "x");
+             (fun '"Exception" as "exn" => "print" "exn"));;;
+          (fun '"Effect1" "x", "k" => "print" "x"; "k" ());
+          (fun '"Effect2" _ as "eff", _ => "print" "eff"));
          let "eff2" := effect "Effect2" 2 in
          perform "eff2";
          "print" "eff2";
          let "final_msg" := 69 in
          "print" "final_msg");;;
-      (fun '("Effect0" "x"), "k" => "print" "x"; "k" ());
-      (fun '("Effect2" _ as "eff"), "k" => "print" "eff"; "k" ()));
+      (fun '"Effect0" "x", "k" => "print" "x"; "k" ());
+      (fun '"Effect2" _ as "eff", "k" => "print" "eff"; "k" ()));
      !"stdout" }>.
 
 Compute (eval_term 4 basic_exn_eff).
+
+Example variant :=
+  <{ let "x" := `"Variant1" 6 9 in
+     match "x" with
+     | '"Variant1" "x" "y" as "foo" => ("foo", "x" + "y")
+     | '"Variant2" => raise (exception "Failure")
+     end }>.
+
+Print variant.
+Compute (eval_term 1 variant).
+
+Example record :=
+  <{ let "x" := `{"fst" := 1 ; "snd" := 2} in
+     `{"fst" := "x".("fst"); "snd" := "x".("fst") + "x".("snd")} }>.
+
+Print record.
+Compute (eval_term 1 record).
+
+Example collatz :=
+  <{ let fix "collatz_len" "n" :=
+       if "n" = 1 then 1 else
+         if "n" mod 2 = 0 then let "r" := "collatz_len" ("n" / 2) in 1 + "r"
+         else let "r" := "collatz_len" (3 * "n" + 1) in 1 + "r"
+     in
+     let "max_len" := ref 0 in
+     let "n_of_max_len" := ref 0 in
+     let "i" := ref 1 in
+     (while (!"i" <= 100) do
+        let "len" := "collatz_len" (!"i") in
+        (if "len" > !"max_len" then
+           "max_len" <- "len";
+           "n_of_max_len" <- !"i"
+         else ());
+        "i" <- !"i" + 1);
+     !"n_of_max_len", !"max_len" }>.
+
+Time Compute (eval_term 300 collatz).
+
+Example eval_ltr :=
+  <{ fix "eval" "e" :=
+       match "e" with
+       | '"Num" "n" => "n"
+       | '"Add" "p" =>
+           let "r1" := "eval" ("p".("lhs")) in
+           let "r2" := "eval" ("p".("rhs")) in
+           "r1" + "r2"
+       | '"Mul" "p" =>
+           let "r1" := "eval" ("p".("lhs")) in
+           let "r2" := "eval" ("p".("rhs")) in
+           "r1" * "r2"
+       end }>.
+
+Example eval_ltr_input1 :=
+  <{ `"Add" (`{"lhs" := `"Num" 2; "rhs" := `"Mul" (`{"lhs" := `"Num" 3; "rhs" := `"Num" 4})}) }>.
+
+Example eval_ltr_input2 :=
+  <{ `"Sub" (`{"lhs" := `"Num" 6; "rhs" := `"Num" 9}) }>.
+
+Compute (eval_term 10 <{ eval_ltr eval_ltr_input1 }>).
+Compute (eval_term 10 <{ eval_ltr eval_ltr_input2 }>).
 
 (*Extraction Language Scheme.*)
 (*Extraction "interpreter.ml" run_term.*)

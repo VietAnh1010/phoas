@@ -1,5 +1,5 @@
 From Stdlib Require Import List String Qcanon ZArith.
-From shift_reset.core Require Import syntax env loc tag val var.
+From shift_reset.core Require Import syntax env loc record tag val var.
 From shift_reset.interpreter Require Import dispatch ierror iheap imonad unwrap.
 Import ListNotations.
 
@@ -15,6 +15,14 @@ Fixpoint interpret_val_term_list_aux (self : val_interpreter) (ts : list val_ter
   | t :: ts' =>
       v <- self t;
       cons v <$> interpret_val_term_list_aux self ts'
+  end.
+
+Fixpoint interpret_record_term_aux (self : val_interpreter) (t : record_term) : imonad record :=
+  match t with
+  | TRecordNil => imonad_pure RecordNil
+  | TRecordCons tag t1 t2 =>
+      v <- self t1;
+      RecordCons tag v <$> interpret_record_term_aux self t2
   end.
 
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
@@ -88,7 +96,15 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       v <- interpret_val_term t1;
       f <- dispatch_op2 op v;
       interpret_val_term t2 >>= f
-  | TVPolyVariant tag ts => VPolyVariant' tag <$> interpret_val_term_list_aux interpret_val_term ts
+  | TVVariant tag ts => VVariant' tag <$> interpret_val_term_list_aux interpret_val_term ts
+  | TVRecord t' => VRecord <$> interpret_record_term_aux interpret_val_term t'
+  | TVProj t' tag =>
+      v <- interpret_val_term t';
+      r <- unwrap_vrecord v;
+      match record_lookup tag r with
+      | None => imonad_throw_error (Projection_failure "")
+      | Some v' => imonad_pure v'
+      end
   end.
 
 Definition with_binder (b : binder) (v : val) (env : env) : syntax.env :=
@@ -136,16 +152,16 @@ Fixpoint match_eff (p : pattern) (b : binder) (eff : eff) (v : val) (env : env) 
       end
   end.
 
-Fixpoint match_poly_variant (p : pattern) (pv : poly_variant) (env : env) : option syntax.env :=
+Fixpoint match_variant (p : pattern) (v : variant) (env : env) : option syntax.env :=
   match p with
   | PAny => Some env
-  | PVar x => Some (EnvCons x (VPolyVariant pv) env)
+  | PVar x => Some (EnvCons x (VVariant v) env)
   | PConstr tag bs =>
-      let (tag', vs) := pv in
+      let (tag', vs) := v in
       if tag_eqb tag tag' then with_binder_list bs vs env else None
   | PAlias p' x =>
-      match match_poly_variant p' pv env with
-      | Some env' => Some (EnvCons x (VPolyVariant pv) env')
+      match match_variant p' v env with
+      | Some env' => Some (EnvCons x (VVariant v) env')
       | None => None
       end
   end.
@@ -233,14 +249,13 @@ Fixpoint interpret_eff_term_aux_under (env : env) (self : interpreter) (t : eff_
       end
   end.
 
-Fixpoint interpret_poly_variant_term_aux (self : interpreter) (t : poly_variant_term) (k : ikont) (pv : poly_variant) : imonad iresult :=
+Fixpoint interpret_variant_term_aux_under (env : env) (self : interpreter) (t : variant_term) (k : ikont) (v : variant) : imonad iresult :=
   match t with
-  | TPolyVariantNil => imonad_throw_error (Failure "todo")
-  | TPolyVariantCons p t1 t2 =>
-      env <- imonad_ask_env;
-      match match_poly_variant p pv env with
+  | TVariantNil => imonad_throw_error (Match_failure "")
+  | TVariantCons p t1 t2 =>
+      match match_variant p v env with
       | Some env' => imonad_under_env env' (self t1 k)
-      | None => interpret_poly_variant_term_aux self t2 k pv
+      | None => interpret_variant_term_aux_under env self t2 k v
       end
   end.
 
@@ -397,9 +412,11 @@ Definition interpret_term_aux (self : interpreter) : term -> ikont -> imonad ire
         r <- self' t1 ikont_nil;
         env <- imonad_ask_env;
         unwind_shallow_handle self' (CShallowHandle env t2 t3) k r
-    | TPolyMatch t1 t2 =>
+    | TMatch t1 t2 =>
         v <- interpret_val_term t1;
-        unwrap_vpoly_variant v >>= interpret_poly_variant_term_aux self' t2 k
+        v <- unwrap_vvariant v;
+        env <- imonad_ask_env;
+        interpret_variant_term_aux_under env self' t2 k v
     end.
 
 Fixpoint interpret_term (fuel : nat) (t : term) (k : ikont) : imonad iresult :=

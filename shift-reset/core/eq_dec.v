@@ -36,7 +36,8 @@ with val_term_eq_dec : forall (t1 t2 : val_term), {t1 = t2} + {t1 <> t2}
 with ret_term_eq_dec : forall (t1 t2 : ret_term), {t1 = t2} + {t1 <> t2}
 with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}
 with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}
-with poly_variant_term_eq_dec : forall (t1 t2 : poly_variant_term), {t1 = t2} + {t1 <> t2}.
+with variant_term_eq_dec : forall (t1 t2 : variant_term), {t1 = t2} + {t1 <> t2}
+with record_term_eq_dec : forall (t1 t2 : record_term), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve term_eq_dec : eq_dec_db.
@@ -46,7 +47,8 @@ Hint Resolve val_term_eq_dec : eq_dec_db.
 Hint Resolve ret_term_eq_dec : eq_dec_db.
 Hint Resolve exn_term_eq_dec : eq_dec_db.
 Hint Resolve eff_term_eq_dec : eq_dec_db.
-Hint Resolve poly_variant_term_eq_dec : eq_dec_db.
+Hint Resolve variant_term_eq_dec : eq_dec_db.
+Hint Resolve record_term_eq_dec : eq_dec_db.
 
 Lemma val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with fun_clo_eq_dec : forall (c1 c2 : fun_clo), {c1 = c2} + {c1 <> c2}
@@ -60,7 +62,8 @@ with metakont_eq_dec : forall (mk1 mk2 : metakont), {mk1 = mk2} + {mk1 <> mk2}
 with env_eq_dec : forall (env1 env2 : env), {env1 = env2} + {env1 <> env2}
 with exn_eq_dec : forall (exn1 exn2 : exn), {exn1 = exn2} + {exn1 <> exn2}
 with eff_eq_dec : forall (eff1 eff2 : eff), {eff1 = eff2} + {eff1 <> eff2}
-with poly_variant_eq_dec : forall (pv1 pv2 : poly_variant), {pv1 = pv2} + {pv1 <> pv2}.
+with variant_eq_dec : forall (v1 v2 : variant), {v1 = v2} + {v1 <> v2}
+with record_eq_dec : forall (r1 r2 : record), {r1 = r2} + {r1 <> r2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve val_eq_dec : eq_dec_db.
@@ -75,4 +78,5 @@ Hint Resolve metakont_eq_dec : eq_dec_db.
 Hint Resolve env_eq_dec : eq_dec_db.
 Hint Resolve exn_eq_dec : eq_dec_db.
 Hint Resolve eff_eq_dec : eq_dec_db.
-Hint Resolve poly_variant_eq_dec : eq_dec_db.
+Hint Resolve variant_eq_dec : eq_dec_db.
+Hint Resolve record_eq_dec : eq_dec_db.

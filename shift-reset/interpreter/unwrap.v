@@ -68,10 +68,16 @@ Definition unwrap_veff (v : val) : imonad eff :=
   | _ => imonad_throw_error (Type_error "unwrap_veff")
   end.
 
-Definition unwrap_vpoly_variant (v : val) : imonad poly_variant :=
+Definition unwrap_vvariant (v : val) : imonad variant :=
   match v with
-  | VPolyVariant pv => imonad_pure pv
-  | _ => imonad_throw_error (Type_error "unwrap_vpoly_variant")
+  | VVariant v' => imonad_pure v'
+  | _ => imonad_throw_error (Type_error "unwrap_vvariant")
+  end.
+
+Definition unwrap_vrecord (v : val) : imonad record :=
+  match v with
+  | VRecord r => imonad_pure r
+  | _ => imonad_throw_error (Type_error "unwrap_vrecord")
   end.
 
 Definition unwrap_vlambda (v : val) : imonad lambda :=

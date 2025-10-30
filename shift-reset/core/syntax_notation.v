@@ -13,22 +13,32 @@ Declare Custom Entry term2.
 Declare Custom Entry ret_term.
 Declare Custom Entry exn_term.
 Declare Custom Entry eff_term.
+Declare Custom Entry variant_term.
+Declare Custom Entry record_term.
 
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
 
 Notation "'_'" := PAny (in custom pattern' at level 0) : term_scope.
+Notation "( x )" := x (in custom pattern', x at level 99) : term_scope.
 Notation "x" := x (in custom pattern' at level 0, x constr at level 0) : term_scope.
 
-Notation "' ( tag x )" :=
-  (PConstr tag x) (in custom pattern' at level 10, tag at level 0, x custom binder' at level 0) : term_scope.
+Notation "' tag" :=
+  (PConstr tag nil) (in custom pattern' at level 10, tag constr at level 0) : term_scope.
 
-Notation "' ( tag x1 'as' x2 )" :=
-  (PAlias (PConstr tag x1) x2)
+Notation "' tag x1 .. xn" :=
+  (PConstr tag (cons (x1 : binder) .. (cons (xn : binder) nil) ..))
     (in custom pattern' at level 10,
-        tag at level 0,
+        tag constr at level 0,
         x1 custom binder' at level 0,
-        x2 constr at level 0) : term_scope.
+        xn custom binder' at level 0) : term_scope.
+
+Notation "x1 'as' x2" :=
+  (PAlias x1 x2)
+    (in custom pattern' at level 15,
+        x1 custom pattern',
+        x2 constr at level 0,
+        left associativity) : term_scope.
 
 Notation "<{ t }>" := t (t custom term at level 99) : term_scope.
 Notation "( t )" := t (in custom term, t at level 99) : term_scope.
@@ -49,12 +59,12 @@ Notation "( 'fun' x => t )" :=
   (TRetSome x t) (in custom ret_term at level 69, x custom binder' at level 0, t custom term) : term_scope.
 
 Notation "( 'fun' x => t )" :=
-  (TExnLast x t) (in custom exn_term at level 69, x custom pattern' at level 10, t custom term) : term_scope.
+  (TExnLast x t) (in custom exn_term at level 69, x custom pattern' at level 15, t custom term) : term_scope.
 
 Notation "( 'fun' x => t1 ) ; t2" :=
   (TExnCons x t1 t2)
     (in custom exn_term at level 69,
-        x custom pattern' at level 10,
+        x custom pattern' at level 15,
         t1 custom term,
         t2 custom exn_term,
         right associativity) : term_scope.
@@ -62,21 +72,35 @@ Notation "( 'fun' x => t1 ) ; t2" :=
 Notation "( 'fun' x , k => t )" :=
   (TEffLast x k t)
     (in custom eff_term at level 69,
-        x custom pattern' at level 10,
+        x custom pattern' at level 15,
         k custom binder' at level 0,
         t custom term) : term_scope.
 
 Notation "( 'fun' x , k => t1 ) ; t2" :=
   (TEffCons x k t1 t2)
     (in custom eff_term at level 69,
-        x custom pattern' at level 10,
+        x custom pattern' at level 15,
         k custom binder' at level 0,
         t1 custom term,
         t2 custom eff_term,
         right associativity) : term_scope.
 
+Notation "| x => t" :=
+  (TVariantCons x t TVariantNil)
+    (in custom variant_term at level 69,
+        x custom pattern' at level 15,
+        t custom term) : term_scope.
+
+Notation "| x => t1 t2" :=
+  (TVariantCons x t1 t2)
+    (in custom variant_term at level 69,
+        x custom pattern' at level 15,
+        t1 custom term,
+        t2 custom variant_term,
+        right associativity) : term_scope.
+
 Notation "t1 t2" :=
-  (TApp t1 t2) (in custom term at level 10, t1 custom term, t2 custom term) : term_scope.
+  (TApp t1 t2) (in custom term at level 17, t1 custom term, t2 custom term) : term_scope.
 
 Notation "'if' t1 'then' t2 'else' t3" :=
   (TIf t1 t2 t3)
@@ -137,25 +161,25 @@ Notation "'shift' t" :=
   (TShift tag_empty t) (in custom term at level 69, t custom term1) : term_scope.
 
 Notation "'shift' 'at' tag t" :=
-  (TShift tag t) (in custom term at level 69, tag at level 0, t custom term1) : term_scope.
+  (TShift tag t) (in custom term at level 69, tag constr at level 0, t custom term1) : term_scope.
 
 Notation "'control' t" :=
   (TControl tag_empty t) (in custom term at level 69, t custom term1) : term_scope.
 
 Notation "'control' 'at' tag t" :=
-  (TControl tag t) (in custom term at level 69, tag at level 0, t custom term1) : term_scope.
+  (TControl tag t) (in custom term at level 69, tag constr at level 0, t custom term1) : term_scope.
 
 Notation "'reset' t" :=
   (TReset tag_empty t) (in custom term at level 69, t custom term) : term_scope.
 
 Notation "'reset' 'at' tag t" :=
-  (TReset tag t) (in custom term at level 69, tag at level 0, t custom term) : term_scope.
+  (TReset tag t) (in custom term at level 69, tag constr at level 0, t custom term) : term_scope.
 
 Notation "'prompt' t" :=
   (TPrompt tag_empty t) (in custom term at level 69, t custom term) : term_scope.
 
 Notation "'prompt' 'at' tag t" :=
-  (TPrompt tag t) (in custom term at level 69, tag at level 0, t custom term) : term_scope.
+  (TPrompt tag t) (in custom term at level 69, tag constr at level 0, t custom term) : term_scope.
 
 Notation "'fun' x1 .. xn => t" :=
   (TVFun (T1 x1 .. (TVFun (T1 xn t)) ..))
@@ -283,8 +307,15 @@ Notation "'match' tv 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
         t1 custom term,
         t2 custom term) : term_scope.
 
-Notation "'exception' tag t" :=
-  (TVExn tag t) (in custom term at level 23, tag at level 0, t custom term at level 0) : term_scope.
+Notation "'exception' tag" :=
+  (TVExn tag nil) (in custom term at level 23, tag constr at level 0) : term_scope.
+
+Notation "'exception' tag t1 .. tn" :=
+  (TVExn tag (cons (t1 : val_term) .. (cons (tn : val_term) nil) ..))
+    (in custom term at level 23,
+        tag constr at level 0,
+        t1 custom term at level 0,
+        tn custom term at level 0) : term_scope.
 
 Notation "'raise' t" :=
   (TRaise t) (in custom term at level 23, t custom term at level 0) : term_scope.
@@ -292,34 +323,73 @@ Notation "'raise' t" :=
 Notation "'try' t1 ;; t2" :=
   (TTry t1 t2) (in custom term at level 69, t1 custom term, t2 custom exn_term) : term_scope.
 
-Notation "'effect' tag t" :=
-  (TVEff tag t) (in custom term at level 23, tag at level 0, t custom term at level 0) : term_scope.
+Notation "'effect' tag" :=
+  (TVEff tag nil) (in custom term at level 23, tag constr at level 0) : term_scope.
+
+Notation "'effect' tag t1 .. tn" :=
+  (TVEff tag (cons (t1 : val_term) .. (cons (tn : val_term) nil) ..))
+    (in custom term at level 23,
+        tag constr at level 0,
+        t1 custom term at level 0,
+        tn custom term at level 0) : term_scope.
 
 Notation "'perform' t" :=
   (TPerform t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
 Notation "'handle' t1 ;; t2 ;; t3" :=
   (THandle t1 t2 t3)
-    (in custom term at level 23,
+    (in custom term at level 69,
         t1 custom term,
         t2 custom ret_term,
         t3 custom eff_term) : term_scope.
 
 Notation "'handle' t1 ;;; t2" :=
   (THandle t1 TRetNone t2)
-    (in custom term at level 23,
+    (in custom term at level 69,
         t1 custom term,
         t2 custom eff_term) : term_scope.
 
 Notation "'shallow' 'handle' t1 ;; t2 ;; t3" :=
   (TShallowHandle t1 t2 t3)
-    (in custom term at level 23,
+    (in custom term at level 69,
         t1 custom term,
         t2 custom ret_term,
         t3 custom eff_term) : term_scope.
 
 Notation "'shallow' 'handle' t1 ;;; t2" :=
   (TShallowHandle t1 TRetNone t2)
-    (in custom term at level 23,
+    (in custom term at level 69,
         t1 custom term,
         t2 custom eff_term) : term_scope.
+
+Notation "` tag" :=
+  (TVVariant tag nil) (in custom term at level 23, tag constr at level 0) : term_scope.
+
+Notation "` tag t1 .. tn" :=
+  (TVVariant tag (cons (t1 : val_term) .. (cons (tn : val_term) nil) ..))
+    (in custom term at level 23,
+        tag constr at level 0,
+        t1 custom term at level 0,
+        tn custom term at level 0) : term_scope.
+
+Notation "'match' t1 'with' t2 'end'" :=
+  (TMatch t1 t2) (in custom term at level 69, t1 custom term, t2 custom variant_term) : term_scope.
+
+Notation "`{ tag := t1 t2" :=
+  (TVRecord (TRecordCons tag t1 t2))
+    (in custom term at level 23,
+        tag constr at level 0,
+        t1 custom term at level 23,
+        t2 custom record_term at level 23) : term_scope.
+
+Notation "; tag := t1 t2" :=
+  (TRecordCons tag t1 t2)
+    (in custom record_term at level 23,
+        tag constr at level 0,
+        t1 custom term at level 23,
+        t2 custom record_term at level 23) : term_scope.
+
+Notation "}" := TRecordNil (in custom record_term at level 23) : term_scope.
+
+Notation "t .( tag )" :=
+  (TVProj t tag) (in custom term at level 23, tag constr at level 0) : term_scope.

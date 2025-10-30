@@ -9,6 +9,8 @@ Inductive ierror : Type :=
 | Name_error : var -> ierror
 | Memory_error : string -> ierror
 | Assert_failure : string -> ierror
+| Match_failure : string -> ierror
+| Projection_failure : string -> ierror
 | Undelimited_shift : tag -> ierror
 | Undelimited_control : tag -> ierror
 | Unhandled_exception : exn -> ierror

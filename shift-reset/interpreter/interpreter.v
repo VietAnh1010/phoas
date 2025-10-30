@@ -1,10 +1,21 @@
-From Stdlib Require Import String Qcanon ZArith.
+From Stdlib Require Import List String Qcanon ZArith.
 From shift_reset.core Require Import syntax env loc tag val var.
 From shift_reset.interpreter Require Import dispatch ierror iheap imonad unwrap.
+Import ListNotations.
 
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
 Local Unset Elimination Schemes.
+
+Definition val_interpreter : Type := val_term -> imonad val.
+
+Fixpoint interpret_val_term_list_aux (self : val_interpreter) (ts : list val_term) : imonad (list val) :=
+  match ts with
+  | [] => imonad_pure []
+  | t :: ts' =>
+      v <- self t;
+      cons v <$> interpret_val_term_list_aux self ts'
+  end.
 
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
@@ -66,8 +77,8 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       | None => imonad_throw_error (Memory_error "free")
       | Some h' => VUnit <$ imonad_set_heap h'
       end
-  | TVExn tag t' => VExn' tag <$> interpret_val_term t'
-  | TVEff tag t' => VEff' tag <$> interpret_val_term t'
+  | TVExn tag ts => VExn' tag <$> interpret_val_term_list_aux interpret_val_term ts
+  | TVEff tag ts => VEff' tag <$> interpret_val_term_list_aux interpret_val_term ts
   | TVAssert t' =>
       v <- interpret_val_term t';
       b <- unwrap_vbool v;
@@ -85,13 +96,24 @@ Definition with_binder (b : binder) (v : val) (env : env) : syntax.env :=
   | BVar x => EnvCons x v env
   end.
 
+Fixpoint with_binder_list (bs : list binder) (vs : list val) (env : env) : option syntax.env :=
+  match bs, vs with
+  | [], [] => Some env
+  | b :: bs', v :: vs' =>
+      match with_binder_list bs' vs' env with
+      | Some env' => Some (with_binder b v env')
+      | None => None
+      end
+  | _, _ => None
+  end.
+
 Fixpoint match_exn (p : pattern) (exn : exn) (env : env) : option syntax.env :=
   match p with
   | PAny => Some env
   | PVar x => Some (EnvCons x (VExn exn) env)
-  | PConstr tag b =>
-      let (tag', v) := exn in
-      if tag_eqb tag tag' then Some (with_binder b v env) else None
+  | PConstr tag bs =>
+      let (tag', vs) := exn in
+      if tag_eqb tag tag' then with_binder_list bs vs env else None
   | PAlias p' x =>
       match match_exn p' exn env with
       | Some env' => Some (EnvCons x (VExn exn) env')
@@ -103,9 +125,9 @@ Fixpoint match_eff (p : pattern) (b : binder) (eff : eff) (v : val) (env : env) 
   match p with
   | PAny => Some (with_binder b v env)
   | PVar x => Some (EnvCons x (VEff eff) (with_binder b v env))
-  | PConstr tag b' =>
-      let (tag', v') := eff in
-      if tag_eqb tag tag' then Some (with_binder b' v' (with_binder b v env)) else None
+  | PConstr tag bs =>
+      let (tag', vs) := eff in
+      if tag_eqb tag tag' then with_binder_list bs vs (with_binder b v env) else None
   | PAlias p' x =>
       match match_eff p' b eff v env with
       | Some env' => Some (EnvCons x (VEff eff) env')

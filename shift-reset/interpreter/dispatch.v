@@ -1,7 +1,8 @@
-From Stdlib Require Import String Qcanon ZArith.
+From Stdlib Require Import List String Qcanon ZArith.
 From shift_reset.lib Require Import comparison float int.
 From shift_reset.core Require Import syntax loc tag val.
 From shift_reset.interpreter Require Import ierror imonad unwrap.
+Import ListNotations.
 
 Local Open Scope imonad_scope.
 
@@ -139,6 +140,15 @@ Definition vsum_compare2 (v arg : val) : imonad comparison :=
   | inr v' => compare_val v v'
   end.
 
+Fixpoint equal_val_list_aux (go : val -> val -> imonad bool) (vs1 vs2 : list val) : imonad bool :=
+  match vs1, vs2 with
+  | [], [] => imonad_pure true
+  | v1 :: vs1', v2 :: vs2' =>
+      b <- go v1 v2;
+      if b then equal_val_list_aux go vs1' vs2' else imonad_pure false
+  | _, _ => imonad_pure false
+  end.
+
 Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   match v1, v2 with
   | VUnit, VUnit => imonad_pure true
@@ -161,13 +171,13 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   | _, _ => imonad_throw_error (Type_error "equal_val")
   end
 with equal_exn (exn1 exn2 : exn) : imonad bool :=
-  let (tag1, v1) := exn1 in
-  let (tag2, v2) := exn2 in
-  if tag_eqb tag1 tag2 then equal_val v1 v2 else imonad_pure false
+  let (tag1, vs1) := exn1 in
+  let (tag2, vs2) := exn2 in
+  if tag_eqb tag1 tag2 then equal_val_list_aux equal_val vs1 vs2 else imonad_pure false
 with equal_eff (eff1 eff2 : eff) : imonad bool :=
-  let (tag1, v1) := eff1 in
-  let (tag2, v2) := eff2 in
-  if tag_eqb tag1 tag2 then equal_val v1 v2 else imonad_pure false.
+  let (tag1, vs1) := eff1 in
+  let (tag2, vs2) := eff2 in
+  if tag_eqb tag1 tag2 then equal_val_list_aux equal_val vs1 vs2 else imonad_pure false.
 
 Definition vprod_equal (v1 v2 arg : val) : imonad bool :=
   p <- unwrap_vprod arg;

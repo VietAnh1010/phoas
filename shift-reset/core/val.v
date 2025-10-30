@@ -7,11 +7,11 @@ Definition VFun' (t : term1) (env : env) : val :=
 Definition VFix' (t : term2) (env : env) : val :=
   VFix (CFix env t).
 
-Definition VExn' (tag : tag) (v : val) : val :=
-  VExn (Exn tag v).
+Definition VExn' (tag : tag) (vs : list val) : val :=
+  VExn (Exn tag vs).
 
-Definition VEff' (tag : tag) (v : val) : val :=
-  VEff (Eff tag v).
+Definition VEff' (tag : tag) (vs : list val) : val :=
+  VEff (Eff tag vs).
 
 Definition VBool (b : bool) : val :=
   if b then VTrue else VFalse.

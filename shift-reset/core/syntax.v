@@ -8,7 +8,7 @@ Inductive binder : Type :=
 Inductive pattern : Type :=
 | PAny : pattern
 | PVar : var -> pattern
-| PConstr : tag -> binder -> pattern
+| PConstr : tag -> list binder -> pattern
 | PAlias : pattern -> var -> pattern.
 
 Inductive op1 : Type :=
@@ -69,8 +69,8 @@ with val_term : Type :=
 | TVGet : val_term -> val_term
 | TVSet : val_term -> val_term -> val_term
 | TVFree : val_term -> val_term
-| TVExn : tag -> val_term -> val_term
-| TVEff : tag -> val_term -> val_term
+| TVExn : tag -> list val_term -> val_term
+| TVEff : tag -> list val_term -> val_term
 | TVAssert : val_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
@@ -129,6 +129,6 @@ with env : Type :=
 | EnvNil : env
 | EnvCons : var -> val -> env -> env
 with exn : Type :=
-| Exn : tag -> val -> exn
+| Exn : tag -> list val -> exn
 with eff : Type :=
-| Eff : tag -> val -> eff.
+| Eff : tag -> list val -> eff.

@@ -47,6 +47,7 @@ Inductive term : Type :=
 | TPerform : val_term -> term
 | THandle : term -> ret_term -> eff_term -> term
 | TShallowHandle : term -> ret_term -> eff_term -> term
+| TPolyMatch : val_term -> poly_variant_term -> term
 with term1 : Type :=
 | T1 : binder -> term -> term1
 with term2 : Type :=
@@ -74,6 +75,7 @@ with val_term : Type :=
 | TVAssert : val_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
+| TVPolyVariant : tag -> list val_term -> val_term
 with ret_term : Type :=
 | TRetNone : ret_term
 | TRetSome : binder -> term -> ret_term
@@ -82,7 +84,10 @@ with exn_term : Type :=
 | TExnCons : pattern -> term -> exn_term -> exn_term
 with eff_term : Type :=
 | TEffLast : pattern -> binder -> term -> eff_term
-| TEffCons : pattern -> binder -> term -> eff_term -> eff_term.
+| TEffCons : pattern -> binder -> term -> eff_term -> eff_term
+with poly_variant_term : Type :=
+| TPolyVariantNil : poly_variant_term
+| TPolyVariantCons : pattern -> term -> poly_variant_term -> poly_variant_term.
 
 Inductive val : Type :=
 | VUnit : val
@@ -101,6 +106,7 @@ Inductive val : Type :=
 | VMKPure : metakont -> val
 | VMKReset : metakont -> tag -> val
 | VMKHandle : metakont -> handle_clo -> val
+| VPolyVariant : poly_variant -> val
 with fun_clo : Type :=
 | CFun : env -> term1 -> fun_clo
 with fix_clo : Type :=
@@ -131,4 +137,6 @@ with env : Type :=
 with exn : Type :=
 | Exn : tag -> list val -> exn
 with eff : Type :=
-| Eff : tag -> list val -> eff.
+| Eff : tag -> list val -> eff
+with poly_variant : Type :=
+| PolyVariant : tag -> list val -> poly_variant.

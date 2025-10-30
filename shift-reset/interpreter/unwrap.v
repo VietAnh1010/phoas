@@ -68,6 +68,12 @@ Definition unwrap_veff (v : val) : imonad eff :=
   | _ => imonad_throw_error (Type_error "unwrap_veff")
   end.
 
+Definition unwrap_vpoly_variant (v : val) : imonad poly_variant :=
+  match v with
+  | VPolyVariant pv => imonad_pure pv
+  | _ => imonad_throw_error (Type_error "unwrap_vpoly_variant")
+  end.
+
 Definition unwrap_vlambda (v : val) : imonad lambda :=
   match v with
   | VFun c => imonad_pure (LFun c)

@@ -168,6 +168,7 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   | VRef l1, VRef l2 => imonad_pure (loc_eqb l1 l2)
   | VExn exn1, VExn exn2 => equal_exn exn1 exn2
   | VEff eff1, VEff eff2 => equal_eff eff1 eff2
+  | VPolyVariant pv1, VPolyVariant pv2 => equal_poly_variant pv1 pv2
   | _, _ => imonad_throw_error (Type_error "equal_val")
   end
 with equal_exn (exn1 exn2 : exn) : imonad bool :=
@@ -177,6 +178,10 @@ with equal_exn (exn1 exn2 : exn) : imonad bool :=
 with equal_eff (eff1 eff2 : eff) : imonad bool :=
   let (tag1, vs1) := eff1 in
   let (tag2, vs2) := eff2 in
+  if tag_eqb tag1 tag2 then equal_val_list_aux equal_val vs1 vs2 else imonad_pure false
+with equal_poly_variant (pv1 pv2 : poly_variant) : imonad bool :=
+  let (tag1, vs1) := pv1 in
+  let (tag2, vs2) := pv2 in
   if tag_eqb tag1 tag2 then equal_val_list_aux equal_val vs1 vs2 else imonad_pure false.
 
 Definition vprod_equal (v1 v2 arg : val) : imonad bool :=
@@ -204,6 +209,9 @@ Definition vexn_equal (exn : exn) (arg : val) : imonad bool :=
 
 Definition veff_equal (eff : eff) (arg : val) : imonad bool :=
   unwrap_veff arg >>= equal_eff eff.
+
+Definition vpoly_variant_equal (pv : poly_variant) (arg : val) : imonad bool :=
+  unwrap_vpoly_variant arg >>= equal_poly_variant pv.
 
 Definition vunit_ltb (arg : val) : imonad val :=
   VFalse <$ unwrap_vunit arg.
@@ -367,6 +375,12 @@ Definition veff_eqb (eff : eff) (arg : val) : imonad val :=
 Definition veff_neqb (eff : eff) (arg : val) : imonad val :=
   VBool_by negb <$> veff_equal eff arg.
 
+Definition vpoly_variant_eqb (pv : poly_variant) (arg : val) : imonad val :=
+  VBool <$> vpoly_variant_equal pv arg.
+
+Definition vpoly_variant_neqb (pv : poly_variant) (arg : val) : imonad val :=
+  VBool_by negb <$> vpoly_variant_equal pv arg.
+
 Definition dispatch_ltb (v : val) : imonad (val -> imonad val) :=
   match v with
   | VUnit => imonad_pure vunit_ltb
@@ -432,6 +446,7 @@ Definition dispatch_eqb (v : val) : imonad (val -> imonad val) :=
   | VRef l => imonad_pure (vref_eqb l)
   | VExn exn => imonad_pure (vexn_eqb exn)
   | VEff eff => imonad_pure (veff_eqb eff)
+  | VPolyVariant pv => imonad_pure (vpoly_variant_eqb pv)
   | _ => imonad_throw_error (Type_error "dispatch_eqb")
   end.
 
@@ -448,6 +463,7 @@ Definition dispatch_neqb (v : val) : imonad (val -> imonad val) :=
   | VRef l => imonad_pure (vref_neqb l)
   | VExn exn => imonad_pure (vexn_neqb exn)
   | VEff eff => imonad_pure (veff_neqb eff)
+  | VPolyVariant pv => imonad_pure (vpoly_variant_neqb pv)
   | _ => imonad_throw_error (Type_error "dispatch_neqb")
   end.
 

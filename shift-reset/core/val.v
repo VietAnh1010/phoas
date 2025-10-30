@@ -13,6 +13,9 @@ Definition VExn' (tag : tag) (vs : list val) : val :=
 Definition VEff' (tag : tag) (vs : list val) : val :=
   VEff (Eff tag vs).
 
+Definition VPolyVariant' (tag : tag) (vs : list val) : val :=
+  VPolyVariant (PolyVariant tag vs).
+
 Definition VBool (b : bool) : val :=
   if b then VTrue else VFalse.
 

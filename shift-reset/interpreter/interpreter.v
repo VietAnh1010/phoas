@@ -309,7 +309,7 @@ Definition interpret_term_aux (self : interpreter) : term -> ikont -> imonad ire
         v <- interpret_val_term t1;
         b <- unwrap_vbool v;
         if b then self' t2 k else self' t3 k
-    | TSplit t1 t2 =>
+    | TUnpair t1 t2 =>
         v <- interpret_val_term t1;
         p <- unwrap_vprod v;
         let (v1, v2) := p in interpret_term2_aux self' t2 k v1 v2

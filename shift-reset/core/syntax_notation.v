@@ -251,7 +251,7 @@ Notation "t1 , t2" :=
   (TVPair t1 t2) (in custom term at level 65, t1 custom term, t2 custom term) : term_scope.
 
 Notation "'let' ( x1 , x2 ) := t1 'in' t2" :=
-  (TSplit t1 (T2 x1 x2 t2))
+  (TUnpair t1 (T2 x1 x2 t2))
     (in custom term at level 69,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,
@@ -260,7 +260,7 @@ Notation "'let' ( x1 , x2 ) := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' x1 , x2 := t1 'in' t2" :=
-  (TSplit t1 (T2 x1 x2 t2))
+  (TUnpair t1 (T2 x1 x2 t2))
     (in custom term at level 69,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,

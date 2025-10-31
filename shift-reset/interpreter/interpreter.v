@@ -7,16 +7,6 @@ Local Open Scope string_scope.
 Local Open Scope imonad_scope.
 Local Unset Elimination Schemes.
 
-Definition val_interpreter : Type := val_term -> imonad val.
-
-Fixpoint interpret_val_term_list_aux (self : val_interpreter) (ts : list val_term) : imonad (list val) :=
-  match ts with
-  | [] => imonad_pure []
-  | t :: ts' =>
-      v <- self t;
-      cons v <$> interpret_val_term_list_aux self ts'
-  end.
-
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
   | TVVar x =>
@@ -77,8 +67,8 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       | None => imonad_throw_error (Memory_error "free")
       | Some h' => VUnit <$ imonad_set_heap h'
       end
-  | TVExn tag ts => VExn' tag <$> interpret_val_term_list_aux interpret_val_term ts
-  | TVEff tag ts => VEff' tag <$> interpret_val_term_list_aux interpret_val_term ts
+  | TVExn tag ts => VExn' tag <$> imonad_list_map interpret_val_term ts
+  | TVEff tag ts => VEff' tag <$> imonad_list_map interpret_val_term ts
   | TVAssert t' =>
       v <- interpret_val_term t';
       b <- unwrap_vbool v;
@@ -88,7 +78,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       v <- interpret_val_term t1;
       f <- dispatch_op2 op v;
       interpret_val_term t2 >>= f
-  | TVVariant tag ts => VVariant' tag <$> interpret_val_term_list_aux interpret_val_term ts
+  | TVVariant tag ts => VVariant' tag <$> imonad_list_map interpret_val_term ts
   | TVRecord t' => VRecord <$> interpret_record_term t'
   | TVProj t' tag =>
       v <- interpret_val_term t';

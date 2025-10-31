@@ -140,15 +140,6 @@ Definition vsum_compare2 (v arg : val) : imonad comparison :=
   | inr v' => compare_val v v'
   end.
 
-Fixpoint equal_val_list_aux (go : val -> val -> imonad bool) (vs1 vs2 : list val) : imonad bool :=
-  match vs1, vs2 with
-  | [], [] => imonad_pure true
-  | v1 :: vs1', v2 :: vs2' =>
-      b <- go v1 v2;
-      if b then equal_val_list_aux go vs1' vs2' else imonad_pure false
-  | _, _ => imonad_pure false
-  end.
-
 Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   match v1, v2 with
   | VUnit, VUnit => imonad_pure true
@@ -175,15 +166,15 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
 with equal_exn (exn1 exn2 : exn) : imonad bool :=
   let (tag1, vs1) := exn1 in
   let (tag2, vs2) := exn2 in
-  if tag_eqb tag1 tag2 then equal_val_list_aux equal_val vs1 vs2 else imonad_pure false
+  if tag_eqb tag1 tag2 then imonad_list_forall2b equal_val vs1 vs2 else imonad_pure false
 with equal_eff (eff1 eff2 : eff) : imonad bool :=
   let (tag1, vs1) := eff1 in
   let (tag2, vs2) := eff2 in
-  if tag_eqb tag1 tag2 then equal_val_list_aux equal_val vs1 vs2 else imonad_pure false
+  if tag_eqb tag1 tag2 then imonad_list_forall2b equal_val vs1 vs2 else imonad_pure false
 with equal_variant (v1 v2 : variant) : imonad bool :=
   let (tag1, vs1) := v1 in
   let (tag2, vs2) := v2 in
-  if tag_eqb tag1 tag2 then equal_val_list_aux equal_val vs1 vs2 else imonad_pure false
+  if tag_eqb tag1 tag2 then imonad_list_forall2b equal_val vs1 vs2 else imonad_pure false
 with equal_record (r1 r2 : record) : imonad bool :=
   match r1, r2 with
   | RecordNil, RecordNil => imonad_pure true
@@ -227,266 +218,266 @@ Definition vvariant_equal (v : variant) (arg : val) : imonad bool :=
 Definition vrecord_equal (r : record) (arg : val) : imonad bool :=
   unwrap_vrecord arg >>= equal_record r.
 
-Definition vunit_ltb (arg : val) : imonad val :=
+Definition vunit_lt (arg : val) : imonad val :=
   VFalse <$ unwrap_vunit arg.
 
-Definition vunit_leb (arg : val) : imonad val :=
+Definition vunit_le (arg : val) : imonad val :=
   VTrue <$ unwrap_vunit arg.
 
-Definition vunit_gtb (arg : val) : imonad val :=
+Definition vunit_gt (arg : val) : imonad val :=
   VFalse <$ unwrap_vunit arg.
 
-Definition vunit_geb (arg : val) : imonad val :=
+Definition vunit_ge (arg : val) : imonad val :=
   VTrue <$ unwrap_vunit arg.
 
-Definition vunit_eqb (arg : val) : imonad val :=
+Definition vunit_eq (arg : val) : imonad val :=
   VTrue <$ unwrap_vunit arg.
 
-Definition vunit_neqb (arg : val) : imonad val :=
+Definition vunit_neq (arg : val) : imonad val :=
   VFalse <$ unwrap_vunit arg.
 
-Definition vint_ltb (z : Z) (arg : val) : imonad val :=
+Definition vint_lt (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z.ltb z <$> unwrap_vint arg.
 
-Definition vint_leb (z : Z) (arg : val) : imonad val :=
+Definition vint_le (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z.leb z <$> unwrap_vint arg.
 
-Definition vint_gtb (z : Z) (arg : val) : imonad val :=
+Definition vint_gt (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z.gtb z <$> unwrap_vint arg.
 
-Definition vint_geb (z : Z) (arg : val) : imonad val :=
+Definition vint_ge (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z.geb z <$> unwrap_vint arg.
 
-Definition vint_eqb (z : Z) (arg : val) : imonad val :=
+Definition vint_eq (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z.eqb z <$> unwrap_vint arg.
 
-Definition vint_neqb (z : Z) (arg : val) : imonad val :=
+Definition vint_neq (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z_neqb z <$> unwrap_vint arg.
 
-Definition vfloat_ltb (q : Qc) (arg : val) : imonad val :=
+Definition vfloat_lt (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_ltb q <$> unwrap_vfloat arg.
 
-Definition vfloat_leb (q : Qc) (arg : val) : imonad val :=
+Definition vfloat_le (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_leb q <$> unwrap_vfloat arg.
 
-Definition vfloat_gtb (q : Qc) (arg : val) : imonad val :=
+Definition vfloat_gt (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_gtb q <$> unwrap_vfloat arg.
 
-Definition vfloat_geb (q : Qc) (arg : val) : imonad val :=
+Definition vfloat_ge (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_geb q <$> unwrap_vfloat arg.
 
-Definition vfloat_eqb (q : Qc) (arg : val) : imonad val :=
+Definition vfloat_eq (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_eq_bool q <$> unwrap_vfloat arg.
 
-Definition vfloat_neqb (q : Qc) (arg : val) : imonad val :=
+Definition vfloat_neq (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_neqb q <$> unwrap_vfloat arg.
 
-Definition vbool_ltb1 (arg : val) : imonad val :=
+Definition vbool_lt1 (arg : val) : imonad val :=
   VFalse <$ unwrap_vbool arg.
 
-Definition vbool_leb1 (arg : val) : imonad val :=
+Definition vbool_le1 (arg : val) : imonad val :=
   VBool <$> unwrap_vbool arg.
 
-Definition vbool_gtb1 (arg : val) : imonad val :=
+Definition vbool_gt1 (arg : val) : imonad val :=
   VBool_by negb <$> unwrap_vbool arg.
 
-Definition vbool_geb1 (arg : val) : imonad val :=
+Definition vbool_ge1 (arg : val) : imonad val :=
   VTrue <$ unwrap_vbool arg.
 
-Definition vbool_eqb1 (arg : val) : imonad val :=
+Definition vbool_eq1 (arg : val) : imonad val :=
   VBool <$> unwrap_vbool arg.
 
-Definition vbool_neqb1 (arg : val) : imonad val :=
+Definition vbool_neq1 (arg : val) : imonad val :=
   VBool_by negb <$> unwrap_vbool arg.
 
-Definition vbool_ltb2 (arg : val) : imonad val :=
+Definition vbool_lt2 (arg : val) : imonad val :=
   VBool <$> unwrap_vbool arg.
 
-Definition vbool_leb2 (arg : val) : imonad val :=
+Definition vbool_le2 (arg : val) : imonad val :=
   VTrue <$ unwrap_vbool arg.
 
-Definition vbool_gtb2 (arg : val) : imonad val :=
+Definition vbool_gt2 (arg : val) : imonad val :=
   VFalse <$ unwrap_vbool arg.
 
-Definition vbool_geb2 (arg : val) : imonad val :=
+Definition vbool_ge2 (arg : val) : imonad val :=
   VBool_by negb <$> unwrap_vbool arg.
 
-Definition vbool_eqb2 (arg : val) : imonad val :=
+Definition vbool_eq2 (arg : val) : imonad val :=
   VBool_by negb <$> unwrap_vbool arg.
 
-Definition vbool_neqb2 (arg : val) : imonad val :=
+Definition vbool_neq2 (arg : val) : imonad val :=
   VBool <$> unwrap_vbool arg.
 
-Definition vprod_ltb (v1 v2 arg : val) : imonad val :=
+Definition vprod_lt (v1 v2 arg : val) : imonad val :=
   VBool_by compare_ltb <$> vprod_compare v1 v2 arg.
 
-Definition vprod_leb (v1 v2 arg : val) : imonad val :=
+Definition vprod_le (v1 v2 arg : val) : imonad val :=
   VBool_by compare_leb <$> vprod_compare v1 v2 arg.
 
-Definition vprod_gtb (v1 v2 arg : val) : imonad val :=
+Definition vprod_gt (v1 v2 arg : val) : imonad val :=
   VBool_by compare_gtb <$> vprod_compare v1 v2 arg.
 
-Definition vprod_geb (v1 v2 arg : val) : imonad val :=
+Definition vprod_ge (v1 v2 arg : val) : imonad val :=
   VBool_by compare_geb <$> vprod_compare v1 v2 arg.
 
-Definition vprod_eqb (v1 v2 arg : val) : imonad val :=
+Definition vprod_eq (v1 v2 arg : val) : imonad val :=
   VBool <$> vprod_equal v1 v2 arg.
 
-Definition vprod_neqb (v1 v2 arg : val) : imonad val :=
+Definition vprod_neq (v1 v2 arg : val) : imonad val :=
   VBool_by negb <$> vprod_equal v1 v2 arg.
 
-Definition vsum_ltb1 (v arg : val) : imonad val :=
+Definition vsum_lt1 (v arg : val) : imonad val :=
   VBool_by compare_ltb <$> vsum_compare1 v arg.
 
-Definition vsum_leb1 (v arg : val) : imonad val :=
+Definition vsum_le1 (v arg : val) : imonad val :=
   VBool_by compare_leb <$> vsum_compare1 v arg.
 
-Definition vsum_gtb1 (v arg : val) : imonad val :=
+Definition vsum_gt1 (v arg : val) : imonad val :=
   VBool_by compare_gtb <$> vsum_compare1 v arg.
 
-Definition vsum_geb1 (v arg : val) : imonad val :=
+Definition vsum_ge1 (v arg : val) : imonad val :=
   VBool_by compare_geb <$> vsum_compare1 v arg.
 
-Definition vsum_eqb1 (v arg : val) : imonad val :=
+Definition vsum_eq1 (v arg : val) : imonad val :=
   VBool <$> vsum_equal1 v arg.
 
-Definition vsum_neqb1 (v arg : val) : imonad val :=
+Definition vsum_neq1 (v arg : val) : imonad val :=
   VBool_by negb <$> vsum_equal1 v arg.
 
-Definition vsum_ltb2 (v arg : val) : imonad val :=
+Definition vsum_lt2 (v arg : val) : imonad val :=
   VBool_by compare_ltb <$> vsum_compare2 v arg.
 
-Definition vsum_leb2 (v arg : val) : imonad val :=
+Definition vsum_le2 (v arg : val) : imonad val :=
   VBool_by compare_leb <$> vsum_compare2 v arg.
 
-Definition vsum_gtb2 (v arg : val) : imonad val :=
+Definition vsum_gt2 (v arg : val) : imonad val :=
   VBool_by compare_gtb <$> vsum_compare2 v arg.
 
-Definition vsum_geb2 (v arg : val) : imonad val :=
+Definition vsum_ge2 (v arg : val) : imonad val :=
   VBool_by compare_geb <$> vsum_compare2 v arg.
 
-Definition vsum_eqb2 (v arg : val) : imonad val :=
+Definition vsum_eq2 (v arg : val) : imonad val :=
   VBool <$> vsum_equal2 v arg.
 
-Definition vsum_neqb2 (v arg : val) : imonad val :=
+Definition vsum_neq2 (v arg : val) : imonad val :=
   VBool_by negb <$> vsum_equal2 v arg.
 
-Definition vref_eqb (l : loc) (arg : val) : imonad val :=
+Definition vref_eq (l : loc) (arg : val) : imonad val :=
   VBool_by2 loc_eqb l <$> unwrap_vref arg.
 
-Definition vref_neqb (l : loc) (arg : val) : imonad val :=
+Definition vref_neq (l : loc) (arg : val) : imonad val :=
   VBool_by2 loc_neqb l <$> unwrap_vref arg.
 
-Definition vexn_eqb (exn : exn) (arg : val) : imonad val :=
+Definition vexn_eq (exn : exn) (arg : val) : imonad val :=
   VBool <$> vexn_equal exn arg.
 
-Definition vexn_neqb (exn : exn) (arg : val) : imonad val :=
+Definition vexn_neq (exn : exn) (arg : val) : imonad val :=
   VBool_by negb <$> vexn_equal exn arg.
 
-Definition veff_eqb (eff : eff) (arg : val) : imonad val :=
+Definition veff_eq (eff : eff) (arg : val) : imonad val :=
   VBool <$> veff_equal eff arg.
 
-Definition veff_neqb (eff : eff) (arg : val) : imonad val :=
+Definition veff_neq (eff : eff) (arg : val) : imonad val :=
   VBool_by negb <$> veff_equal eff arg.
 
-Definition vvariant_eqb (v : variant) (arg : val) : imonad val :=
+Definition vvariant_eq (v : variant) (arg : val) : imonad val :=
   VBool <$> vvariant_equal v arg.
 
-Definition vvariant_neqb (v : variant) (arg : val) : imonad val :=
+Definition vvariant_neq (v : variant) (arg : val) : imonad val :=
   VBool_by negb <$> vvariant_equal v arg.
 
-Definition vrecord_eqb (r : record) (arg : val) : imonad val :=
+Definition vrecord_eq (r : record) (arg : val) : imonad val :=
   VBool <$> vrecord_equal r arg.
 
-Definition vrecord_neqb (r : record) (arg : val) : imonad val :=
+Definition vrecord_neq (r : record) (arg : val) : imonad val :=
   VBool_by negb <$> vrecord_equal r arg.
 
-Definition dispatch_ltb (v : val) : imonad (val -> imonad val) :=
+Definition dispatch_lt (v : val) : imonad (val -> imonad val) :=
   match v with
-  | VUnit => imonad_pure vunit_ltb
-  | VInt z => imonad_pure (vint_ltb z)
-  | VFloat q => imonad_pure (vfloat_ltb q)
-  | VTrue => imonad_pure vbool_ltb1
-  | VFalse => imonad_pure vbool_ltb2
-  | VPair v1 v2 => imonad_pure (vprod_ltb v1 v2)
-  | VInl v' => imonad_pure (vsum_ltb1 v')
-  | VInr v' => imonad_pure (vsum_ltb2 v')
-  | _ => imonad_throw_error (Type_error "dispatch_ltb")
+  | VUnit => imonad_pure vunit_lt
+  | VInt z => imonad_pure (vint_lt z)
+  | VFloat q => imonad_pure (vfloat_lt q)
+  | VTrue => imonad_pure vbool_lt1
+  | VFalse => imonad_pure vbool_lt2
+  | VPair v1 v2 => imonad_pure (vprod_lt v1 v2)
+  | VInl v' => imonad_pure (vsum_lt1 v')
+  | VInr v' => imonad_pure (vsum_lt2 v')
+  | _ => imonad_throw_error (Type_error "dispatch_lt")
   end.
 
-Definition dispatch_leb (v : val) : imonad (val -> imonad val) :=
+Definition dispatch_le (v : val) : imonad (val -> imonad val) :=
   match v with
-  | VUnit => imonad_pure vunit_leb
-  | VInt z => imonad_pure (vint_leb z)
-  | VFloat q => imonad_pure (vfloat_leb q)
-  | VTrue => imonad_pure vbool_leb1
-  | VFalse => imonad_pure vbool_leb2
-  | VPair v1 v2 => imonad_pure (vprod_leb v1 v2)
-  | VInl v' => imonad_pure (vsum_leb1 v')
-  | VInr v' => imonad_pure (vsum_leb2 v')
-  | _ => imonad_throw_error (Type_error "dispatch_leb")
+  | VUnit => imonad_pure vunit_le
+  | VInt z => imonad_pure (vint_le z)
+  | VFloat q => imonad_pure (vfloat_le q)
+  | VTrue => imonad_pure vbool_le1
+  | VFalse => imonad_pure vbool_le2
+  | VPair v1 v2 => imonad_pure (vprod_le v1 v2)
+  | VInl v' => imonad_pure (vsum_le1 v')
+  | VInr v' => imonad_pure (vsum_le2 v')
+  | _ => imonad_throw_error (Type_error "dispatch_le")
   end.
 
-Definition dispatch_gtb (v : val) : imonad (val -> imonad val) :=
+Definition dispatch_gt (v : val) : imonad (val -> imonad val) :=
   match v with
-  | VUnit => imonad_pure vunit_gtb
-  | VInt z => imonad_pure (vint_gtb z)
-  | VFloat q => imonad_pure (vfloat_gtb q)
-  | VTrue => imonad_pure vbool_gtb1
-  | VFalse => imonad_pure vbool_gtb2
-  | VPair v1 v2 => imonad_pure (vprod_gtb v1 v2)
-  | VInl v' => imonad_pure (vsum_gtb1 v')
-  | VInr v' => imonad_pure (vsum_gtb2 v')
-  | _ => imonad_throw_error (Type_error "dispatch_gtb")
+  | VUnit => imonad_pure vunit_gt
+  | VInt z => imonad_pure (vint_gt z)
+  | VFloat q => imonad_pure (vfloat_gt q)
+  | VTrue => imonad_pure vbool_gt1
+  | VFalse => imonad_pure vbool_gt2
+  | VPair v1 v2 => imonad_pure (vprod_gt v1 v2)
+  | VInl v' => imonad_pure (vsum_gt1 v')
+  | VInr v' => imonad_pure (vsum_gt2 v')
+  | _ => imonad_throw_error (Type_error "dispatch_gt")
   end.
 
-Definition dispatch_geb (v : val) : imonad (val -> imonad val) :=
+Definition dispatch_ge (v : val) : imonad (val -> imonad val) :=
   match v with
-  | VUnit => imonad_pure vunit_geb
-  | VInt z => imonad_pure (vint_geb z)
-  | VFloat q => imonad_pure (vfloat_geb q)
-  | VTrue => imonad_pure vbool_geb1
-  | VFalse => imonad_pure vbool_geb2
-  | VPair v1 v2 => imonad_pure (vprod_geb v1 v2)
-  | VInl v' => imonad_pure (vsum_geb1 v')
-  | VInr v' => imonad_pure (vsum_geb2 v')
-  | _ => imonad_throw_error (Type_error "dispatch_geb")
+  | VUnit => imonad_pure vunit_ge
+  | VInt z => imonad_pure (vint_ge z)
+  | VFloat q => imonad_pure (vfloat_ge q)
+  | VTrue => imonad_pure vbool_ge1
+  | VFalse => imonad_pure vbool_ge2
+  | VPair v1 v2 => imonad_pure (vprod_ge v1 v2)
+  | VInl v' => imonad_pure (vsum_ge1 v')
+  | VInr v' => imonad_pure (vsum_ge2 v')
+  | _ => imonad_throw_error (Type_error "dispatch_ge")
   end.
 
-Definition dispatch_eqb (v : val) : imonad (val -> imonad val) :=
+Definition dispatch_eq (v : val) : imonad (val -> imonad val) :=
   match v with
-  | VUnit => imonad_pure vunit_eqb
-  | VInt z => imonad_pure (vint_eqb z)
-  | VFloat q => imonad_pure (vfloat_eqb q)
-  | VTrue => imonad_pure vbool_eqb1
-  | VFalse => imonad_pure vbool_eqb2
-  | VPair v1 v2 => imonad_pure (vprod_eqb v1 v2)
-  | VInl v' => imonad_pure (vsum_eqb1 v')
-  | VInr v' => imonad_pure (vsum_eqb2 v')
-  | VRef l => imonad_pure (vref_eqb l)
-  | VExn exn => imonad_pure (vexn_eqb exn)
-  | VEff eff => imonad_pure (veff_eqb eff)
-  | VVariant v' => imonad_pure (vvariant_eqb v')
-  | VRecord r => imonad_pure (vrecord_eqb r)
-  | _ => imonad_throw_error (Type_error "dispatch_eqb")
+  | VUnit => imonad_pure vunit_eq
+  | VInt z => imonad_pure (vint_eq z)
+  | VFloat q => imonad_pure (vfloat_eq q)
+  | VTrue => imonad_pure vbool_eq1
+  | VFalse => imonad_pure vbool_eq2
+  | VPair v1 v2 => imonad_pure (vprod_eq v1 v2)
+  | VInl v' => imonad_pure (vsum_eq1 v')
+  | VInr v' => imonad_pure (vsum_eq2 v')
+  | VRef l => imonad_pure (vref_eq l)
+  | VExn exn => imonad_pure (vexn_eq exn)
+  | VEff eff => imonad_pure (veff_eq eff)
+  | VVariant v' => imonad_pure (vvariant_eq v')
+  | VRecord r => imonad_pure (vrecord_eq r)
+  | _ => imonad_throw_error (Type_error "dispatch_eq")
   end.
 
-Definition dispatch_neqb (v : val) : imonad (val -> imonad val) :=
+Definition dispatch_neq (v : val) : imonad (val -> imonad val) :=
   match v with
-  | VUnit => imonad_pure vunit_neqb
-  | VInt z => imonad_pure (vint_neqb z)
-  | VFloat q => imonad_pure (vfloat_neqb q)
-  | VTrue => imonad_pure vbool_neqb1
-  | VFalse => imonad_pure vbool_neqb2
-  | VPair v1 v2 => imonad_pure (vprod_neqb v1 v2)
-  | VInl v' => imonad_pure (vsum_neqb1 v')
-  | VInr v' => imonad_pure (vsum_neqb2 v')
-  | VRef l => imonad_pure (vref_neqb l)
-  | VExn exn => imonad_pure (vexn_neqb exn)
-  | VEff eff => imonad_pure (veff_neqb eff)
-  | VVariant v' => imonad_pure (vvariant_neqb v')
-  | VRecord r => imonad_pure (vrecord_neqb r)
-  | _ => imonad_throw_error (Type_error "dispatch_neqb")
+  | VUnit => imonad_pure vunit_neq
+  | VInt z => imonad_pure (vint_neq z)
+  | VFloat q => imonad_pure (vfloat_neq q)
+  | VTrue => imonad_pure vbool_neq1
+  | VFalse => imonad_pure vbool_neq2
+  | VPair v1 v2 => imonad_pure (vprod_neq v1 v2)
+  | VInl v' => imonad_pure (vsum_neq1 v')
+  | VInr v' => imonad_pure (vsum_neq2 v')
+  | VRef l => imonad_pure (vref_neq l)
+  | VExn exn => imonad_pure (vexn_neq exn)
+  | VEff eff => imonad_pure (veff_neq eff)
+  | VVariant v' => imonad_pure (vvariant_neq v')
+  | VRecord r => imonad_pure (vrecord_neq r)
+  | _ => imonad_throw_error (Type_error "dispatch_neq")
   end.
 
 Definition dispatch_op2 (op : op2) : val -> imonad (val -> imonad val) :=
@@ -496,10 +487,10 @@ Definition dispatch_op2 (op : op2) : val -> imonad (val -> imonad val) :=
   | Op2Mul => dispatch_mul
   | Op2Div => dispatch_div
   | Op2Mod => dispatch_mod
-  | Op2Ltb => dispatch_ltb
-  | Op2Leb => dispatch_leb
-  | Op2Gtb => dispatch_gtb
-  | Op2Geb => dispatch_geb
-  | Op2Eqb => dispatch_eqb
-  | Op2Neqb => dispatch_neqb
+  | Op2Lt => dispatch_lt
+  | Op2Le => dispatch_le
+  | Op2Gt => dispatch_gt
+  | Op2Ge => dispatch_ge
+  | Op2Eq => dispatch_eq
+  | Op2Neq => dispatch_neq
   end.

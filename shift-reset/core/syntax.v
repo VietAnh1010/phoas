@@ -22,12 +22,12 @@ Inductive op2 : Type :=
 | Op2Mul : op2
 | Op2Div : op2
 | Op2Mod : op2
-| Op2Ltb : op2
-| Op2Leb : op2
-| Op2Gtb : op2
-| Op2Geb : op2
-| Op2Eqb : op2
-| Op2Neqb : op2.
+| Op2Lt : op2
+| Op2Le : op2
+| Op2Gt : op2
+| Op2Ge : op2
+| Op2Eq : op2
+| Op2Neq : op2.
 
 Inductive term : Type :=
 | TVal : val_term -> term

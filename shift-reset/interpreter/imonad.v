@@ -1,5 +1,7 @@
+From Stdlib Require Import List.
 From shift_reset.core Require Import syntax.
 From shift_reset.interpreter Require Import ierror iheap.
+Import ListNotations.
 
 Record imonad (A : Type) : Type := IMonad { imonad_run : env -> iheap -> (ierror + A) * iheap }.
 
@@ -150,19 +152,34 @@ Definition imonad_eval {A} (m : imonad A) (env : env) (h : iheap) : ierror + A :
 Definition imonad_exec {A} (m : imonad A) (env : env) (h : iheap) : iheap :=
   snd (imonad_run m env h).
 
-Definition imonad_kleisli_compose {A B C} (f1 : A -> imonad B) (f2 : B -> imonad C) (x : A) : imonad C :=
-  imonad_bind (f1 x) f2.
-
 Declare Scope imonad_scope.
 Delimit Scope imonad_scope with imonad.
 Bind Scope imonad_scope with imonad.
+Local Open Scope imonad_scope.
 
 Notation "f <$> m" := (imonad_map f m) (at level 65, right associativity) : imonad_scope.
 Notation "x <$ m" := (imonad_replace x m) (at level 65, right associativity) : imonad_scope.
 Notation "m1 <*> m2" := (imonad_app m1 m2) (at level 55, left associativity) : imonad_scope.
 Notation "m >>= f" := (imonad_bind m f) (at level 50, left associativity) : imonad_scope.
 Notation "m1 >> m2" := (imonad_then m1 m2) (at level 50, left associativity) : imonad_scope.
-Notation "f1 >=> f2" := (imonad_kleisli_compose f1 f2) (at level 60, right associativity) : imonad_scope.
 
 Notation "x <- m1 ; m2" := (imonad_bind m1 (fun x => m2)) (at level 100, right associativity) : imonad_scope.
 Notation "m1 ;; m2" := (imonad_bind m1 (fun _ => m2)) (at level 100, right associativity) : imonad_scope.
+
+Definition imonad_kleisli_compose {A B C} (f1 : A -> imonad B) (f2 : B -> imonad C) (x : A) : imonad C :=
+  f1 x >>= f2.
+
+Fixpoint imonad_list_map {A B} (f : A -> imonad B) (xs : list A) : imonad (list B) :=
+  match xs with
+  | [] => imonad_pure []
+  | x :: xs' => y <- f x; cons y <$> imonad_list_map f xs'
+  end.
+
+Fixpoint imonad_list_forall2b {A B} (f : A -> B -> imonad bool) (xs : list A) (ys : list B) : imonad bool :=
+  match xs, ys with
+  | [], [] => imonad_pure true
+  | x :: xs', y :: ys' => b <- f x y; if b then imonad_list_forall2b f xs' ys' else imonad_pure false
+  | _, _ => imonad_pure false
+  end.
+
+Notation "f1 >=> f2" := (imonad_kleisli_compose f1 f2) (at level 60, right associativity) : imonad_scope.

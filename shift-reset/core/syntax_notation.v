@@ -245,22 +245,22 @@ Notation "t1 'mod' t2" :=
   (Op2Mod t1 t2) (in custom term at level 39, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 = t2" :=
-  (Op2Eqb t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (Op2Eq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 < t2" :=
-  (Op2Ltb t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (Op2Lt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 <= t2" :=
-  (Op2Leb t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (Op2Le t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 > t2" :=
-  (Op2Gtb t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (Op2Gt t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 >= t2" :=
-  (Op2Geb t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (Op2Ge t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 <> t2" :=
-  (Op2Neqb t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
+  (Op2Neq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
 Notation "t1 && t2" :=
   (TVAnd t1 t2) (in custom term at level 50, t1 custom term, t2 custom term, right associativity) : term_scope.

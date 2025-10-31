@@ -123,7 +123,7 @@ Example choice :=
               | Inl _ => ()
               | Inr "xs" =>
                   let ("x", "xs'") := "xs" in
-                  "k" "x";
+                  let _ := "k" "x" in
                   "go" "xs'"
               end
             in "go" "xs") }>.
@@ -138,7 +138,7 @@ Compute (eval_term 3 (sum (term_of_list []))).
 Compute (eval_term 4 (sum (term_of_list [1]))).
 Compute (eval_term 5 (sum (term_of_list [1; 2]))).
 
-Time Compute (eval_term 20000 (sum (term_of_list (sequence 0 5000)))).
+Time Compute (eval_term 5005 (sum (term_of_list (sequence 0 5000)))).
 
 Example yield :=
   <{ fun "x" => shift (fun "k" => Inr ("x", "k")) }>.
@@ -148,9 +148,10 @@ Example walk_aux :=
        match "t" with
        | Inl "x" => yield "x"
        | Inr "p" =>
-           (let ("l", "r") := "p" in
-            "walk_aux" "l";
-            "walk_aux" "r")
+           let ("l", "r") := "p" in
+           let _ := "walk_aux" "l" in
+           let _ := "walk_aux" "r" in
+           ()
        end }>.
 
 Example walk :=
@@ -338,7 +339,7 @@ Example collatz :=
      let "max_len" := ref 0 in
      let "n_of_max_len" := ref 0 in
      let "i" := ref 1 in
-     (while (!"i" <= 100) do
+     (while (!"i" <= 500) do
         let "len" := "collatz_len" (!"i") in
         (if "len" > !"max_len" then
            "max_len" <- "len";
@@ -347,7 +348,7 @@ Example collatz :=
         "i" <- !"i" + 1);
      !"n_of_max_len", !"max_len" }>.
 
-Time Compute (eval_term 300 collatz).
+Time Compute (eval_term 1000 collatz).
 
 Example eval_ltr :=
   <{ fix "eval" "e" :=
@@ -372,6 +373,20 @@ Example eval_ltr_input2 :=
 Compute (eval_term 10 <{ eval_ltr eval_ltr_input1 }>).
 Compute (eval_term 10 <{ eval_ltr eval_ltr_input2 }>).
 
-(*Extraction Language Scheme.*)
+Example loop :=
+  <{ let "stdout" := ref () in
+     let "clock" := ref 0 in
+     let "print" := print in
+     let "f" _ :=
+       let _ := "print" (!"clock") in
+       let _ := "clock" <- !"clock" + 1 in
+       let "f" := perform (effect "Foo") in
+       "f" ()
+     in
+     handle "f" ();;; (fun '"Foo", "k" => "k" "f") }>.
+
+Compute (run_term 10 loop).
+
+Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)
 Recursive Extraction run_term.

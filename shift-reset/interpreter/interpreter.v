@@ -296,18 +296,18 @@ Definition interpret_kont_clo_aux (self : interpreter) (c : kont_clo) (k : ikont
   | CKLet env t => interpret_term1_aux_under env self t k v
   end.
 
-Fixpoint interpret_kont_aux (self : interpreter) (k : kont) (v : val) : imonad iresult :=
-  match k with
-  | KNil => imonad_pure (IRVal v)
-  | KCons c k' => interpret_kont_clo_aux self c (IKont k' (interpret_kont_aux self k')) v
-  | KApp k1 k2 => interpret_kont_aux self (IKont k1 (interpret_kont_aux self k2)) v
-  end.
-
 Fixpoint interpret_kont_aux_app (self : interpreter) (k1 : kont) (k2 : ikont) (v : val) : imonad iresult :=
   match k1 with
   | KNil => k2 v
   | KCons c k1' => interpret_kont_clo_aux self c (IKont (KApp k1' k2) (interpret_kont_aux_app self k1' k2)) v
   | KApp k11 k12 => interpret_kont_aux_app self k11 (IKont (KApp k12 k2) (interpret_kont_aux_app self k12 k2)) v
+  end.
+
+Fixpoint interpret_kont_aux (self : interpreter) (k : kont) (v : val) : imonad iresult :=
+  match k with
+  | KNil => imonad_pure (IRVal v)
+  | KCons c k' => interpret_kont_clo_aux self c (IKont k' (interpret_kont_aux self k')) v
+  | KApp k1 k2 => interpret_kont_aux_app self k1 (IKont k2 (interpret_kont_aux self k2)) v
   end.
 
 Definition refine_kont (self : interpreter) (k : kont) : ikont :=

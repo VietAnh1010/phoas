@@ -17,14 +17,6 @@ Fixpoint interpret_val_term_list_aux (self : val_interpreter) (ts : list val_ter
       cons v <$> interpret_val_term_list_aux self ts'
   end.
 
-Fixpoint interpret_record_term_aux (self : val_interpreter) (t : record_term) : imonad record :=
-  match t with
-  | TRecordNil => imonad_pure RecordNil
-  | TRecordCons tag t1 t2 =>
-      v <- self t1;
-      RecordCons tag v <$> interpret_record_term_aux self t2
-  end.
-
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
   | TVVar x =>
@@ -97,7 +89,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       f <- dispatch_op2 op v;
       interpret_val_term t2 >>= f
   | TVVariant tag ts => VVariant' tag <$> interpret_val_term_list_aux interpret_val_term ts
-  | TVRecord t' => VRecord <$> interpret_record_term_aux interpret_val_term t'
+  | TVRecord t' => VRecord <$> interpret_record_term t'
   | TVProj t' tag =>
       v <- interpret_val_term t';
       r <- unwrap_vrecord v;
@@ -105,6 +97,13 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       | None => imonad_throw_error (Projection_failure "")
       | Some v' => imonad_pure v'
       end
+  end
+with interpret_record_term (t : record_term) : imonad record :=
+  match t with
+  | TRecordNil => imonad_pure RecordNil
+  | TRecordCons tag t1 t2 =>
+      v <- interpret_val_term t1;
+      RecordCons tag v <$> interpret_record_term t2
   end.
 
 Definition with_binder (b : binder) (v : val) (env : env) : syntax.env :=

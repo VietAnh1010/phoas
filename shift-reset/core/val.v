@@ -1,20 +1,5 @@
 From Stdlib Require Import Qcanon ZArith.
-From shift_reset.core Require Import syntax tag.
-
-Definition VFun' (t : term1) (env : env) : val :=
-  VFun (CFun env t).
-
-Definition VFix' (t : term2) (env : env) : val :=
-  VFix (CFix env t).
-
-Definition VExn' (tag : tag) (vs : list val) : val :=
-  VExn (Exn tag vs).
-
-Definition VEff' (tag : tag) (vs : list val) : val :=
-  VEff (Eff tag vs).
-
-Definition VVariant' (tag : tag) (vs : list val) : val :=
-  VVariant (Variant tag vs).
+From shift_reset.core Require Import syntax.
 
 Definition VBool (b : bool) : val :=
   if b then VTrue else VFalse.
@@ -27,6 +12,25 @@ Definition VSum (s : val + val) : val :=
   | inl v => VInl v
   | inr v => VInr v
   end.
+
+Definition VClosure (c : closure) : val :=
+  match c with
+  | CFun b t e => VFun b t e
+  | CFix f b t e => VFix f b t e
+  | CFixMut t f e => VFixMut t f e
+  | CMKPure mk => VMKPure mk
+  | CMKReset mk => VMKReset mk
+  | CMKHandle mk t1 t2 e => VMKHandle mk t1 t2 e
+  end.
+
+Definition VVariant' (v : variant) : val :=
+  let (tag, v) := v in VVariant tag v.
+
+Definition VExn' (e : exn) : val :=
+  let (tag, v) := e in VExn tag v.
+
+Definition VEff' (e : eff) : val :=
+  let (tag, v) := e in VEff tag v.
 
 Definition VInt_by {A} (f : A -> Z) (x : A) : val :=
   VInt (f x).

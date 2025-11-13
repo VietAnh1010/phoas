@@ -228,13 +228,13 @@ Example reverse_while :=
        try
          (while true do
             (match !"in" with
-             | Inl _ => raise (exception "Exit")
+             | Inl _ => raise exception "Exit" ()
              | Inr "xs" =>
                  let ("x", "xs'") := "xs" in
                  "in" <- "xs'";
                  "out" <- Inr ("x", !"out")
              end));;
-       (fun '"Exit" => !"out") }>.
+       (fun '("Exit" _) => !"out") }>.
 
 Example copy1 xs :=
   <{ let "copy" := copy in reset ("copy" xs) }>.
@@ -252,16 +252,16 @@ Time Compute (eval_term 2010 (reverse1 (term_of_list (sequence 0 1000)))).
 Time Compute (eval_term 1010 (reverse_while1 (term_of_list (sequence 0 1000)))).
 
 Example unhandled_exception :=
-  <{ raise (exception "Segfault" 139) }>.
+  <{ raise exception "Segfault" 139 }>.
 
 Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
      try
-       (raise (exception tag 10));;
-     (fun '"Segfault" "code" =>
+       raise exception tag 10;;
+     (fun '("Segfault" "code") =>
         let _ := "r" <- "code" = 10 in
         !"r");
-     (fun '"StackOverflow" _ => false);
+     (fun '("StackOverflow" _) => false);
      (fun "exn" => raise "exn") }>.
 
 Print handle_exception.
@@ -273,9 +273,9 @@ Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle
-       perform (effect "Effect0");;;
-     (fun '"Effect1", _ => ());
-     (fun '"Effect2", _ => ()) }>.
+       perform effect "Effect0" ();;;
+     (fun '("Effect1" _), _ => ());
+     (fun '("Effect2" _), _ => ()) }>.
 
 Print unhandled_effect.
 Compute (eval_term 1 unhandled_effect).
@@ -291,33 +291,33 @@ Example basic_exn_eff :=
             (try
                (let "eff0" := effect "Effect0" 0 in
                 let "eff1" := effect "Effect1" 1 in
-                let "exn" := exception "Exception" in
+                let "exn" := exception "Exception" () in
                 perform "eff0";
                 "print" "eff0";
                 perform "eff1";
                 "print" "eff1";
                 raise "exn";
                 "print" "exn");;
-             (fun '"RuntimeException" "x" => "print" "x");
-             (fun '"Exception" as "exn" => "print" "exn"));;;
-          (fun '"Effect1" "x", "k" => "print" "x"; "k" ());
-          (fun '"Effect2" _ as "eff", _ => "print" "eff"));
+             (fun '("RuntimeException" "x") => "print" "x");
+             (fun '("Exception" "x") => "print" (exception "Exception" "x")));;;
+          (fun '("Effect1" "x"), "k" => "print" "x"; "k" ());
+          (fun '("Effect2" "x"), _ => "print" (effect "Effect2" "x")));
          let "eff2" := effect "Effect2" 2 in
          perform "eff2";
          "print" "eff2";
          let "final_msg" := 69 in
          "print" "final_msg");;;
-      (fun '"Effect0" "x", "k" => "print" "x"; "k" ());
-      (fun '"Effect2" _ as "eff", "k" => "print" "eff"; "k" ()));
+      (fun '("Effect0" "x"), "k" => "print" "x"; "k" ());
+      (fun '("Effect2" "x"), "k" => "print" (effect "Effect2" "x"); "k" ()));
      !"stdout" }>.
 
 Compute (eval_term 4 basic_exn_eff).
 
 Example variant :=
-  <{ let "x" := `"Variant1" 6 9 in
-     match "x" with
-     | '"Variant1" "x" "y" as "foo" => ("foo", "x" + "y")
-     | '"Variant2" => raise (exception "Failure")
+  <{ let "v" := `"Variant1" (6, 9) in
+     match "v" with
+     | `"Variant1" "p" => let ("x", "y") := "p" in ("v", "x" + "y")
+     | `"Variant2" _ => raise exception "Failure" ()
      end }>.
 
 Print variant.
@@ -353,12 +353,12 @@ Time Compute (eval_term 1000 collatz).
 Example eval_ltr :=
   <{ fix "eval" "e" :=
        match "e" with
-       | '"Num" "n" => "n"
-       | '"Add" "p" =>
+       | `"Num" "n" => "n"
+       | `"Add" "p" =>
            let "r1" := "eval" ("p".("lhs")) in
            let "r2" := "eval" ("p".("rhs")) in
            "r1" + "r2"
-       | '"Mul" "p" =>
+       | `"Mul" "p" =>
            let "r1" := "eval" ("p".("lhs")) in
            let "r2" := "eval" ("p".("rhs")) in
            "r1" * "r2"
@@ -380,12 +380,20 @@ Example loop :=
      let "f" _ :=
        let _ := "print" (!"clock") in
        let _ := "clock" <- !"clock" + 1 in
-       let "f" := perform (effect "Foo") in
+       let "f" := perform effect "Foo" () in
        "f" ()
      in
-     handle "f" ();;; (fun '"Foo", "k" => "k" "f") }>.
+     handle "f" ();;; (fun '("Foo" _), "k" => "k" "f") }>.
 
 Compute (run_term 10 loop).
+
+Example tuple1 :=
+  <{ `(1, 2, 3, 4, 5) }>.
+
+Example use_tuple1 :=
+  <{ let ("a", "b", "c", "d", "e") := tuple1 in "a" + "b" + "c" + "d" + "e" }>.
+
+Compute (run_term 1 use_tuple1).
 
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)

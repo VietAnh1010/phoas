@@ -1,7 +1,6 @@
-From Stdlib Require Import List String Qcanon ZArith.
-From shift_reset.core Require Import syntax env loc record tag val var.
+From Stdlib Require Import String Qcanon ZArith.
+From shift_reset.core Require Import syntax env loc record tag var.
 From shift_reset.interpreter Require Import dispatch ierror iheap imonad unwrap.
-Import ListNotations.
 
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
@@ -10,12 +9,12 @@ Local Unset Elimination Schemes.
 Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
   | TVVar x =>
-      env <- imonad_ask_env;
-      match env_lookup x env with
-      | None => imonad_throw_error (Name_error x)
+      e <- imonad_ask_env;
+      match env_lookup x e with
+      | None => imonad_throw_error (Name_error (var_car x))
       | Some v => imonad_pure v
       end
-  | TVUnit => imonad_pure VUnit
+  | TVTt => imonad_pure VTt
   | TVInt z => imonad_pure (VInt z)
   | TVFloat q => imonad_pure (VFloat q)
   | TVTrue => imonad_pure VTrue
@@ -28,13 +27,24 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       v <- interpret_val_term t1;
       b <- unwrap_vbool v;
       if b then imonad_pure VTrue else interpret_val_term t2
-  | TVFun t' => imonad_asks_env (VFun' t')
-  | TVFix t' => imonad_asks_env (VFix' t')
+  | TVFun b t' => imonad_asks_env (VFun b t')
+  | TVFix f b t' => imonad_asks_env (VFix f b t')
+  | TVFixMut t' f => imonad_asks_env (VFixMut t' f)
   | TVPair t1 t2 =>
       v <- interpret_val_term t1;
       VPair v <$> interpret_val_term t2
+  | TVTuple t' => VTuple <$> interpret_tuple_term t'
+  | TVRecord t' => VRecord <$> interpret_record_term t'
+  | TVProj t' tag =>
+      v <- interpret_val_term t';
+      r <- unwrap_vrecord v;
+      match record_lookup tag r with
+      | None => imonad_throw_error (Name_error (tag_car tag))
+      | Some v' => imonad_pure v'
+      end
   | TVInl t' => VInl <$> interpret_val_term t'
   | TVInr t' => VInr <$> interpret_val_term t'
+  | TVVariant tag t' => VVariant tag <$> interpret_val_term t'
   | TVRef t' =>
       v <- interpret_val_term t';
       h <- imonad_get_heap;
@@ -57,7 +67,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       h <- imonad_get_heap;
       match iheap_set l v h with
       | None => imonad_throw_error (Memory_error "set")
-      | Some h' => VUnit <$ imonad_set_heap h'
+      | Some h' => VTt <$ imonad_set_heap h'
       end
   | TVFree t' =>
       v <- interpret_val_term t';
@@ -65,28 +75,26 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       h <- imonad_get_heap;
       match iheap_free l h with
       | None => imonad_throw_error (Memory_error "free")
-      | Some h' => VUnit <$ imonad_set_heap h'
+      | Some h' => VTt <$ imonad_set_heap h'
       end
-  | TVExn tag ts => VExn' tag <$> imonad_list_map interpret_val_term ts
-  | TVEff tag ts => VEff' tag <$> imonad_list_map interpret_val_term ts
+  | TVExn tag t' => VExn tag <$> interpret_val_term t'
+  | TVEff tag t' => VEff tag <$> interpret_val_term t'
   | TVAssert t' =>
       v <- interpret_val_term t';
       b <- unwrap_vbool v;
-      if b then imonad_pure VUnit else imonad_throw_error (Assert_failure "")
+      if b then imonad_pure VTt else imonad_throw_error (Assert_failure "")
   | TVOp1 op t' => interpret_val_term t' >>= dispatch_op1 op
   | TVOp2 op t1 t2 =>
       v <- interpret_val_term t1;
       f <- dispatch_op2 op v;
       interpret_val_term t2 >>= f
-  | TVVariant tag ts => VVariant' tag <$> imonad_list_map interpret_val_term ts
-  | TVRecord t' => VRecord <$> interpret_record_term t'
-  | TVProj t' tag =>
-      v <- interpret_val_term t';
-      r <- unwrap_vrecord v;
-      match record_lookup tag r with
-      | None => imonad_throw_error (Projection_failure "")
-      | Some v' => imonad_pure v'
-      end
+  end
+with interpret_tuple_term (t : tuple_term) : imonad tuple :=
+  match t with
+  | TTupleNil => imonad_pure TupleNil
+  | TTupleCons t1 t2 =>
+      v <- interpret_val_term t1;
+      TupleCons v <$> interpret_tuple_term t2
   end
 with interpret_record_term (t : record_term) : imonad record :=
   match t with
@@ -96,335 +104,353 @@ with interpret_record_term (t : record_term) : imonad record :=
       RecordCons tag v <$> interpret_record_term t2
   end.
 
-Definition with_binder (b : binder) (v : val) (env : env) : syntax.env :=
+Definition with_binder (b : binder) (v : val) (e : env) : env :=
   match b with
-  | BAny => env
-  | BVar x => EnvCons x v env
+  | BAny => e
+  | BVar x => ECons x v e
   end.
 
-Fixpoint with_binder_list (bs : list binder) (vs : list val) (env : env) : option syntax.env :=
-  match bs, vs with
-  | [], [] => Some env
-  | b :: bs', v :: vs' =>
-      match with_binder_list bs' vs' env with
-      | Some env' => Some (with_binder b v env')
-      | None => None
-      end
-  | _, _ => None
-  end.
-
-Fixpoint match_exn (p : pattern) (exn : exn) (env : env) : option syntax.env :=
+Definition match_variant (p : variant_pattern) (tag : tag) (v : val) (e : env) : option env :=
   match p with
-  | PAny => Some env
-  | PVar x => Some (EnvCons x (VExn exn) env)
-  | PConstr tag bs =>
-      let (tag', vs) := exn in
-      if tag_eqb tag tag' then with_binder_list bs vs env else None
-  | PAlias p' x =>
-      match match_exn p' exn env with
-      | Some env' => Some (EnvCons x (VExn exn) env')
+  | PVariantAny => Some e
+  | PVariantVar x => Some (ECons x (VVariant tag v) e)
+  | PVariantTag tag' b => if tag_eqb tag tag' then Some (with_binder b v e) else None
+  end.
+
+Definition match_exn (p : variant_pattern) (tag : tag) (v : val) (e : env) : option env :=
+  match p with
+  | PVariantAny => Some e
+  | PVariantVar x => Some (ECons x (VExn tag v) e)
+  | PVariantTag tag' b => if tag_eqb tag tag' then Some (with_binder b v e) else None
+  end.
+
+Definition match_eff (p : variant_pattern) (tag : tag) (v : val) (e : env) : option env :=
+  match p with
+  | PVariantAny => Some e
+  | PVariantVar x => Some (ECons x (VEff tag v) e)
+  | PVariantTag tag' b => if tag_eqb tag tag' then Some (with_binder b v e) else None
+  end.
+
+Fixpoint match_tuple (p : tuple_pattern) (t : tuple) (e : env) : option env :=
+  match p with
+  | PTupleNil =>
+      match t with
+      | TupleNil => Some e
+      | TupleCons _ _ => None
+      end
+  | PTupleCons b p' =>
+      match t with
+      | TupleNil => None
+      | TupleCons v t' => match_tuple p' t' (with_binder b v e)
+      end
+  end.
+
+Fixpoint match_record (p : record_pattern) (r : record) (e : env) : option env :=
+  match p with
+  | PRecordAny => Some e
+  | PRecordVar x => Some (ECons x (VRecord r) e)
+  | PRecordNil =>
+      match r with
+      | RecordNil => Some e
+      | RecordCons _ _ _ => None
+      end
+  | PRecordCons tag b p' =>
+      let (o, r') := record_lookup_remove tag r in
+      match o with
+      | Some v => match_record p' r' (with_binder b v e)
       | None => None
       end
   end.
 
-Fixpoint match_eff (p : pattern) (b : binder) (eff : eff) (v : val) (env : env) : option syntax.env :=
-  match p with
-  | PAny => Some (with_binder b v env)
-  | PVar x => Some (EnvCons x (VEff eff) (with_binder b v env))
-  | PConstr tag bs =>
-      let (tag', vs) := eff in
-      if tag_eqb tag tag' then with_binder_list bs vs (with_binder b v env) else None
-  | PAlias p' x =>
-      match match_eff p' b eff v env with
-      | Some env' => Some (EnvCons x (VEff eff) env')
-      | None => None
-      end
-  end.
-
-Fixpoint match_variant (p : pattern) (v : variant) (env : env) : option syntax.env :=
-  match p with
-  | PAny => Some env
-  | PVar x => Some (EnvCons x (VVariant v) env)
-  | PConstr tag bs =>
-      let (tag', vs) := v in
-      if tag_eqb tag tag' then with_binder_list bs vs env else None
-  | PAlias p' x =>
-      match match_variant p' v env with
-      | Some env' => Some (EnvCons x (VVariant v) env')
-      | None => None
-      end
-  end.
+Definition with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
+  (fix go (t' : fix_mut_term) (e' : env) : env :=
+     match t' with
+     | TFixMutLast f _ _ => ECons f (VFixMut t f e) e'
+     | TFixMutCons f _ _ t'' => go t'' (ECons f (VFixMut t f e) e')
+     end) t e.
 
 Inductive iresult : Type :=
 | IRVal : val -> iresult
-| IRShift : metakont -> (val -> imonad iresult) -> tag -> iresult
-| IRControl : metakont -> (val -> imonad iresult) -> tag -> iresult
-| IRRaise : exn -> iresult
-| IRPerform : metakont -> eff -> iresult.
+| IRShift : metakont -> (val -> imonad iresult) -> iresult
+| IRControl : metakont -> (val -> imonad iresult) -> iresult
+| IRRaise : tag -> val -> iresult
+| IRPerform : metakont -> tag -> val -> iresult.
 
-Record ikont : Type := IKont { ikont_car :> kont; ikont_app :> val -> imonad iresult }.
+Definition IRPerform' (mk : metakont) (e : eff) : iresult :=
+  let (tag, v) := e in IRPerform mk tag v.
+
+Definition IRRaise' (e : exn) : iresult :=
+  let (tag, v) := e in IRRaise tag v.
+
+Record ikont : Type := IKont { ikont_car :> kont; ikont_app : val -> imonad iresult }.
 
 Definition ikont_nil : ikont := IKont KNil (fun v => imonad_pure (IRVal v)).
 
 Definition interpreter : Type := term -> ikont -> imonad iresult.
 
-Fixpoint unwind_reset (tag : tag) (k : ikont) (r : iresult) : imonad iresult :=
-  match r with
-  | IRVal v => k v
-  | IRShift mk f tag' =>
-      if tag_eqb tag tag'
-      then f (VMKReset mk tag) >>= unwind_reset tag k
-      else imonad_pure (IRShift (MKReset mk tag k) f tag')
-  | IRControl mk f tag' => imonad_pure (IRControl (MKReset mk tag k) f tag')
-  | IRRaise _ => imonad_pure r
-  | IRPerform mk eff => imonad_pure (IRPerform (MKReset mk tag k) eff)
-  end.
-
-Fixpoint unwind_prompt (tag : tag) (k : ikont) (r : iresult) : imonad iresult :=
-  match r with
-  | IRVal v => k v
-  | IRShift mk f tag' => imonad_pure (IRShift (MKPrompt mk tag k) f tag')
-  | IRControl mk f tag' =>
-      if tag_eqb tag tag'
-      then f (VMKPure mk) >>= unwind_prompt tag k
-      else imonad_pure (IRControl (MKPrompt mk tag k) f tag')
-  | IRRaise _ => imonad_pure r
-  | IRPerform mk eff => imonad_pure (IRPerform (MKPrompt mk tag k) eff)
-  end.
-
-Definition interpret_term1_aux (self : interpreter) (t : term1) (k : ikont) (v : val) : imonad iresult :=
-  let (b, t') := t in imonad_local_env (with_binder b v) (self t' k).
-
-Definition interpret_term2_aux (self : interpreter) (t : term2) (k : ikont) (v1 v2 : val) : imonad iresult :=
-  let (b1, b2, t') := t in imonad_local_env (fun env => with_binder b2 v2 (with_binder b1 v1 env)) (self t' k).
-
-Definition interpret_term1_aux_under (env : env) (self : interpreter) (t : term1) (k : ikont) (v : val) : imonad iresult :=
-  let (b, t') := t in imonad_under_env (with_binder b v env) (self t' k).
-
-Definition interpret_term2_aux_under (env : env) (self : interpreter) (t : term2) (k : ikont) (v1 v2 : val) : imonad iresult :=
-  let (b1, b2, t') := t in imonad_under_env (with_binder b2 v2 (with_binder b1 v1 env)) (self t' k).
-
-Definition interpret_ret_term_aux_under (env : env) (self : interpreter) (t : ret_term) (k : ikont) (v : val) : imonad iresult :=
+Definition interpret_ret_term_under (e : env) (self : interpreter) (t : ret_term) (k : ikont) (v : val) : imonad iresult :=
   match t with
-  | TRetNone => k v
-  | TRetSome b t' => imonad_under_env (with_binder b v env) (self t' k)
+  | TRetNone => ikont_app k v
+  | TRetSome b t' => imonad_under_env (with_binder b v e) (self t' k)
   end.
 
-Fixpoint interpret_exn_term_aux_under (env : env) (self : interpreter) (t : exn_term) (k : ikont) (exn : exn) : option (imonad iresult) :=
+Fixpoint interpret_exn_term_under (e : env) (self : interpreter) (t : exn_term) (k : ikont) (tag : tag) (v : val) : option (imonad iresult) :=
   match t with
   | TExnLast p t' =>
-      match match_exn p exn env with
-      | Some env' => Some (imonad_under_env env' (self t' k))
+      match match_exn p tag v e with
+      | Some e' => Some (imonad_under_env e' (self t' k))
       | None => None
       end
   | TExnCons p t1 t2 =>
-      match match_exn p exn env with
-      | Some env' => Some (imonad_under_env env' (self t1 k))
-      | None => interpret_exn_term_aux_under env self t2 k exn
+      match match_exn p tag v e with
+      | Some e' => Some (imonad_under_env e' (self t1 k))
+      | None => interpret_exn_term_under e self t2 k tag v
       end
   end.
 
-Fixpoint interpret_eff_term_aux_under (env : env) (self : interpreter) (t : eff_term) (k : ikont) (eff : eff) (v : val) : option (imonad iresult) :=
+Fixpoint interpret_eff_term_under (e : env) (self : interpreter) (t : eff_term) (k : ikont) (tag : tag) (v u : val) : option (imonad iresult) :=
   match t with
   | TEffLast p b t' =>
-      match match_eff p b eff v env with
-      | Some env' => Some (imonad_under_env env' (self t' k))
+      match match_eff p tag v e with
+      | Some e' => Some (imonad_under_env (with_binder b u e') (self t' k))
       | None => None
       end
   | TEffCons p b t1 t2 =>
-      match match_eff p b eff v env with
-      | Some env' => Some (imonad_under_env env' (self t1 k))
-      | None => interpret_eff_term_aux_under env self t2 k eff v
+      match match_eff p tag v e with
+      | Some e' => Some (imonad_under_env (with_binder b u e') (self t1 k))
+      | None => interpret_eff_term_under e self t2 k tag v u
       end
   end.
 
-Fixpoint interpret_variant_term_aux_under (env : env) (self : interpreter) (t : variant_term) (k : ikont) (v : variant) : imonad iresult :=
-  match t with
-  | TVariantNil => imonad_throw_error (Match_failure "")
-  | TVariantCons p t1 t2 =>
-      match match_variant p v env with
-      | Some env' => imonad_under_env env' (self t1 k)
-      | None => interpret_variant_term_aux_under env self t2 k v
-      end
-  end.
-
-Definition unwind_try (self : interpreter) (c : try_clo) (k : ikont) (r : iresult) : imonad iresult :=
+Fixpoint unwind_reset (k : ikont) (r : iresult) : imonad iresult :=
   match r with
-  | IRVal v => k v
-  | IRShift mk f tag => imonad_pure (IRShift (MKTry mk c k) f tag)
-  | IRControl mk f tag => imonad_pure (IRControl (MKTry mk c k) f tag)
-  | IRRaise exn =>
-      let (env, t) := c in
-      match interpret_exn_term_aux_under env self t k exn with
+  | IRVal v => ikont_app k v
+  | IRShift mk f => f (VMKReset mk) >>= unwind_reset k
+  | IRControl mk f => imonad_pure (IRControl (MKReset mk k) f)
+  | IRRaise _ _ => imonad_pure r
+  | IRPerform mk tag v => imonad_pure (IRPerform (MKReset mk k) tag v)
+  end.
+
+Fixpoint unwind_prompt (k : ikont) (r : iresult) : imonad iresult :=
+  match r with
+  | IRVal v => ikont_app k v
+  | IRShift mk f => imonad_pure (IRShift (MKPrompt mk k) f)
+  | IRControl mk f => f (VMKPure mk) >>= unwind_prompt k
+  | IRRaise _ _ => imonad_pure r
+  | IRPerform mk tag v => imonad_pure (IRPerform (MKPrompt mk k) tag v)
+  end.
+
+Definition unwind_try (e : env) (self : interpreter) (t : exn_term) (k : ikont) (r : iresult) : imonad iresult :=
+  match r with
+  | IRVal v => ikont_app k v
+  | IRShift mk f => imonad_pure (IRShift (MKTry mk t e k) f)
+  | IRControl mk f => imonad_pure (IRControl (MKTry mk t e k) f)
+  | IRRaise tag v =>
+      match interpret_exn_term_under e self t k tag v with
       | Some m => m
       | None => imonad_pure r
       end
-  | IRPerform mk eff => imonad_pure (IRPerform (MKTry mk c k) eff)
+  | IRPerform mk tag v => imonad_pure (IRPerform (MKTry mk t e k) tag v)
   end.
 
-Definition unwind_handle (self : interpreter) (c : handle_clo) (k : ikont) (r : iresult) : imonad iresult :=
+Definition unwind_handle (e : env) (self : interpreter) (t1 : ret_term) (t2 : eff_term) (k : ikont) (r : iresult) : imonad iresult :=
   match r with
-  | IRVal v => let (env, t, _) := c in interpret_ret_term_aux_under env self t k v
-  | IRShift mk f tag => imonad_pure (IRShift (MKHandle mk c k) f tag)
-  | IRControl mk f tag => imonad_pure (IRControl (MKHandle mk c k) f tag)
-  | IRRaise _ => imonad_pure r
-  | IRPerform mk eff =>
-      let (env, _, t) := c in
-      match interpret_eff_term_aux_under env self t k eff (VMKHandle mk c) with
+  | IRVal v => interpret_ret_term_under e self t1 k v
+  | IRShift mk f => imonad_pure (IRShift (MKHandle mk t1 t2 e k) f)
+  | IRControl mk f => imonad_pure (IRControl (MKHandle mk t1 t2 e k) f)
+  | IRRaise _ _ => imonad_pure r
+  | IRPerform mk tag v =>
+      match interpret_eff_term_under e self t2 k tag v (VMKHandle mk t1 t2 e) with
       | Some m => m
-      | None => imonad_pure (IRPerform (MKHandle mk c k) eff)
+      | None => imonad_pure (IRPerform (MKHandle mk t1 t2 e k) tag v)
       end
   end.
 
-Definition unwind_shallow_handle (self : interpreter) (c : shallow_handle_clo) (k : ikont) (r : iresult) : imonad iresult :=
+Definition unwind_shallow_handle (e : env) (self : interpreter) (t1 : ret_term) (t2 : eff_term) (k : ikont) (r : iresult) : imonad iresult :=
   match r with
-  | IRVal v => let (env, t, _) := c in interpret_ret_term_aux_under env self t k v
-  | IRShift mk f tag => imonad_pure (IRShift (MKShallowHandle mk c k) f tag)
-  | IRControl mk f tag => imonad_pure (IRControl (MKShallowHandle mk c k) f tag)
-  | IRRaise _ => imonad_pure r
-  | IRPerform mk eff =>
-      let (env, _, t) := c in
-      match interpret_eff_term_aux_under env self t k eff (VMKPure mk) with
+  | IRVal v => interpret_ret_term_under e self t1 k v
+  | IRShift mk f => imonad_pure (IRShift (MKShallowHandle mk t1 t2 e k) f)
+  | IRControl mk f => imonad_pure (IRControl (MKShallowHandle mk t1 t2 e k) f)
+  | IRRaise _ _ => imonad_pure r
+  | IRPerform mk tag v =>
+      match interpret_eff_term_under e self t2 k tag v (VMKPure mk) with
       | Some m => m
-      | None => imonad_pure (IRPerform (MKShallowHandle mk c k) eff)
+      | None => imonad_pure (IRPerform (MKShallowHandle mk t1 t2 e k) tag v)
       end
   end.
 
-Definition interpret_kont_clo_aux (self : interpreter) (c : kont_clo) (k : ikont) (v : val) : imonad iresult :=
-  match c with
-  | CKSeq env t => imonad_under_env env (self t k)
-  | CKLet env t => interpret_term1_aux_under env self t k v
-  end.
-
-Fixpoint interpret_kont_aux_app (self : interpreter) (k1 : kont) (k2 : ikont) (v : val) : imonad iresult :=
+Fixpoint interpret_kont_app (self : interpreter) (k1 : kont) (k2 : ikont) (v : val) : imonad iresult :=
   match k1 with
-  | KNil => k2 v
-  | KCons c k1' => interpret_kont_clo_aux self c (IKont (KApp k1' k2) (interpret_kont_aux_app self k1' k2)) v
-  | KApp k11 k12 => interpret_kont_aux_app self k11 (IKont (KApp k12 k2) (interpret_kont_aux_app self k12 k2)) v
+  | KNil => ikont_app k2 v
+  | KSeq t e k1' => imonad_under_env e (self t (IKont (KApp k1' k2) (interpret_kont_app self k1' k2)))
+  | KLet b t e k1' => imonad_under_env (with_binder b v e) (self t (IKont (KApp k1' k2) (interpret_kont_app self k1' k2)))
+  | KApp k11 k12 => interpret_kont_app self k11 (IKont (KApp k12 k2) (interpret_kont_app self k12 k2)) v
   end.
 
-Fixpoint interpret_kont_aux (self : interpreter) (k : kont) (v : val) : imonad iresult :=
+Fixpoint interpret_kont (self : interpreter) (k : kont) (v : val) : imonad iresult :=
   match k with
   | KNil => imonad_pure (IRVal v)
-  | KCons c k' => interpret_kont_clo_aux self c (IKont k' (interpret_kont_aux self k')) v
-  | KApp k1 k2 => interpret_kont_aux_app self k1 (IKont k2 (interpret_kont_aux self k2)) v
+  | KSeq t e k' => imonad_under_env e (self t (IKont k' (interpret_kont self k')))
+  | KLet b t e k' => imonad_under_env (with_binder b v e) (self t (IKont k' (interpret_kont self k')))
+  | KApp k1 k2 => interpret_kont_app self k1 (IKont k2 (interpret_kont self k2)) v
   end.
 
 Definition refine_kont (self : interpreter) (k : kont) : ikont :=
-  IKont k (interpret_kont_aux self k).
+  IKont k (interpret_kont self k).
 
 Definition refine_kont_app (self : interpreter) (k1 : kont) (k2 : ikont) : ikont :=
-  IKont (KApp k1 k2) (interpret_kont_aux_app self k1 k2).
+  IKont (KApp k1 k2) (interpret_kont_app self k1 k2).
 
-Fixpoint interpret_metakont_aux (self : interpreter) (mk : metakont) (v : val) : imonad iresult :=
+Fixpoint interpret_metakont (self : interpreter) (mk : metakont) (v : val) : imonad iresult :=
   match mk with
-  | MKPure k => interpret_kont_aux self k v
-  | MKReset mk' tag k => interpret_metakont_aux self mk' v >>= unwind_reset tag (refine_kont self k)
-  | MKPrompt mk' tag k => interpret_metakont_aux self mk' v >>= unwind_prompt tag (refine_kont self k)
-  | MKTry mk' c k => interpret_metakont_aux self mk' v >>= unwind_try self c (refine_kont self k)
-  | MKHandle mk' c k => interpret_metakont_aux self mk' v >>= unwind_handle self c (refine_kont self k)
-  | MKShallowHandle mk' c k => interpret_metakont_aux self mk' v >>= unwind_shallow_handle self c (refine_kont self k)
+  | MKPure k => interpret_kont self k v
+  | MKReset mk' k => interpret_metakont self mk' v >>= unwind_reset (refine_kont self k)
+  | MKPrompt mk' k => interpret_metakont self mk' v >>= unwind_prompt (refine_kont self k)
+  | MKTry mk' t e k => interpret_metakont self mk' v >>= unwind_try e self t (refine_kont self k)
+  | MKHandle mk' t1 t2 e k => interpret_metakont self mk' v >>= unwind_handle e self t1 t2 (refine_kont self k)
+  | MKShallowHandle mk' t1 t2 e k => interpret_metakont self mk' v >>= unwind_shallow_handle e self t1 t2 (refine_kont self k)
   end.
 
-Definition interpret_metakont_aux_app (self : interpreter) (mk : metakont) (k : ikont) (v : val) : imonad iresult :=
+Definition interpret_metakont_app (self : interpreter) (mk : metakont) (k : ikont) (v : val) : imonad iresult :=
   match mk with
-  | MKPure k' => interpret_kont_aux_app self k' k v
-  | MKReset mk' tag k' => interpret_metakont_aux self mk' v >>= unwind_reset tag (refine_kont_app self k' k)
-  | MKPrompt mk' tag k' => interpret_metakont_aux self mk' v >>= unwind_prompt tag (refine_kont_app self k' k)
-  | MKTry mk' c k' => interpret_metakont_aux self mk' v >>= unwind_try self c (refine_kont_app self k' k)
-  | MKHandle mk' c k' => interpret_metakont_aux self mk' v >>= unwind_handle self c (refine_kont_app self k' k)
-  | MKShallowHandle mk' c k' => interpret_metakont_aux self mk' v >>= unwind_shallow_handle self c (refine_kont_app self k' k)
+  | MKPure k' => interpret_kont_app self k' k v
+  | MKReset mk' k' => interpret_metakont self mk' v >>= unwind_reset (refine_kont_app self k' k)
+  | MKPrompt mk' k' => interpret_metakont self mk' v >>= unwind_prompt (refine_kont_app self k' k)
+  | MKTry mk' t e k' => interpret_metakont self mk' v >>= unwind_try e self t (refine_kont_app self k' k)
+  | MKHandle mk' t1 t2 e k' => interpret_metakont self mk' v >>= unwind_handle e self t1 t2 (refine_kont_app self k' k)
+  | MKShallowHandle mk' t1 t2 e k' => interpret_metakont self mk' v >>= unwind_shallow_handle e self t1 t2 (refine_kont_app self k' k)
   end.
 
-Definition interpret_term_aux (self : interpreter) : term -> ikont -> imonad iresult :=
+Fixpoint interpret_variant_term_under (e : env) (self : interpreter) (t : variant_term) (k : ikont) (tag : tag) (v : val) : imonad iresult :=
+  match t with
+  | TVariantNil => imonad_throw_error (Match_failure "")
+  | TVariantCons p t1 t2 =>
+      match match_variant p tag v e with
+      | Some e' => imonad_under_env e' (self t1 k)
+      | None => interpret_variant_term_under e self t2 k tag v
+      end
+  end.
+
+Fixpoint interpret_fix_mut_term_under (e : env) (self : interpreter) (t : fix_mut_term) (k : ikont) (f : var) (v : val) : imonad iresult :=
+  match t with
+  | TFixMutLast f' b t' =>
+      if var_eqb f f'
+      then imonad_under_env (with_binder b v e) (self t' k)
+      else imonad_throw_error (Name_error (var_car f))
+  | TFixMutCons f' b t1 t2 =>
+      if var_eqb f f'
+      then imonad_under_env (with_binder b v e) (self t1 k)
+      else interpret_fix_mut_term_under e self t2 k f v
+  end.
+
+Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult :=
   fix self' (t : term) (k : ikont) : imonad iresult :=
     match t with
-    | TVal t' => interpret_val_term t' >>= k
+    | TVal tv => interpret_val_term tv >>= ikont_app k
     | TApp t1 t2 =>
         u <- interpret_val_term t1;
-        l <- unwrap_vlambda u;
+        c <- unwrap_vclosure u;
         v <- interpret_val_term t2;
-        match l with
-        | LFun c => let (env, t) := c in interpret_term1_aux_under env self t k v
-        | LFix c => let (env, t) := c in interpret_term2_aux_under env self t k u v
-        | LMKPure mk => interpret_metakont_aux_app self mk k v
-        | LMKReset mk tag => interpret_metakont_aux self mk v >>= unwind_reset tag k
-        | LMKHandle mk c => interpret_metakont_aux self mk v >>= unwind_handle self c k
+        match c with
+        | CFun b t' e => imonad_under_env (with_binder b v e) (self t' k)
+        | CFix f b t' e => imonad_under_env (with_binder b v (ECons f u e)) (self t' k)
+        | CFixMut t' f e => interpret_fix_mut_term_under (with_fix_mut_term t' e) self t' k f v
+        | CMKPure mk => interpret_metakont_app self mk k v
+        | CMKReset mk => interpret_metakont self mk v >>= unwind_reset k
+        | CMKHandle mk t1 t2 e => interpret_metakont self mk v >>= unwind_handle e self t1 t2 k
         end
     | TSeq t1 t2 =>
-        env <- imonad_ask_env;
-        self' t1 (IKont (KCons (CKSeq env t2) k) (fun _ => imonad_under_env env (self' t2 k)))
-    | TLet t1 t2 =>
-        env <- imonad_ask_env;
-        self' t1 (IKont (KCons (CKLet env t2) k) (interpret_term1_aux_under env self' t2 k))
-    | TIf t1 t2 t3 =>
-        v <- interpret_val_term t1;
+        e <- imonad_ask_env;
+        self' t1 (IKont (KSeq t2 e k) (fun _ => imonad_under_env e (self' t2 k)))
+    | TLet b t1 t2 =>
+        e <- imonad_ask_env;
+        self' t1 (IKont (KLet b t2 e k) (fun v => imonad_under_env (with_binder b v e) (self' t2 k)))
+    | TIf tv t1 t2 =>
+        v <- interpret_val_term tv;
         b <- unwrap_vbool v;
-        if b then self' t2 k else self' t3 k
-    | TUnpair t1 t2 =>
-        v <- interpret_val_term t1;
-        p <- unwrap_vprod v;
-        let (v1, v2) := p in interpret_term2_aux self' t2 k v1 v2
-    | TCase t1 t2 t3 =>
-        v <- interpret_val_term t1;
+        if b then self' t1 k else self' t2 k
+    | TSplit b1 b2 tv t' =>
+        v <- interpret_val_term tv;
+        '(v1, v2) <- unwrap_vprod v;
+        imonad_local_env (fun e => with_binder b2 v2 (with_binder b1 v1 e)) (self' t' k)
+    | TCase tv b1 t1 b2 t2 =>
+        v <- interpret_val_term tv;
         s <- unwrap_vsum v;
         match s with
-        | inl v' => interpret_term1_aux self' t2 k v'
-        | inr v' => interpret_term1_aux self' t3 k v'
+        | inl v' => imonad_local_env (with_binder b1 v') (self' t1 k)
+        | inr v' => imonad_local_env (with_binder b2 v') (self' t2 k)
         end
-    | TWhile t1 t2 =>
-        v <- interpret_val_term t1;
+    | TWhile tv t' =>
+        v <- interpret_val_term tv;
         b <- unwrap_vbool v;
         if b then
-          env <- imonad_ask_env;
-          self' t2 (IKont (KCons (CKSeq env t) k) (fun _ => imonad_under_env env (self t k)))
-        else k VUnit
-    | TShift tag t' => imonad_asks_env (fun env => IRShift (MKPure k) (interpret_term1_aux_under env self' t' ikont_nil) tag)
-    | TReset tag t' => self' t' ikont_nil >>= unwind_reset tag k
-    | TControl tag t' => imonad_asks_env (fun env => IRControl (MKPure k) (interpret_term1_aux_under env self' t' ikont_nil) tag)
-    | TPrompt tag t' => self' t' ikont_nil >>= unwind_prompt tag k
+          e <- imonad_ask_env;
+          self' t' (IKont (KSeq t e k) (fun _ => imonad_under_env e (self t k)))
+        else ikont_app k VTt
+    | TLetFix f b t1 t2 => imonad_local_env (fun e => ECons f (VFix f b t1 e) e) (self' t2 k)
+    | TLetFixMut t1 t2 => imonad_local_env (with_fix_mut_term t1) (self' t2 k)
+    | TLetTuple p tv t' =>
+        v <- interpret_val_term tv;
+        t <- unwrap_vtuple v;
+        e <- imonad_ask_env;
+        match match_tuple p t e with
+        | Some e' => imonad_under_env e' (self' t' k)
+        | None => imonad_throw_error (Match_failure "")
+        end
+    | TLetRecord p tv t' =>
+        v <- interpret_val_term tv;
+        r <- unwrap_vrecord v;
+        e <- imonad_ask_env;
+        match match_record p r e with
+        | Some e' => imonad_under_env e' (self' t' k)
+        | None => imonad_throw_error (Match_failure "")
+        end
+    | TMatchVariant tv t' =>
+        v <- interpret_val_term tv;
+        '(Variant tag v) <- unwrap_vvariant v;
+        e <- imonad_ask_env;
+        interpret_variant_term_under e self' t' k tag v
+    | TShift b t' => imonad_asks_env (fun e => IRShift (MKPure k) (fun u => imonad_under_env (with_binder b u e) (self' t' ikont_nil)))
+    | TReset t' => self' t' ikont_nil >>= unwind_reset k
+    | TControl b t' => imonad_asks_env (fun e => IRControl (MKPure k) (fun u => imonad_under_env (with_binder b u e) (self' t' ikont_nil)))
+    | TPrompt t' => self' t' ikont_nil >>= unwind_prompt k
     | TRaise t' =>
         v <- interpret_val_term t';
-        IRRaise <$> unwrap_vexn v
+        IRRaise' <$> unwrap_vexn v
     | TTry t1 t2 =>
         r <- self' t1 ikont_nil;
-        env <- imonad_ask_env;
-        unwind_try self' (CTry env t2) k r
+        e <- imonad_ask_env;
+        unwind_try e self' t2 k r
     | TPerform t' =>
         v <- interpret_val_term t';
-        IRPerform (MKPure k) <$> unwrap_veff v
+        IRPerform' (MKPure k) <$> unwrap_veff v
     | THandle t1 t2 t3 =>
         r <- self' t1 ikont_nil;
-        env <- imonad_ask_env;
-        unwind_handle self' (CHandle env t2 t3) k r
+        e <- imonad_ask_env;
+        unwind_handle e self' t2 t3 k r
     | TShallowHandle t1 t2 t3 =>
         r <- self' t1 ikont_nil;
-        env <- imonad_ask_env;
-        unwind_shallow_handle self' (CShallowHandle env t2 t3) k r
-    | TMatch t1 t2 =>
-        v <- interpret_val_term t1;
-        v <- unwrap_vvariant v;
-        env <- imonad_ask_env;
-        interpret_variant_term_aux_under env self' t2 k v
+        e <- imonad_ask_env;
+        unwind_shallow_handle e self' t2 t3 k r
     end.
 
-Fixpoint interpret_term (fuel : nat) (t : term) (k : ikont) : imonad iresult :=
+Fixpoint interpret_term' (fuel : nat) (t : term) (k : ikont) : imonad iresult :=
   match fuel with
   | O => imonad_throw_error Out_of_fuel
-  | S fuel' => interpret_term_aux (interpret_term fuel') t k
+  | S fuel' => interpret_term (interpret_term' fuel') t k
   end.
 
 Definition unwrap_IRVal (r : iresult) : imonad val :=
   match r with
   | IRVal v => imonad_pure v
-  | IRShift _ _ tag => imonad_throw_error (Undelimited_shift tag)
-  | IRControl _ _ tag => imonad_throw_error (Undelimited_control tag)
-  | IRRaise exn => imonad_throw_error (Unhandled_exception exn)
-  | IRPerform _ eff => imonad_throw_error (Unhandled_effect eff)
+  | IRShift _ _ => imonad_throw_error (Undelimited_shift "")
+  | IRControl _ _ => imonad_throw_error (Undelimited_control "")
+  | IRRaise _ _ => imonad_throw_error (Unhandled_exception "")
+  | IRPerform _ _ _ => imonad_throw_error (Unhandled_effect "")
   end.
 
 Definition run_term (fuel : nat) (t : term) : (ierror + val) * iheap :=
-  imonad_run (interpret_term fuel t ikont_nil >>= unwrap_IRVal) EnvNil iheap_empty.
+  imonad_run (interpret_term' fuel t ikont_nil >>= unwrap_IRVal) ENil iheap_empty.
 
 Definition eval_term (fuel : nat) (t : term) : ierror + val :=
   fst (run_term fuel t).

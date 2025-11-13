@@ -1,20 +1,12 @@
 From Stdlib Require Import String Qcanon ZArith.
-From shift_reset.core Require Import syntax loc tag.
+From shift_reset.core Require Import syntax loc.
 From shift_reset.interpreter Require Import ierror imonad.
 
 Local Open Scope string_scope.
-Local Unset Elimination Schemes.
-
-Inductive lambda : Type :=
-| LFun : fun_clo -> lambda
-| LFix : fix_clo -> lambda
-| LMKPure : metakont -> lambda
-| LMKReset : metakont -> tag -> lambda
-| LMKHandle : metakont -> handle_clo -> lambda.
 
 Definition unwrap_vunit (v : val) : imonad unit :=
   match v with
-  | VUnit => imonad_pure tt
+  | VTt => imonad_pure tt
   | _ => imonad_throw_error (Type_error "unwrap_vunit")
   end.
 
@@ -58,20 +50,26 @@ Definition unwrap_vsum (v : val) : imonad (val + val) :=
 
 Definition unwrap_vexn (v : val) : imonad exn :=
   match v with
-  | VExn exn => imonad_pure exn
+  | VExn tag v' => imonad_pure (Exn tag v')
   | _ => imonad_throw_error (Type_error "unwrap_vexn")
   end.
 
 Definition unwrap_veff (v : val) : imonad eff :=
   match v with
-  | VEff eff => imonad_pure eff
+  | VEff tag v' => imonad_pure (Eff tag v')
   | _ => imonad_throw_error (Type_error "unwrap_veff")
   end.
 
 Definition unwrap_vvariant (v : val) : imonad variant :=
   match v with
-  | VVariant v' => imonad_pure v'
+  | VVariant tag v' => imonad_pure (Variant tag v')
   | _ => imonad_throw_error (Type_error "unwrap_vvariant")
+  end.
+
+Definition unwrap_vtuple (v : val) : imonad tuple :=
+  match v with
+  | VTuple t => imonad_pure t
+  | _ => imonad_throw_error (Type_error "unwrap_vtuple")
   end.
 
 Definition unwrap_vrecord (v : val) : imonad record :=
@@ -80,12 +78,13 @@ Definition unwrap_vrecord (v : val) : imonad record :=
   | _ => imonad_throw_error (Type_error "unwrap_vrecord")
   end.
 
-Definition unwrap_vlambda (v : val) : imonad lambda :=
+Definition unwrap_vclosure (v : val) : imonad closure :=
   match v with
-  | VFun c => imonad_pure (LFun c)
-  | VFix c => imonad_pure (LFix c)
-  | VMKPure mk => imonad_pure (LMKPure mk)
-  | VMKReset mk tag => imonad_pure (LMKReset mk tag)
-  | VMKHandle mk c => imonad_pure (LMKHandle mk c)
-  | _ => imonad_throw_error (Type_error "unwrap_vlambda")
+  | VFun b t e => imonad_pure (CFun b t e)
+  | VFix f b t e => imonad_pure (CFix f b t e)
+  | VFixMut t f e => imonad_pure (CFixMut t f e)
+  | VMKPure mk => imonad_pure (CMKPure mk)
+  | VMKReset mk => imonad_pure (CMKReset mk)
+  | VMKHandle mk t1 t2 e => imonad_pure (CMKHandle mk t1 t2 e)
+  | _ => imonad_throw_error (Type_error "unwrap_vclosure")
   end.

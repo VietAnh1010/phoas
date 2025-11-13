@@ -163,6 +163,7 @@ Notation "m1 <*> m2" := (imonad_app m1 m2) (at level 55, left associativity) : i
 Notation "m >>= f" := (imonad_bind m f) (at level 50, left associativity) : imonad_scope.
 Notation "m1 >> m2" := (imonad_then m1 m2) (at level 50, left associativity) : imonad_scope.
 
+Notation "' x <- m1 ; m2" := (imonad_bind m1 (fun x => m2)) (at level 100, x pattern, right associativity) : imonad_scope.
 Notation "x <- m1 ; m2" := (imonad_bind m1 (fun x => m2)) (at level 100, right associativity) : imonad_scope.
 Notation "m1 ;; m2" := (imonad_bind m1 (fun _ => m2)) (at level 100, right associativity) : imonad_scope.
 
@@ -172,13 +173,17 @@ Definition imonad_kleisli_compose {A B C} (f1 : A -> imonad B) (f2 : B -> imonad
 Fixpoint imonad_list_map {A B} (f : A -> imonad B) (xs : list A) : imonad (list B) :=
   match xs with
   | [] => imonad_pure []
-  | x :: xs' => y <- f x; cons y <$> imonad_list_map f xs'
+  | x :: xs' =>
+      y <- f x;
+      cons y <$> imonad_list_map f xs'
   end.
 
 Fixpoint imonad_list_forall2b {A B} (f : A -> B -> imonad bool) (xs : list A) (ys : list B) : imonad bool :=
   match xs, ys with
   | [], [] => imonad_pure true
-  | x :: xs', y :: ys' => b <- f x y; if b then imonad_list_forall2b f xs' ys' else imonad_pure false
+  | x :: xs', y :: ys' =>
+      b <- f x y;
+      if b then imonad_list_forall2b f xs' ys' else imonad_pure false
   | _, _ => imonad_pure false
   end.
 

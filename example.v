@@ -393,7 +393,16 @@ Example tuple1 :=
 Example use_tuple1 :=
   <{ let ("a", "b", "c", "d", "e") := tuple1 in "a" + "b" + "c" + "d" + "e" }>.
 
-Compute (run_term 1 use_tuple1).
+Compute (eval_term 1 use_tuple1).
+
+Example even :=
+  let odd := <{ if "x" = 0 then false else "even" ("x" - 1) }> in
+  let even := <{ if "x" = 0 then true else "odd" ("x" - 1) }> in
+  <{ fix "odd" "x" := odd with "even" "x" := even for "even" }>.
+
+Compute (eval_term 100 <{ even 50 }>).
+Compute (eval_term 100 <{ even 49 }>).
+Compute (eval_term 100 <{ even (-1) }>).
 
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)

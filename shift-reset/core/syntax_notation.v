@@ -14,6 +14,7 @@ Declare Custom Entry exn_term.
 Declare Custom Entry eff_term.
 Declare Custom Entry variant_term.
 Declare Custom Entry record_term.
+Declare Custom Entry fix_mut_term.
 
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
@@ -162,18 +163,92 @@ Notation "'fun' x1 .. xn => t" :=
 Notation "'fix' f x := t" :=
   (TVFix f x t)
     (in custom term at level 69,
-        f custom binder' at level 0,
+        f constr at level 0,
         x custom binder' at level 0,
         t custom term at level 99) : term_scope.
 
 Notation "'fix' f x1 x2 .. xn := t" :=
   (TVFix f x1 (TVFun x2 .. (TVFun xn t) ..))
     (in custom term at level 69,
-        f custom binder' at level 0,
+        f constr at level 0,
         x1 custom binder' at level 0,
         x2 custom binder' at level 0,
         xn custom binder' at level 0,
         t custom term at level 99) : term_scope.
+
+Notation "f x := t1 'with' t2" :=
+  (TFixMutCons f x t1 t2)
+    (in custom fix_mut_term at level 69,
+        f constr at level 0,
+        x custom binder' at level 0,
+        t1 custom term,
+        t2 custom fix_mut_term) : term_scope.
+
+Notation "f x1 x2 .. xn := t1 'with' t2" :=
+  (TFixMutCons f x1 (TVFun x2 .. (TVFun xn t1) ..) t2)
+    (in custom fix_mut_term at level 69,
+        f constr at level 0,
+        x1 custom binder' at level 0,
+        x2 custom binder' at level 0,
+        xn custom binder' at level 0,
+        t1 custom term,
+        t2 custom fix_mut_term) : term_scope.
+
+Notation "f x := t" :=
+  (TFixMutLast f x t)
+    (in custom fix_mut_term at level 69,
+        f constr at level 0,
+        x custom binder' at level 0,
+        t custom term) : term_scope.
+
+Notation "f x1 x2 .. xn := t" :=
+  (TFixMutLast f x1 (TVFun x2 .. (TVFun xn t) ..))
+    (in custom fix_mut_term at level 69,
+        f constr at level 0,
+        x1 custom binder' at level 0,
+        x2 custom binder' at level 0,
+        xn custom binder' at level 0,
+        t custom term) : term_scope.
+
+Notation "'let' 'fix' f x := t1 'with' t2 'in' t3" :=
+  (TLetFixMut (TFixMutCons f x t1 t2) t3)
+    (in custom term at level 69,
+        f constr at level 0,
+        x custom binder' at level 0,
+        t1 custom term,
+        t2 custom fix_mut_term,
+        t3 custom term) : term_scope.
+
+Notation "'let' 'fix' f x1 x2 .. xn := t1 'with' t2 'in' t3" :=
+  (TLetFixMut (TFixMutCons f x1 (TVFun x2 .. (TVFun xn t1) ..) t2) t3)
+    (in custom term at level 69,
+        f constr at level 0,
+        x1 custom binder' at level 0,
+        x2 custom binder' at level 0,
+        xn custom binder' at level 0,
+        t1 custom term,
+        t2 custom fix_mut_term,
+        t3 custom term) : term_scope.
+
+Notation "'fix' f x := t1 'with' t2 'for' g" :=
+  (TVFixMut (TFixMutCons f x t1 t2) g)
+    (in custom term at level 69,
+        f constr at level 0,
+        x custom binder' at level 0,
+        t1 custom term at level 99,
+        t2 custom fix_mut_term,
+        g constr at level 0) : term_scope.
+
+Notation "'fix' f x1 x2 .. xn := t1 'with' t2 'for' g" :=
+  (TVFixMut (TFixMutCons f x1 (TVFun x2 .. (TVFun xn t1) ..) t2) g)
+    (in custom term at level 69,
+        f constr at level 0,
+        x1 custom binder' at level 0,
+        x2 custom binder' at level 0,
+        xn custom binder' at level 0,
+        t1 custom term at level 99,
+        t2 custom fix_mut_term,
+        g constr at level 0) : term_scope.
 
 Notation "()" := TVTt (in custom term at level 0) : term_scope.
 Notation "'true'" := TVTrue (in custom term at level 0) : term_scope.

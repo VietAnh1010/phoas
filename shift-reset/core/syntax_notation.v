@@ -328,7 +328,7 @@ Notation "t1 , t2" :=
 
 Notation "`( t1 , t2 , t3 , .. , tn )" :=
   (TVTuple (TTupleCons t1 (TTupleCons t2 (TTupleCons t3 .. (TTupleCons tn TTupleNil) ..))))
-    (in custom term at level 65,
+    (in custom term at level 0,
         t1 custom term at level 23,
         t2 custom term at level 23,
         t3 custom term at level 23,
@@ -343,7 +343,7 @@ Notation "'let' ( x1 , x2 ) := tv 'in' t" :=
         t custom term,
         right associativity) : term_scope.
 
-Notation "'let' ` ( x1 , x2 , x3 , .. , xn ) := tv 'in' t" :=
+Notation "'let' `( x1 , x2 , x3 , .. , xn ) := tv 'in' t" :=
   (TLetTuple (PTupleCons x1 (PTupleCons x2 (PTupleCons x3 .. (PTupleCons xn PTupleNil) ..))) tv t)
     (in custom term at level 69,
         x1 custom binder' at level 0,
@@ -427,7 +427,7 @@ Notation "'match' tv 'with' t 'end'" :=
 
 Notation "`{ tag := t1 t2" :=
   (TVRecord (TRecordCons tag t1 t2))
-    (in custom term at level 23,
+    (in custom term at level 0,
         tag constr at level 0,
         t1 custom term at level 23,
         t2 custom record_term at level 23) : term_scope.

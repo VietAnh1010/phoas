@@ -365,11 +365,12 @@ Example eval_ltr :=
        end }>.
 
 Example eval_ltr_input1 :=
-  <{ `"Add" (`{"lhs" := `"Num" 2; "rhs" := `"Mul" (`{"lhs" := `"Num" 3; "rhs" := `"Num" 4})}) }>.
+  <{ `"Add" `{"lhs" := `"Num" 2; "rhs" := `"Mul" `{"lhs" := `"Num" 3; "rhs" := `"Num" 4}} }>.
 
 Example eval_ltr_input2 :=
-  <{ `"Sub" (`{"lhs" := `"Num" 6; "rhs" := `"Num" 9}) }>.
+  <{ `"Sub" `{"lhs" := `"Num" 6; "rhs" := `"Num" 9} }>.
 
+Print eval_ltr_input1.
 Compute (eval_term 10 <{ eval_ltr eval_ltr_input1 }>).
 Compute (eval_term 10 <{ eval_ltr eval_ltr_input2 }>).
 
@@ -387,12 +388,10 @@ Example loop :=
 
 Compute (run_term 10 loop).
 
-Example tuple1 :=
-  <{ `(1, 2, 3, 4, 5) }>.
+Example tuple1 := <{ `(1, 2, 3, 4, 5) }>.
+Example use_tuple1 := <{ let `("a", "b", "c", "d", "e") := tuple1 in "a" + "b" + "c" + "d" + "e" }>.
 
-Example use_tuple1 :=
-  <{ let ("a", "b", "c", "d", "e") := tuple1 in "a" + "b" + "c" + "d" + "e" }>.
-
+Print use_tuple1.
 Compute (eval_term 1 use_tuple1).
 
 Example even :=
@@ -403,6 +402,63 @@ Example even :=
 Compute (eval_term 100 <{ even 50 }>).
 Compute (eval_term 100 <{ even 49 }>).
 Compute (eval_term 100 <{ even (-1) }>).
+
+Example send_recv_protocol :=
+  let send :=
+    <{ let ("k", "v") := "args" in
+       shallow handle
+         "k" "v";;;
+       (fun '("Send" "n"), "k" => "recv" `("n", "k", ()));
+       (fun '("Recv" _), _ => raise exception "Protocol_violation" ()) }>
+  in
+  let recv :=
+    <{ let `("n", "k", "v") := "args" in
+       shallow handle
+         "k" "v";;;
+       (fun '("Recv" _), "k" => "send" ("k", "n"));
+       (fun '("Send" _), _ => raise exception "Protocol_violation" ()) }>
+  in
+  <{ fun "k" => let fix "send" "args" := send with "recv" "args" := recv in "send" ("k", ()) }>.
+
+Example run_send_recv1 :=
+  <{ let "stdout" := ref () in
+     let "print" := print in
+     send_recv_protocol
+       (fun _ =>
+          let "eff" := effect "Send" 42 in
+          let _ := "print" "eff" in
+          let _ := perform "eff" in
+          let "eff" := effect "Recv" () in
+          let _ := "print" "eff" in
+          let "n" := perform "eff" in
+          let _ := "print" "n" in
+          let "eff" := effect "Send" 43 in
+          let _ := "print" "eff" in
+          let _ := perform "eff" in
+          let "eff" := effect "Recv" () in
+          let _ := "print" "eff" in
+          let "n" := perform "eff" in
+          let _ := "print" "n" in
+          ());
+     !"stdout" }>.
+
+Compute (eval_term 9 run_send_recv1).
+
+Example run_send_recv2 :=
+  <{ let "stdout" := ref () in
+     let "print" := print in
+     send_recv_protocol
+       (fun _ =>
+          let "eff" := effect "Send" 0 in
+          let _ := "print" "eff" in
+          let _ := perform "eff" in
+          let "eff" := effect "Send" 1 in
+          let _ := "print" "eff" in
+          let _ := perform "eff" in
+          ());
+     !"stdout" }>.
+
+Compute (eval_term 6 run_send_recv2).
 
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)

@@ -74,6 +74,8 @@ with val_term : Type :=
 | TVFix : var -> binder -> term -> val_term
 | TVFixMut : fix_mut_term -> var -> val_term
 | TVPair : val_term -> val_term -> val_term
+| TVFst : val_term -> val_term
+| TVSnd : val_term -> val_term
 | TVTuple : tuple_term -> val_term
 | TVRecord : record_term -> val_term
 | TVProj : val_term -> tag -> val_term

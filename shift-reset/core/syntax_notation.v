@@ -263,6 +263,12 @@ Notation "- t" :=
 Notation "'not' t" :=
   (Op1Not t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
+Notation "'fst' t" :=
+  (TVFst t) (in custom term at level 23, t custom term at level 0) : term_scope.
+
+Notation "'snd' t" :=
+  (TVSnd t) (in custom term at level 23, t custom term at level 0) : term_scope.
+
 Notation "'ref' t" :=
   (TVRef t) (in custom term at level 23, t custom term at level 0) : term_scope.
 

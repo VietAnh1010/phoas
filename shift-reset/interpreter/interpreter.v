@@ -33,6 +33,12 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
   | TVPair t1 t2 =>
       v <- interpret_val_term t1;
       VPair v <$> interpret_val_term t2
+  | TVFst t' =>
+      v <- interpret_val_term t';
+      fst <$> unwrap_vprod v
+  | TVSnd t' =>
+      v <- interpret_val_term t';
+      snd <$> unwrap_vprod v
   | TVTuple t' => VTuple <$> interpret_tuple_term t'
   | TVRecord t' => VRecord <$> interpret_record_term t'
   | TVProj t' tag =>
@@ -407,9 +413,9 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
         end
     | TMatchVariant tv t' =>
         v <- interpret_val_term tv;
-        '(Variant tag v) <- unwrap_vvariant v;
+        '(Variant tag v') <- unwrap_vvariant v;
         e <- imonad_ask_env;
-        interpret_variant_term_under e self' t' k tag v
+        interpret_variant_term_under e self' t' k tag v'
     | TShift b t' => imonad_asks_env (fun e => IRShift (MKPure k) (fun u => imonad_under_env (with_binder b u e) (self' t' ikont_nil)))
     | TReset t' => self' t' ikont_nil >>= unwind_reset k
     | TControl b t' => imonad_asks_env (fun e => IRControl (MKPure k) (fun u => imonad_under_env (with_binder b u e) (self' t' ikont_nil)))

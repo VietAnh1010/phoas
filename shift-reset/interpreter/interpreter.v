@@ -357,7 +357,7 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
         | CFixMut t' f e => interpret_fix_mut_term_under (with_fix_mut_term t' e) self t' k f v
         | CMKPure mk => interpret_metakont_app self mk k v
         | CMKReset mk => interpret_metakont self mk v >>= unwind_reset k
-        | CMKHandle mk t1 t2 e => interpret_metakont self mk v >>= unwind_handle e self t1 t2 k
+        | CMKHandle mk t1' t2' e => interpret_metakont self mk v >>= unwind_handle e self t1' t2' k
         end
     | TSeq t1 t2 =>
         e <- imonad_ask_env;

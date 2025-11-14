@@ -343,7 +343,7 @@ Notation "'let' ( x1 , x2 ) := tv 'in' t" :=
         t custom term,
         right associativity) : term_scope.
 
-Notation "'let' ( x1 , x2 , x3 , .. , xn ) := tv 'in' t" :=
+Notation "'let' ` ( x1 , x2 , x3 , .. , xn ) := tv 'in' t" :=
   (TLetTuple (PTupleCons x1 (PTupleCons x2 (PTupleCons x3 .. (PTupleCons xn PTupleNil) ..))) tv t)
     (in custom term at level 69,
         x1 custom binder' at level 0,

@@ -464,8 +464,13 @@ Example atomically :=
   <{ fun "f" =>
        let "comp" :=
          handle
-           try "f" ();; (fun "exn" => (fun "rb" => "rb" (); raise "exn"));;;
+           (try
+              ("f" (); fun _ => ());;
+            (fun "exn" =>
+               "print" "exn";
+               (fun "rb" => "rb" (); raise "exn")));;;
          (fun '("Update" "p"), "k" =>
+            "print" (effect "Update" "p");
             (fun "rb" =>
                let ("r", "v") := "p" in
                let "old_v" := !"r" in
@@ -483,26 +488,28 @@ Example run_transaction :=
      let "print" := print in
      let "atomically" := atomically in
      let "update" := update in
-     "atomically"
-       (fun _ =>
-          let "r" := ref 10 in
-          "print" (`"T0:" !"r");
-          try
-            ("atomically"
-               (fun _ =>
-                  "update" ("r", 20);
-                  "update" ("r", 21);
-                  "print" (`"T1: before abort" !"r");
-                  raise (exception "Result" !"r");
-                  "print" (`"T1: after abort" !"r");
-                  "update" ("r", 30)));;
-          (fun '("Result" "v") =>
-             "print" (`"T0: T1 aborted" "v");
-             "print" (`"T0:" !"r")));
+     let "result" :=
+       "atomically"
+         (fun _ =>
+            let "r" := ref 10 in
+            "print" (`"T0:" !"r");
+            try
+              ("atomically"
+                 (fun _ =>
+                    "update" ("r", 20);
+                    "update" ("r", 21);
+                    "print" (`"T1: before abort" !"r");
+                    raise (exception "Result" !"r");
+                    "print" (`"T1: after abort" !"r");
+                    "update" ("r", 30)));;
+            (fun '("Result" "v") =>
+               "print" (`"T0: T1 aborted" "v");
+               "print" (`"T0:" !"r")))
+     in
      !"stdout" }>.
 
 Compute run_transaction.
-Compute (run_term 10 run_transaction).
+Compute (eval_term 10 run_transaction).
 
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)

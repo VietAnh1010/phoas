@@ -460,6 +460,50 @@ Example run_send_recv2 :=
 
 Compute (eval_term 6 run_send_recv2).
 
+Example atomically :=
+  <{ fun "f" =>
+       let "comp" :=
+         handle
+           try "f" ();; (fun "exn" => (fun "rb" => "rb" (); raise "exn"));;;
+         (fun '("Update" "p"), "k" =>
+            (fun "rb" =>
+               let ("r", "v") := "p" in
+               let "old_v" := !"r" in
+               "r" <- "v";
+               let "k" := "k" () in
+               "k" (fun _ => "r" <- "old_v"; "rb" ())))
+       in
+       "comp" (fun _ => ()) }>.
+
+Example update :=
+  <{ fun "p" => perform effect "Update" "p" }>.
+
+Example run_transaction :=
+  <{ let "stdout" := ref () in
+     let "print" := print in
+     let "atomically" := atomically in
+     let "update" := update in
+     "atomically"
+       (fun _ =>
+          let "r" := ref 10 in
+          "print" (`"T0:" !"r");
+          try
+            ("atomically"
+               (fun _ =>
+                  "update" ("r", 20);
+                  "update" ("r", 21);
+                  "print" (`"T1: before abort" !"r");
+                  raise (exception "Result" !"r");
+                  "print" (`"T1: after abort" !"r");
+                  "update" ("r", 30)));;
+          (fun '("Result" "v") =>
+             "print" (`"T0: T1 aborted" "v");
+             "print" (`"T0:" !"r")));
+     !"stdout" }>.
+
+Compute run_transaction.
+Compute (run_term 10 run_transaction).
+
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)
 Recursive Extraction run_term.

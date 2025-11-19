@@ -511,6 +511,88 @@ Example run_transaction :=
 Compute run_transaction.
 Compute (eval_term 10 run_transaction).
 
+Example nat_iterator n :=
+  <{ let "seed" := ref n in
+     fun _ =>
+       let "x" := !"seed" in
+       let _ := "seed" <- "x" + 1 in
+       "x" }>.
+
+Example map_iterator f it :=
+  <{ fun _ => let "x" := it () in f "x" }>.
+
+Example zip_with_iterator f it1 it2 :=
+  <{ fun _ =>
+       let "x" := it1 () in
+       let "y" := it2 () in
+       f ("x", "y") }>.
+
+Example delta_iterator p it :=
+  <{ let "prev" := ref p in
+     fun _ =>
+       let "x" := it () in
+       let "y" := !"prev" in
+       let _ := "prev" <- "x" in
+       "x" - "y" }>.
+
+Example delta_n :=
+  <{ fix "delta_n" "args" :=
+       let ("it", "n") := "args" in
+       if "n" = 0 then
+         "it"
+       else
+         let "it" := "delta_n" ("it", "n" - 1) in
+         let "p" := "it" () in
+         {delta_iterator "p" "it"} }>.
+
+Example run_delta_n it n k :=
+  <{ let "it" := it in
+     let "it" := delta_n ("it", n) in
+     let "i" := ref 0 in
+     let "r" := ref () in
+     while (!"i" < k) do
+       (let "v" := "it" () in
+        "r" <- ("v", !"r");
+        "i" <- !"i" + 1);
+     !"r" }>.
+
+Compute (eval_term 10 (run_delta_n (nat_iterator 0) 0 5)).
+Compute (eval_term 10 (run_delta_n (nat_iterator 0) 1 5)).
+Compute (eval_term 10 (run_delta_n (nat_iterator 0) 2 5)).
+
+Example square_iterator n :=
+  <{ let "it" := {nat_iterator n} in
+     let "f" "x" := "x" * "x" in
+     {map_iterator "f" "it"} }>.
+
+Compute (eval_term 10 (run_delta_n (square_iterator 0) 0 5)).
+Compute (eval_term 10 (run_delta_n (square_iterator 0) 1 5)).
+Compute (eval_term 10 (run_delta_n (square_iterator 0) 2 5)).
+Compute (eval_term 10 (run_delta_n (square_iterator 0) 3 5)).
+
+Example cube_iterator n :=
+  <{ let "it" := {nat_iterator n} in
+     let "f" "x" := "x" * "x" * "x" in
+     {map_iterator "f" "it"} }>.
+
+Compute (eval_term 10 (run_delta_n (cube_iterator 0) 0 5)).
+Compute (eval_term 10 (run_delta_n (cube_iterator 0) 1 5)).
+Compute (eval_term 10 (run_delta_n (cube_iterator 0) 2 5)).
+Compute (eval_term 10 (run_delta_n (cube_iterator 0) 3 5)).
+Compute (eval_term 15 (run_delta_n (cube_iterator 0) 4 5)).
+
+Example x3_x2_iterator n :=
+  <{ let "it1" := {cube_iterator n} in
+     let "it2" := {square_iterator n} in
+     let "f" "args" := let ("x", "y") := "args" in "x" + "y" in
+     {zip_with_iterator "f" "it1" "it2"} }>.
+
+Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 0 5)).
+Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 1 5)).
+Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 2 5)).
+Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 3 5)).
+Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 4 5)).
+
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)
 Recursive Extraction run_term.

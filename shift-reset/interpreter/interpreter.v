@@ -19,6 +19,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
   | TVFloat q => imonad_pure (VFloat q)
   | TVTrue => imonad_pure VTrue
   | TVFalse => imonad_pure VFalse
+  | TVChar a => imonad_pure (VChar a)
   | TVAnd t1 t2 =>
       v <- interpret_val_term t1;
       b <- unwrap_vbool v;

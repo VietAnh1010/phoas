@@ -1,8 +1,9 @@
-From Stdlib Require Import Qcanon ZArith.
+From Stdlib Require Import Ascii Qcanon ZArith.
 From shift_reset.core Require Import syntax loc tag var.
 
 Create HintDb eq_dec_db discriminated.
 
+Hint Resolve ascii_dec : eq_dec_db.
 Hint Resolve Z.eq_dec : eq_dec_db.
 Hint Resolve Qc_eq_dec : eq_dec_db.
 Hint Resolve loc_eq_dec : eq_dec_db.

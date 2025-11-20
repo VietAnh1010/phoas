@@ -1,4 +1,4 @@
-From Stdlib Require Import Qcanon ZArith.
+From Stdlib Require Import Ascii Qcanon ZArith.
 From shift_reset.core Require Import loc tag var.
 
 Inductive binder : Type :=
@@ -68,6 +68,7 @@ with val_term : Type :=
 | TVFloat : Qc -> val_term
 | TVTrue : val_term
 | TVFalse : val_term
+| TVChar : ascii -> val_term
 | TVAnd : val_term -> val_term -> val_term
 | TVOr : val_term -> val_term -> val_term
 | TVFun : binder -> term -> val_term
@@ -119,6 +120,7 @@ Inductive val : Type :=
 | VFloat : Qc -> val
 | VTrue : val
 | VFalse : val
+| VChar : ascii -> val
 | VFun : binder -> term -> env -> val
 | VFix : var -> binder -> term -> env -> val
 | VFixMut : fix_mut_term -> var -> env -> val

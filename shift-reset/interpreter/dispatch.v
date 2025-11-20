@@ -1,5 +1,5 @@
-From Stdlib Require Import String Qcanon ZArith.
-From shift_reset.lib Require Import comparison float int.
+From Stdlib Require Import Ascii String Qcanon ZArith.
+From shift_reset.lib Require Import char comparison float int.
 From shift_reset.core Require Import syntax loc tag val.
 From shift_reset.interpreter Require Import ierror imonad unwrap.
 
@@ -104,6 +104,7 @@ Fixpoint compare_val (v1 v2 : val) : imonad comparison :=
   | VTrue, VFalse => imonad_pure Gt
   | VFalse, VTrue => imonad_pure Lt
   | VFalse, VFalse => imonad_pure Eq
+  | VChar a1, VChar a2 => imonad_pure (Ascii.compare a1 a2)
   | VPair v11 v12, VPair v21 v22 =>
       c <- compare_val v11 v21;
       match c with
@@ -148,6 +149,7 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   | VTrue, VFalse => imonad_pure false
   | VFalse, VTrue => imonad_pure false
   | VFalse, VFalse => imonad_pure true
+  | VChar a1, VChar a2 => imonad_pure (Ascii.eqb a1 a2)
   | VPair v11 v12, VPair v21 v22 =>
       b <- equal_val v11 v21;
       if b then equal_val v12 v22 else imonad_pure false
@@ -309,6 +311,24 @@ Definition vbool_eq2 (arg : val) : imonad val :=
 Definition vbool_neq2 (arg : val) : imonad val :=
   VBool <$> unwrap_vbool arg.
 
+Definition vchar_lt (a : ascii) (arg : val) : imonad val :=
+  VBool_by2 Ascii.ltb a <$> unwrap_vchar arg.
+
+Definition vchar_le (a : ascii) (arg : val) : imonad val :=
+  VBool_by2 Ascii.leb a <$> unwrap_vchar arg.
+
+Definition vchar_gt (a : ascii) (arg : val) : imonad val :=
+  VBool_by2 ascii_gtb a <$> unwrap_vchar arg.
+
+Definition vchar_ge (a : ascii) (arg : val) : imonad val :=
+  VBool_by2 ascii_geb a <$> unwrap_vchar arg.
+
+Definition vchar_eq (a : ascii) (arg : val) : imonad val :=
+  VBool_by2 Ascii.eqb a <$> unwrap_vchar arg.
+
+Definition vchar_neq (a : ascii) (arg : val) : imonad val :=
+  VBool_by2 ascii_neqb a <$> unwrap_vchar arg.
+
 Definition vprod_lt (v1 v2 arg : val) : imonad val :=
   VBool_by compare_ltb <$> vprod_compare v1 v2 arg.
 
@@ -406,6 +426,7 @@ Definition dispatch_lt (v : val) : imonad (val -> imonad val) :=
   | VFloat q => imonad_pure (vfloat_lt q)
   | VTrue => imonad_pure vbool_lt1
   | VFalse => imonad_pure vbool_lt2
+  | VChar a => imonad_pure (vchar_lt a)
   | VPair v1 v2 => imonad_pure (vprod_lt v1 v2)
   | VInl v' => imonad_pure (vsum_lt1 v')
   | VInr v' => imonad_pure (vsum_lt2 v')
@@ -419,6 +440,7 @@ Definition dispatch_le (v : val) : imonad (val -> imonad val) :=
   | VFloat q => imonad_pure (vfloat_le q)
   | VTrue => imonad_pure vbool_le1
   | VFalse => imonad_pure vbool_le2
+  | VChar a => imonad_pure (vchar_le a)
   | VPair v1 v2 => imonad_pure (vprod_le v1 v2)
   | VInl v' => imonad_pure (vsum_le1 v')
   | VInr v' => imonad_pure (vsum_le2 v')
@@ -432,6 +454,7 @@ Definition dispatch_gt (v : val) : imonad (val -> imonad val) :=
   | VFloat q => imonad_pure (vfloat_gt q)
   | VTrue => imonad_pure vbool_gt1
   | VFalse => imonad_pure vbool_gt2
+  | VChar a => imonad_pure (vchar_gt a)
   | VPair v1 v2 => imonad_pure (vprod_gt v1 v2)
   | VInl v' => imonad_pure (vsum_gt1 v')
   | VInr v' => imonad_pure (vsum_gt2 v')
@@ -445,6 +468,7 @@ Definition dispatch_ge (v : val) : imonad (val -> imonad val) :=
   | VFloat q => imonad_pure (vfloat_ge q)
   | VTrue => imonad_pure vbool_ge1
   | VFalse => imonad_pure vbool_ge2
+  | VChar a => imonad_pure (vchar_ge a)
   | VPair v1 v2 => imonad_pure (vprod_ge v1 v2)
   | VInl v' => imonad_pure (vsum_ge1 v')
   | VInr v' => imonad_pure (vsum_ge2 v')
@@ -458,6 +482,7 @@ Definition dispatch_eq (v : val) : imonad (val -> imonad val) :=
   | VFloat q => imonad_pure (vfloat_eq q)
   | VTrue => imonad_pure vbool_eq1
   | VFalse => imonad_pure vbool_eq2
+  | VChar a => imonad_pure (vchar_eq a)
   | VPair v1 v2 => imonad_pure (vprod_eq v1 v2)
   | VTuple t => imonad_pure (vtuple_eq t)
   | VRecord r => imonad_pure (vrecord_eq r)
@@ -477,6 +502,7 @@ Definition dispatch_neq (v : val) : imonad (val -> imonad val) :=
   | VFloat q => imonad_pure (vfloat_neq q)
   | VTrue => imonad_pure vbool_neq1
   | VFalse => imonad_pure vbool_neq2
+  | VChar a => imonad_pure (vchar_neq a)
   | VPair v1 v2 => imonad_pure (vprod_neq v1 v2)
   | VTuple t => imonad_pure (vtuple_neq t)
   | VRecord r => imonad_pure (vrecord_neq r)

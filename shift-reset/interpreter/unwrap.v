@@ -1,4 +1,4 @@
-From Stdlib Require Import String Qcanon ZArith.
+From Stdlib Require Import Ascii String Qcanon ZArith.
 From shift_reset.core Require Import syntax loc.
 From shift_reset.interpreter Require Import ierror imonad.
 
@@ -27,6 +27,12 @@ Definition unwrap_vbool (v : val) : imonad bool :=
   | VTrue => imonad_pure true
   | VFalse => imonad_pure false
   | _ => imonad_throw_error (Type_error "unwrap_vbool")
+  end.
+
+Definition unwrap_vchar (v : val) : imonad ascii :=
+  match v with
+  | VChar a => imonad_pure a
+  | _ => imonad_throw_error (Type_error "unwrap_vchar")
   end.
 
 Definition unwrap_vref (v : val) : imonad loc :=

@@ -654,6 +654,158 @@ Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 2 5)).
 Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 3 5)).
 Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 4 5)).
 
+Example make_lazy :=
+  <{ fun "g" => ref (`"Delayed" "g") }>.
+
+Example pure_lazy :=
+  <{ fun "a" => ref (`"Evaluated" "a") }>.
+
+Example get_lazy :=
+  <{ fun "t" =>
+       match !"t" with
+       | `"Delayed" "g" =>
+           let "a" := "g" () in
+           let _ := "t" <- `"Evaluated" "a" in
+           "a"
+       | `"Evaluated" "a" => "a"
+       end }>.
+
+Example lazy_module t :=
+  <{ let "make_lazy" := make_lazy in
+     let "pure_lazy" := pure_lazy in
+     let "get_lazy" := get_lazy in
+     t }>.
+
+Example nil_stream :=
+  <{ "pure_lazy" (Inl ()) }>.
+
+Example empty_queue :=
+  <{ `("nil_stream", Inl (), "nil_stream") }>.
+
+Example is_empty_queue :=
+  <{ fun "q" =>
+       let `("f", _, _) := "q" in
+       let "f" := "get_lazy" "f" in
+       match "f" with
+       | Inl _ => true
+       | Inr _ => false
+       end }>.
+
+Example rotate_queue :=
+  <{ fix "rotate_queue" "q" :=
+       let `("f", "r", "a") := "q" in
+       let "f" := "get_lazy" "f" in
+       match "f" with
+       | Inl _ =>
+           match "r" with
+           | Inl _ => raise exception "Failure" ()
+           | Inr "p" => "pure_lazy" (Inr (fst "p", "a"))
+           end
+       | Inr "p" =>
+           let ("x", "f") := "p" in
+           match "r" with
+           | Inl _ => raise exception "Failure" ()
+           | Inr "p" =>
+               let ("y", "r") := "p" in
+               let "a" := "pure_lazy" (Inr ("y", "a")) in
+               let "t" _ :=
+                 let "q" := "rotate_queue" `("f", "r", "a") in
+                 Inr ("x", "q")
+               in
+               "make_lazy" "t"
+           end
+       end }>.
+
+Example exec_queue :=
+  <{ fun "q" =>
+       let `("f", "r", "s") := "q" in
+       let "s" := "get_lazy" "s" in
+       match "s" with
+       | Inl _ =>
+           let "f'" := "rotate_queue" `("f", "r", "nil_stream") in
+           `("f'", Inl (), "f'")
+       | Inr "p" => `("f", "r", snd "p")
+       end }>.
+
+Example snoc_queue :=
+  <{ fun "args" =>
+       let ("y", "q") := "args" in
+       let `("f", "r", "s") := "q" in
+       "exec_queue" `("f", Inr ("y", "r"), "s") }>.
+
+Example head_queue :=
+  <{ fun "q" =>
+       let `("f", _, _) := "q" in
+       let "f" := "get_lazy" "f" in
+       match "f" with
+       | Inl _ => raise exception "Empty" ()
+       | Inr "p" => fst "p"
+       end }>.
+
+Example tail_queue :=
+  <{ fun "q" =>
+       let `("f", "r", "s") := "q" in
+       let "f" := "get_lazy" "f" in
+       match "f" with
+       | Inl _ => raise exception "Empty" ()
+       | Inr "p" => "exec_queue" `(snd "p", "r", "s")
+       end }>.
+
+Example queue_module t :=
+  lazy_module
+    <{ let "nil_stream" := nil_stream in
+       let "empty_queue" := empty_queue in
+       let "is_empty_queue" := is_empty_queue in
+       let "rotate_queue" := rotate_queue in
+       let "exec_queue" := exec_queue in
+       let "snoc_queue" := snoc_queue in
+       let "head_queue" := head_queue in
+       let "tail_queue" := tail_queue in
+       t }>.
+
+Example use_queue xs t :=
+  <{ let "ref_xs" := ref xs in
+     let "ref_q" := ref "empty_queue" in
+     let _ :=
+       try
+         (while true do
+            (match !"ref_xs" with
+             | Inl _ => raise exception "Exit" ()
+             | Inr "p" =>
+                 let ("x", "xs'") := "p" in
+                 let "q" := "snoc_queue" ("x", !"ref_q") in
+                 "ref_q" <- "q";
+                 "ref_xs" <- "xs'"
+             end));;
+       (fun '("Exit" _) => ())
+     in t }>.
+
+Example queue_display xs :=
+  queue_module (use_queue xs <{ !"ref_q" }>).
+
+Example queue_reverse xs :=
+  queue_module
+    (use_queue xs
+     <{ let _ := "ref_xs" <- Inl () in
+        let _ :=
+          try
+            (while true do
+               (let "q" := !"ref_q" in
+                let "mt" := "is_empty_queue" "q" in
+                if "mt" then
+                  raise exception "Exit" ()
+                else
+                  let "x" := "head_queue" "q" in
+                  let "q" := "tail_queue" "q" in
+                  "ref_xs" <- Inr ("x", !"ref_xs");
+                  "ref_q" <- "q"));;
+          (fun '("Exit" _) => ())
+        in
+        !"ref_xs" }>).
+
+Compute (eval_term 100 (queue_display (term_of_list (sequence 0 20)))).
+Compute (list_eval_term 2000 (queue_reverse (term_of_list (sequence 0 1000)))).
+
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)
 Recursive Extraction run_term.

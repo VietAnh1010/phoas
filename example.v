@@ -191,6 +191,54 @@ Example sum_tree1 t :=
 Compute (eval_term 100 (sum_tree1 (Leaf 0))).
 Compute (eval_term 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).
 
+Example bfs :=
+  <{ fix "bfs" "t" :=
+       match "t" with
+       | Inl "x" =>
+           control
+             (fun "k" =>
+                let "xs" := "k" () in
+                Inr ("x", "xs"))
+       | Inr "p" =>
+           let ("l", "r") := "p" in
+           control
+             (fun "k" =>
+                let "xs" := "k" () in
+                let _ := "bfs" "l" in
+                let _ := "bfs" "r" in
+                "xs")
+       end }>.
+
+Example bfs1 t :=
+  <{ prompt (bfs {term_of_tree t}; Inl ()) }>.
+
+Compute (eval_term 10 (bfs1 (Leaf 0))).
+Compute (eval_term 10 (bfs1 (Node (Leaf 0) (Leaf 1)))).
+
+Example dfs :=
+  <{ fix "dfs" "t" :=
+       match "t" with
+       | Inl "x" =>
+           shift
+             (fun "k" =>
+                let "xs" := "k" () in
+                Inr ("x", "xs"))
+       | Inr "p" =>
+           let ("l", "r") := "p" in
+           shift
+             (fun "k" =>
+                let "xs" := "k" () in
+                let _ := "dfs" "l" in
+                let _ := "dfs" "r" in
+                "xs")
+       end }>.
+
+Example dfs1 t :=
+  <{ reset (dfs {term_of_tree t}; Inl ()) }>.
+
+Compute (eval_term 10 (dfs1 (Leaf 0))).
+Compute (eval_term 10 (dfs1 (Node (Leaf 0) (Leaf 1)))).
+
 Example copy :=
   <{ fix "copy" "xs" :=
        match "xs" with

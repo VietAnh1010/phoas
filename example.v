@@ -35,7 +35,6 @@ Example ex1 :=
      in
      "f" 10 }>.
 
-Print ex1.
 Compute (eval_term 2 ex1).
 
 Example append_aux :=
@@ -57,6 +56,19 @@ Fixpoint term_of_list (xs : list Z) :=
   | x :: xs' => <{ Inr (x, {term_of_list xs'}) }>
   end.
 
+Fixpoint list_of_val (l : val) : option (list val) :=
+  match l with
+  | VInl Vtt => Some []
+  | VInr (VPair v t) => option.map (cons v) (list_of_val t)
+  | _ => None
+  end.
+
+Definition list_eval_term (n : nat) (t : term) : option (list val) :=
+  match eval_term n t with
+  | inl _ => None
+  | inr l => list_of_val l
+  end.
+
 Example append1 xs :=
   <{ let "append" := append in "append" xs }>.
 
@@ -66,8 +78,8 @@ Example append2 xs ys :=
 Compute (eval_term 3 (append1 (term_of_list []))).
 Compute (eval_term 4 (append1 (term_of_list [1]))).
 Compute (eval_term 5 (append1 (term_of_list [1; 2]))).
-Compute (eval_term 3 (append2 (term_of_list []) (term_of_list [1]))).
-Compute (eval_term 4 (append2 (term_of_list [1]) (term_of_list [2]))).
+Compute (list_eval_term 3 (append2 (term_of_list []) (term_of_list [1]))).
+Compute (list_eval_term 4 (append2 (term_of_list [1]) (term_of_list [2]))).
 
 Fixpoint sequence start len : list Z :=
   match len with
@@ -111,7 +123,6 @@ Example ex2 :=
      let "answer" := !"result" || "crash" in
      free "result"; "answer" }>.
 
-Print ex2.
 Compute (eval_term 5 ex2).
 
 Example choice :=
@@ -137,7 +148,6 @@ Example sum xs :=
 Compute (eval_term 3 (sum (term_of_list []))).
 Compute (eval_term 4 (sum (term_of_list [1]))).
 Compute (eval_term 5 (sum (term_of_list [1; 2]))).
-
 Time Compute (eval_term 5005 (sum (term_of_list (sequence 0 5000)))).
 
 Example yield :=
@@ -191,53 +201,65 @@ Example sum_tree1 t :=
 Compute (eval_term 100 (sum_tree1 (Leaf 0))).
 Compute (eval_term 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).
 
+Fixpoint make_balanced_tree3 (n : nat) : val_term :=
+  match n with
+  | O => <{ `"Leaf" {Z.of_nat n} }>
+  | S n' =>
+      let t := make_balanced_tree3 n' in
+      <{ `"Node" `(t, {Z.of_nat n}, t) }>
+  end.
+
 Example bfs :=
   <{ fix "bfs" "t" :=
        match "t" with
-       | Inl "x" =>
+       | `"Leaf" "x" =>
            control
              (fun "k" =>
                 let "xs" := "k" () in
                 Inr ("x", "xs"))
-       | Inr "p" =>
-           let ("l", "r") := "p" in
+       | `"Node" "p" =>
+           let `("l", "x", "r") := "p" in
            control
              (fun "k" =>
                 let "xs" := "k" () in
-                let _ := "bfs" "l" in
-                let _ := "bfs" "r" in
-                "xs")
+                "bfs" "l";
+                "bfs" "r";
+                Inr ("x", "xs"))
        end }>.
 
 Example bfs1 t :=
-  <{ prompt (bfs {term_of_tree t}; Inl ()) }>.
+  <{ prompt (bfs t; Inl ()) }>.
 
-Compute (eval_term 10 (bfs1 (Leaf 0))).
-Compute (eval_term 10 (bfs1 (Node (Leaf 0) (Leaf 1)))).
+Compute (list_eval_term 100 (bfs1 (make_balanced_tree3 0))).
+Compute (list_eval_term 100 (bfs1 (make_balanced_tree3 1))).
+Compute (list_eval_term 100 (bfs1 (make_balanced_tree3 2))).
+Compute (list_eval_term 100 (bfs1 (make_balanced_tree3 3))).
 
 Example dfs :=
   <{ fix "dfs" "t" :=
        match "t" with
-       | Inl "x" =>
+       | `"Leaf" "x" =>
            shift
              (fun "k" =>
                 let "xs" := "k" () in
                 Inr ("x", "xs"))
-       | Inr "p" =>
-           let ("l", "r") := "p" in
+       | `"Node" "p" =>
+           let `("l", "x", "r") := "p" in
            shift
              (fun "k" =>
                 let "xs" := "k" () in
-                let _ := "dfs" "l" in
-                let _ := "dfs" "r" in
-                "xs")
+                "dfs" "l";
+                "dfs" "r";
+                Inr ("x", "xs"))
        end }>.
 
 Example dfs1 t :=
-  <{ reset (dfs {term_of_tree t}; Inl ()) }>.
+  <{ reset (dfs t; Inl ()) }>.
 
-Compute (eval_term 10 (dfs1 (Leaf 0))).
-Compute (eval_term 10 (dfs1 (Node (Leaf 0) (Leaf 1)))).
+Compute (list_eval_term 100 (dfs1 (make_balanced_tree3 0))).
+Compute (list_eval_term 100 (dfs1 (make_balanced_tree3 1))).
+Compute (list_eval_term 100 (dfs1 (make_balanced_tree3 2))).
+Compute (list_eval_term 100 (dfs1 (make_balanced_tree3 3))).
 
 Example copy :=
   <{ fix "copy" "xs" :=
@@ -293,11 +315,9 @@ Example reverse1 xs :=
 Example reverse_while1 xs :=
   <{ let "reverse_while" := reverse_while in "reverse_while" xs }>.
 
-Print reverse_while.
-
-Time Compute (eval_term 2010 (copy1 (term_of_list (sequence 0 1000)))).
-Time Compute (eval_term 2010 (reverse1 (term_of_list (sequence 0 1000)))).
-Time Compute (eval_term 1010 (reverse_while1 (term_of_list (sequence 0 1000)))).
+Time Compute (list_eval_term 2010 (copy1 (term_of_list (sequence 0 1000)))).
+Time Compute (list_eval_term 2010 (reverse1 (term_of_list (sequence 0 1000)))).
+Time Compute (list_eval_term 1010 (reverse_while1 (term_of_list (sequence 0 1000)))).
 
 Example unhandled_exception :=
   <{ raise exception "Segfault" 139 }>.
@@ -312,8 +332,6 @@ Example handle_exception (tag : string) :=
      (fun '("StackOverflow" _) => false);
      (fun "exn" => raise "exn") }>.
 
-Print handle_exception.
-
 Compute (eval_term 1 unhandled_exception).
 Compute (eval_term 1 (handle_exception "Segfault")).
 Compute (eval_term 1 (handle_exception "StackOverflow")).
@@ -325,7 +343,6 @@ Example unhandled_effect :=
      (fun '("Effect1" _), _ => ());
      (fun '("Effect2" _), _ => ()) }>.
 
-Print unhandled_effect.
 Compute (eval_term 1 unhandled_effect).
 
 Example print :=
@@ -368,17 +385,15 @@ Example variant :=
      | `"Variant2" _ => raise exception "Failure" ()
      end }>.
 
-Print variant.
 Compute (eval_term 1 variant).
 
 Example record :=
   <{ let "x" := `{"fst" := 1 ; "snd" := 2} in
      `{"fst" := "x".("fst"); "snd" := "x".("fst") + "x".("snd")} }>.
 
-Print record.
 Compute (eval_term 1 record).
 
-Example collatz :=
+Example collatz k :=
   <{ let fix "collatz_len" "n" :=
        if "n" = 1 then 1 else
          if "n" mod 2 = 0 then let "r" := "collatz_len" ("n" / 2) in 1 + "r"
@@ -387,7 +402,7 @@ Example collatz :=
      let "max_len" := ref 0 in
      let "n_of_max_len" := ref 0 in
      let "i" := ref 1 in
-     (while (!"i" <= 500) do
+     (while (!"i" <= k) do
         let "len" := "collatz_len" (!"i") in
         (if "len" > !"max_len" then
            "max_len" <- "len";
@@ -396,7 +411,7 @@ Example collatz :=
         "i" <- !"i" + 1);
      !"n_of_max_len", !"max_len" }>.
 
-Time Compute (eval_term 1000 collatz).
+Time Compute (eval_term 1000 (collatz 500)).
 
 Example eval_ltr :=
   <{ fix "eval" "e" :=
@@ -418,7 +433,6 @@ Example eval_ltr_input1 :=
 Example eval_ltr_input2 :=
   <{ `"Sub" `{"lhs" := `"Num" 6; "rhs" := `"Num" 9} }>.
 
-Print eval_ltr_input1.
 Compute (eval_term 10 <{ eval_ltr eval_ltr_input1 }>).
 Compute (eval_term 10 <{ eval_ltr eval_ltr_input2 }>).
 
@@ -439,7 +453,6 @@ Compute (run_term 10 loop).
 Example tuple1 := <{ `(1, 2, 3, 4, 5) }>.
 Example use_tuple1 := <{ let `("a", "b", "c", "d", "e") := tuple1 in "a" + "b" + "c" + "d" + "e" }>.
 
-Print use_tuple1.
 Compute (eval_term 1 use_tuple1).
 
 Example even :=

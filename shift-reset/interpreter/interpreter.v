@@ -1,6 +1,6 @@
 From Stdlib Require Import String Qcanon ZArith.
 From shift_reset.core Require Import syntax env loc record tag var.
-From shift_reset.interpreter Require Import dispatch ierror iheap imonad unwrap.
+From shift_reset.interpreter Require Import builtin ierror iheap imonad op unwrap.
 
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
@@ -96,9 +96,9 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       v <- interpret_val_term t1;
       f <- dispatch_op2 op v;
       interpret_val_term t2 >>= f
-  | TVBuiltin f t' =>
-      v <- interpret_val_term t';
-      imonad_throw_error (Failure "todo: TVBuiltin")
+  | TVBuiltin tag t' =>
+      f <- dispatch_builtin tag;
+      interpret_val_term t' >>= f
   end
 with interpret_tuple_term (t : tuple_term) : imonad tuple :=
   match t with

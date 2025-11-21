@@ -35,6 +35,12 @@ Definition unwrap_vchar (v : val) : imonad ascii :=
   | _ => imonad_throw_error (Type_error "unwrap_vchar")
   end.
 
+Definition unwrap_vstring (v : val) : imonad string :=
+  match v with
+  | VString s => imonad_pure s
+  | _ => imonad_throw_error (Type_error "unwrap_vstring")
+  end.
+
 Definition unwrap_vref (v : val) : imonad loc :=
   match v with
   | VRef l => imonad_pure l

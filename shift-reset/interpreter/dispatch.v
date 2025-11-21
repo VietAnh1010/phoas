@@ -1,5 +1,5 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
-From shift_reset.lib Require Import char comparison float int.
+From shift_reset.lib Require Import char comparison float int string.
 From shift_reset.core Require Import syntax loc tag val.
 From shift_reset.interpreter Require Import ierror imonad unwrap.
 
@@ -61,6 +61,9 @@ Definition vfloat_mul (q : Qc) (arg : val) : imonad val :=
 Definition vfloat_div (q : Qc) (arg : val) : imonad val :=
   VFloat_by2 Qcdiv q <$> unwrap_vfloat arg.
 
+Definition vstring_app (s : string) (arg : val) : imonad val :=
+  VString_by2 String.append s <$> unwrap_vstring arg.
+
 Definition dispatch_add (v : val) : imonad (val -> imonad val) :=
   match v with
   | VInt z => imonad_pure (vint_add z)
@@ -95,6 +98,12 @@ Definition dispatch_mod (v : val) : imonad (val -> imonad val) :=
   | _ => imonad_throw_error (Type_error "dispatch_mod")
   end.
 
+Definition dispatch_app (v : val) : imonad (val -> imonad val) :=
+  match v with
+  | VString s => imonad_pure (vstring_app s)
+  | _ => imonad_throw_error (Type_error "dispatch_app")
+  end.
+
 Fixpoint compare_val (v1 v2 : val) : imonad comparison :=
   match v1, v2 with
   | VTt, VTt => imonad_pure Eq
@@ -105,6 +114,7 @@ Fixpoint compare_val (v1 v2 : val) : imonad comparison :=
   | VFalse, VTrue => imonad_pure Lt
   | VFalse, VFalse => imonad_pure Eq
   | VChar a1, VChar a2 => imonad_pure (Ascii.compare a1 a2)
+  | VString s1, VString s2 => imonad_pure (String.compare s1 s2)
   | VPair v11 v12, VPair v21 v22 =>
       c <- compare_val v11 v21;
       match c with
@@ -150,6 +160,7 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   | VFalse, VTrue => imonad_pure false
   | VFalse, VFalse => imonad_pure true
   | VChar a1, VChar a2 => imonad_pure (Ascii.eqb a1 a2)
+  | VString s1, VString s2 => imonad_pure (String.eqb s1 s2)
   | VPair v11 v12, VPair v21 v22 =>
       b <- equal_val v11 v21;
       if b then equal_val v12 v22 else imonad_pure false
@@ -221,6 +232,8 @@ Definition veff_equal (tag : tag) (v arg : val) : imonad bool :=
   '(Eff tag' v') <- unwrap_veff arg;
   if tag_eqb tag tag' then equal_val v v' else imonad_pure false.
 
+(** Unit *)
+
 Definition vunit_lt (arg : val) : imonad val :=
   VFalse <$ unwrap_vunit arg.
 
@@ -238,6 +251,8 @@ Definition vunit_eq (arg : val) : imonad val :=
 
 Definition vunit_neq (arg : val) : imonad val :=
   VFalse <$ unwrap_vunit arg.
+
+(** Int *)
 
 Definition vint_lt (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z.ltb z <$> unwrap_vint arg.
@@ -257,6 +272,8 @@ Definition vint_eq (z : Z) (arg : val) : imonad val :=
 Definition vint_neq (z : Z) (arg : val) : imonad val :=
   VBool_by2 Z_neqb z <$> unwrap_vint arg.
 
+(** Float *)
+
 Definition vfloat_lt (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_ltb q <$> unwrap_vfloat arg.
 
@@ -274,6 +291,8 @@ Definition vfloat_eq (q : Qc) (arg : val) : imonad val :=
 
 Definition vfloat_neq (q : Qc) (arg : val) : imonad val :=
   VBool_by2 Qc_neqb q <$> unwrap_vfloat arg.
+
+(** Bool *)
 
 Definition vbool_lt1 (arg : val) : imonad val :=
   VFalse <$ unwrap_vbool arg.
@@ -311,6 +330,8 @@ Definition vbool_eq2 (arg : val) : imonad val :=
 Definition vbool_neq2 (arg : val) : imonad val :=
   VBool <$> unwrap_vbool arg.
 
+(** Char *)
+
 Definition vchar_lt (a : ascii) (arg : val) : imonad val :=
   VBool_by2 Ascii.ltb a <$> unwrap_vchar arg.
 
@@ -329,6 +350,28 @@ Definition vchar_eq (a : ascii) (arg : val) : imonad val :=
 Definition vchar_neq (a : ascii) (arg : val) : imonad val :=
   VBool_by2 ascii_neqb a <$> unwrap_vchar arg.
 
+(** String *)
+
+Definition vstring_lt (s : string) (arg : val) : imonad val :=
+  VBool_by2 String.ltb s <$> unwrap_vstring arg.
+
+Definition vstring_le (s : string) (arg : val) : imonad val :=
+  VBool_by2 String.leb s <$> unwrap_vstring arg.
+
+Definition vstring_gt (s : string) (arg : val) : imonad val :=
+  VBool_by2 string_gtb s <$> unwrap_vstring arg.
+
+Definition vstring_ge (s : string) (arg : val) : imonad val :=
+  VBool_by2 string_geb s <$> unwrap_vstring arg.
+
+Definition vstring_eq (s : string) (arg : val) : imonad val :=
+  VBool_by2 String.eqb s <$> unwrap_vstring arg.
+
+Definition vstring_neq (s : string) (arg : val) : imonad val :=
+  VBool_by2 string_neqb s <$> unwrap_vstring arg.
+
+(** Prod *)
+
 Definition vprod_lt (v1 v2 arg : val) : imonad val :=
   VBool_by compare_ltb <$> vprod_compare v1 v2 arg.
 
@@ -346,6 +389,8 @@ Definition vprod_eq (v1 v2 arg : val) : imonad val :=
 
 Definition vprod_neq (v1 v2 arg : val) : imonad val :=
   VBool_by negb <$> vprod_equal v1 v2 arg.
+
+(** Sum *)
 
 Definition vsum_lt1 (v arg : val) : imonad val :=
   VBool_by compare_ltb <$> vsum_compare1 v arg.
@@ -383,11 +428,15 @@ Definition vsum_eq2 (v arg : val) : imonad val :=
 Definition vsum_neq2 (v arg : val) : imonad val :=
   VBool_by negb <$> vsum_equal2 v arg.
 
+(** Tuple *)
+
 Definition vtuple_eq (t : tuple) (arg : val) : imonad val :=
   VBool <$> vtuple_equal t arg.
 
 Definition vtuple_neq (t : tuple) (arg : val) : imonad val :=
   VBool_by negb <$> vtuple_equal t arg.
+
+(** Record *)
 
 Definition vrecord_eq (r : record) (arg : val) : imonad val :=
   VBool <$> vrecord_equal r arg.
@@ -395,11 +444,15 @@ Definition vrecord_eq (r : record) (arg : val) : imonad val :=
 Definition vrecord_neq (r : record) (arg : val) : imonad val :=
   VBool_by negb <$> vrecord_equal r arg.
 
+(** Variant *)
+
 Definition vvariant_eq (tag : tag) (v arg : val) : imonad val :=
   VBool <$> vvariant_equal tag v arg.
 
 Definition vvariant_neq (tag : tag) (v arg : val) : imonad val :=
   VBool_by negb <$> vvariant_equal tag v arg.
+
+(** Ref *)
 
 Definition vref_eq (l : loc) (arg : val) : imonad val :=
   VBool_by2 loc_eqb l <$> unwrap_vref arg.
@@ -407,11 +460,15 @@ Definition vref_eq (l : loc) (arg : val) : imonad val :=
 Definition vref_neq (l : loc) (arg : val) : imonad val :=
   VBool_by2 loc_neqb l <$> unwrap_vref arg.
 
+(** Exn *)
+
 Definition vexn_eq (tag : tag) (v arg : val) : imonad val :=
   VBool <$> vexn_equal tag v arg.
 
 Definition vexn_neq (tag : tag) (v arg : val) : imonad val :=
   VBool_by negb <$> vexn_equal tag v arg.
+
+(** Eff *)
 
 Definition veff_eq (tag : tag) (v arg : val) : imonad val :=
   VBool <$> veff_equal tag v arg.
@@ -427,6 +484,7 @@ Definition dispatch_lt (v : val) : imonad (val -> imonad val) :=
   | VTrue => imonad_pure vbool_lt1
   | VFalse => imonad_pure vbool_lt2
   | VChar a => imonad_pure (vchar_lt a)
+  | VString s => imonad_pure (vstring_lt s)
   | VPair v1 v2 => imonad_pure (vprod_lt v1 v2)
   | VInl v' => imonad_pure (vsum_lt1 v')
   | VInr v' => imonad_pure (vsum_lt2 v')
@@ -441,6 +499,7 @@ Definition dispatch_le (v : val) : imonad (val -> imonad val) :=
   | VTrue => imonad_pure vbool_le1
   | VFalse => imonad_pure vbool_le2
   | VChar a => imonad_pure (vchar_le a)
+  | VString s => imonad_pure (vstring_le s)
   | VPair v1 v2 => imonad_pure (vprod_le v1 v2)
   | VInl v' => imonad_pure (vsum_le1 v')
   | VInr v' => imonad_pure (vsum_le2 v')
@@ -455,6 +514,7 @@ Definition dispatch_gt (v : val) : imonad (val -> imonad val) :=
   | VTrue => imonad_pure vbool_gt1
   | VFalse => imonad_pure vbool_gt2
   | VChar a => imonad_pure (vchar_gt a)
+  | VString s => imonad_pure (vstring_gt s)
   | VPair v1 v2 => imonad_pure (vprod_gt v1 v2)
   | VInl v' => imonad_pure (vsum_gt1 v')
   | VInr v' => imonad_pure (vsum_gt2 v')
@@ -469,6 +529,7 @@ Definition dispatch_ge (v : val) : imonad (val -> imonad val) :=
   | VTrue => imonad_pure vbool_ge1
   | VFalse => imonad_pure vbool_ge2
   | VChar a => imonad_pure (vchar_ge a)
+  | VString s => imonad_pure (vstring_ge s)
   | VPair v1 v2 => imonad_pure (vprod_ge v1 v2)
   | VInl v' => imonad_pure (vsum_ge1 v')
   | VInr v' => imonad_pure (vsum_ge2 v')
@@ -483,6 +544,7 @@ Definition dispatch_eq (v : val) : imonad (val -> imonad val) :=
   | VTrue => imonad_pure vbool_eq1
   | VFalse => imonad_pure vbool_eq2
   | VChar a => imonad_pure (vchar_eq a)
+  | VString s => imonad_pure (vstring_eq s)
   | VPair v1 v2 => imonad_pure (vprod_eq v1 v2)
   | VTuple t => imonad_pure (vtuple_eq t)
   | VRecord r => imonad_pure (vrecord_eq r)
@@ -503,6 +565,7 @@ Definition dispatch_neq (v : val) : imonad (val -> imonad val) :=
   | VTrue => imonad_pure vbool_neq1
   | VFalse => imonad_pure vbool_neq2
   | VChar a => imonad_pure (vchar_neq a)
+  | VString s => imonad_pure (vstring_neq s)
   | VPair v1 v2 => imonad_pure (vprod_neq v1 v2)
   | VTuple t => imonad_pure (vtuple_neq t)
   | VRecord r => imonad_pure (vrecord_neq r)
@@ -522,6 +585,7 @@ Definition dispatch_op2 (op : op2) : val -> imonad (val -> imonad val) :=
   | Op2Mul => dispatch_mul
   | Op2Div => dispatch_div
   | Op2Mod => dispatch_mod
+  | Op2App => dispatch_app
   | Op2Lt => dispatch_lt
   | Op2Le => dispatch_le
   | Op2Gt => dispatch_gt

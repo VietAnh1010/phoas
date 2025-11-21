@@ -20,6 +20,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
   | TVTrue => imonad_pure VTrue
   | TVFalse => imonad_pure VFalse
   | TVChar a => imonad_pure (VChar a)
+  | TVString s => imonad_pure (VString s)
   | TVAnd t1 t2 =>
       v <- interpret_val_term t1;
       b <- unwrap_vbool v;
@@ -95,6 +96,9 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       v <- interpret_val_term t1;
       f <- dispatch_op2 op v;
       interpret_val_term t2 >>= f
+  | TVBuiltin f t' =>
+      v <- interpret_val_term t';
+      imonad_throw_error (Failure "todo: TVBuiltin")
   end
 with interpret_tuple_term (t : tuple_term) : imonad tuple :=
   match t with

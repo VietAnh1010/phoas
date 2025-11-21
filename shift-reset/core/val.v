@@ -1,4 +1,4 @@
-From Stdlib Require Import Qcanon ZArith.
+From Stdlib Require Import String Qcanon ZArith.
 From shift_reset.core Require Import syntax.
 
 Definition VBool (b : bool) : val :=
@@ -41,6 +41,9 @@ Definition VFloat_by {A} (f : A -> Qc) (x : A) : val :=
 Definition VBool_by {A} (f : A -> bool) (x : A) : val :=
   VBool (f x).
 
+Definition VString_by {A} (f : A -> string) (x : A) : val :=
+  VString (f x).
+
 Definition VInt_by2 {A B} (f : A -> B -> Z) (x : A) (y : B) : val :=
   VInt (f x y).
 
@@ -49,3 +52,6 @@ Definition VFloat_by2 {A B} (f : A -> B -> Qc) (x : A) (y : B) : val :=
 
 Definition VBool_by2 {A B} (f : A -> B -> bool) (x : A) (y : B) : val :=
   VBool (f x y).
+
+Definition VString_by2 {A B} (f : A -> B -> string) (x : A) (y : B) : val :=
+  VString (f x y).

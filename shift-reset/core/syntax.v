@@ -88,6 +88,7 @@ with val_term : Type :=
 | TVRef : val_term -> val_term
 | TVGet : val_term -> val_term
 | TVSet : val_term -> val_term -> val_term
+| TVGetAt : val_term -> val_term -> val_term
 | TVFree : val_term -> val_term
 | TVExn : tag -> val_term -> val_term
 | TVEff : tag -> val_term -> val_term

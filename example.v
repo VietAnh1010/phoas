@@ -544,6 +544,8 @@ Example atomically :=
 Example update :=
   <{ fun "p" => perform effect "Update" "p" }>.
 
+Example int_to_string i := TVBuiltin "int_to_string" i.
+
 Example run_transaction :=
   <{ let "stdout" := ref () in
      let "print" := print in
@@ -553,19 +555,19 @@ Example run_transaction :=
        "atomically"
          (fun _ =>
             let "r" := ref 10 in
-            "print" (`"T0:" !"r");
+            "print" ({TVString "T0: "} ++ {int_to_string <{ !"r" }>});
             try
               ("atomically"
                  (fun _ =>
                     "update" ("r", 20);
                     "update" ("r", 21);
-                    "print" (`"T1: before abort" !"r");
+                    "print" ({TVString "T1, before abort: "} ++ {int_to_string <{ !"r" }>});
                     raise (exception "Result" !"r");
-                    "print" (`"T1: after abort" !"r");
+                    "print" ({TVString "T1, after abort: "} ++  {int_to_string <{ !"r" }>});
                     "update" ("r", 30)));;
             (fun '("Result" "v") =>
-               "print" (`"T0: T1 aborted" "v");
-               "print" (`"T0:" !"r")))
+               "print" ({TVString "T0, T1 aborted: "} ++  {int_to_string "v"});
+               "print" ({TVString "T0: "} ++ {int_to_string <{ !"r" }>})))
      in
      !"stdout" }>.
 

@@ -77,6 +77,15 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       | None => imonad_throw_error (Memory_error "set")
       | Some h' => VTt <$ imonad_set_heap h'
       end
+  | TVGetAt t1 t2 =>
+      v <- interpret_val_term t1;
+      s <- unwrap_vstring v;
+      v <- interpret_val_term t2;
+      z <- unwrap_vint v;
+      match String.get (Z.to_nat z) s with
+      | None => imonad_throw_error (Invalid_argument "index out of bounds")
+      | Some a => imonad_pure (VChar a)
+      end
   | TVFree t' =>
       v <- interpret_val_term t';
       l <- unwrap_vref v;

@@ -2,7 +2,7 @@ From Stdlib Require Import List String ZArith.
 From shift_reset.lib Require list.
 From shift_reset.lib Require Import int.
 From shift_reset.core Require Import syntax loc tag.
-From shift_reset.interpreter Require Import ierror iheap imonad unwrap.
+From shift_reset.interpreter Require Import array ierror iheap imonad unwrap.
 Import ListNotations.
 
 Local Open Scope string_scope.
@@ -14,20 +14,10 @@ Definition string_length (v : val) : imonad val :=
 Definition array_length (v : val) : imonad val :=
   let+ '(Array _ z) := unwrap_varray v in VInt z.
 
-Fixpoint array_free_loop (n : nat) (l : loc) (h : iheap) : option iheap :=
-  match n with
-  | O => Some h
-  | S n' =>
-      match iheap_dealloc l h with
-      | Some h' => array_free_loop n' (loc_succ l) h'
-      | None => None
-      end
-  end.
-
 Definition array_free (v : val) : imonad val :=
   let* '(Array l z) := unwrap_varray v in
   let* h := imonad_get_heap in
-  match array_free_loop (Z.to_nat z) l h with
+  match array_free_dealloc (Z.to_nat z) l h with
   | Some h' => VTt <$ imonad_set_heap h'
   | None => imonad_throw_error (Memory_error "array_free")
   end.
@@ -56,16 +46,10 @@ Definition dispatch_builtin1 (tag : tag) : imonad (val -> imonad val) :=
   | None => imonad_throw_error (Name_error (tag_car tag))
   end.
 
-Fixpoint array_make_loop (n : nat) (v : val) (h : iheap) : iheap :=
-  match n with
-  | O => h
-  | S n' => array_make_loop n' v (iheap_alloc v h)
-  end.
-
 Definition array_make (v1 v2 : val) : imonad val :=
   let* z := unwrap_vint v1 in
   let* h := imonad_get_heap in
-  VArray (iheap_next_loc h) z <$ imonad_set_heap (array_make_loop (Z.to_nat z) v2 h).
+  VArray (iheap_next_loc h) z <$ imonad_set_heap (array_make_alloc (Z.to_nat z) v2 h).
 
 Definition builtin2_registry : list (tag * (val -> val -> imonad val)) :=
   [(Tag "array_make", array_make)].

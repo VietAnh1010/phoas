@@ -93,6 +93,7 @@ with val_term : Type :=
 | TVExn : tag -> val_term -> val_term
 | TVEff : tag -> val_term -> val_term
 | TVAssert : val_term -> val_term
+| TVArray : tuple_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
 | TVBuiltin1 : tag -> val_term -> val_term

@@ -1,6 +1,6 @@
 From Stdlib Require Import String Qcanon ZArith.
-From shift_reset.core Require Import syntax env loc record tag var.
-From shift_reset.interpreter Require Import builtin ierror iheap imonad op unwrap.
+From shift_reset.core Require Import syntax env loc record tag tuple var.
+From shift_reset.interpreter Require Import array builtin ierror iheap imonad op unwrap.
 
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
@@ -115,6 +115,10 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       let* v := interpret_val_term t' in
       let* b := unwrap_vbool v in
       if b then imonad_pure VTt else imonad_throw_error (Assert_failure "")
+  | TVArray t' =>
+      let* t := interpret_tuple_term t' in
+      let* h := imonad_get_heap in
+      VArray (iheap_next_loc h) (Z.of_nat (tuple_length t)) <$ imonad_set_heap (array_of_tuple_alloc t h)
   | TVOp1 op t' => interpret_val_term t' >>= dispatch_op1 op
   | TVOp2 op t1 t2 =>
       let* v := interpret_val_term t1 in

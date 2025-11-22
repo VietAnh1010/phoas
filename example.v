@@ -810,6 +810,44 @@ Example queue_reverse xs :=
 Compute (eval_term 100 (queue_display (term_of_list (sequence 0 20)))).
 Compute (list_eval_term 2000 (queue_reverse (term_of_list (sequence 0 1000)))).
 
+Example array_make := TVBuiltin2 "array_make".
+
+Example counting_sort_lt_10 xs :=
+  <{ let "ref_xs" := ref xs in
+     let "arr_fs" := {array_make 10 0} in
+     let _ :=
+       try
+         (while true do
+            (match !"ref_xs" with
+             | Inl _ => raise exception "Exit" ()
+             | Inr "p" =>
+                 let ("x", "xs'") := "p" in
+                 let _ := "arr_fs".["x"] <- ("arr_fs".["x"] + 1) in
+                 "ref_xs" <- "xs'"
+             end));;
+       (fun '("Exit" _) => ())
+     in
+     let _ := "ref_xs" <- Inl () in
+     let "i" := ref 9 in
+     let "f" := ref 0 in
+     let _ :=
+       while (!"i" >= 0) do
+         let _ := "f" <- "arr_fs".[!"i"] in
+         let _ :=
+           while (!"f" > 0) do
+             let _ := "ref_xs" <- Inr (!"i", !"ref_xs") in
+             "f" <- !"f" - 1
+         in
+         "i" <- !"i" - 1
+     in
+     !"ref_xs" }>.
+
+Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list []))).
+Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [0]))).
+Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [0; 9; 1]))).
+Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [8; 7; 0; 9; 1]))).
+Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [8; 7; 0; 7; 9; 1; 7]))).
+
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)
 Recursive Extraction run_term.

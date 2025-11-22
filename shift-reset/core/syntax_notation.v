@@ -311,6 +311,9 @@ Notation "t1 >= t2" :=
 Notation "t1 <> t2" :=
   (Op2Neq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term) : term_scope.
 
+Notation "t1 ++ t2" :=
+  (Op2App t1 t2) (in custom term at level 49, t1 custom term, t2 custom term, right associativity) : term_scope.
+
 Notation "t1 && t2" :=
   (TVAnd t1 t2) (in custom term at level 50, t1 custom term, t2 custom term, right associativity) : term_scope.
 
@@ -442,7 +445,11 @@ Notation "t .( tag )" :=
   (TVProj t tag) (in custom term at level 23, tag constr at level 0) : term_scope.
 
 Notation "t1 .[ t2 ]" :=
-  (TVGetAt t1 t2) (in custom term at level 65, t1 custom term, t2 custom term) : term_scope.
+  (TVGetAt t1 t2) (in custom term at level 64, t1 custom term, t2 custom term) : term_scope.
 
-Notation "t1 ++ t2" :=
-  (Op2App t1 t2) (in custom term at level 49, t1 custom term, t2 custom term, right associativity) : term_scope.
+Notation "t1 .[ t2 ] <- t3" :=
+  (TVSetAt t1 t2 t3)
+    (in custom term at level 64,
+        t1 custom term,
+        t2 custom term,
+        t3 custom term) : term_scope.

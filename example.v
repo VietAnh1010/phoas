@@ -391,7 +391,7 @@ Compute (eval_term 1 variant).
 
 Example record :=
   <{ let "x" := `{"fst" := 1 ; "snd" := 2} in
-     `{"fst" := "x".("fst"); "snd" := "x".("fst") + "x".("snd")} }>.
+     `{"fst" := "x".`"fst"; "snd" := "x".`"fst" + "x".`"snd"} }>.
 
 Compute (eval_term 1 record).
 
@@ -420,12 +420,12 @@ Example eval_ltr :=
        match "e" with
        | `"Num" "n" => "n"
        | `"Add" "p" =>
-           let "r1" := "eval" ("p".("lhs")) in
-           let "r2" := "eval" ("p".("rhs")) in
+           let "r1" := "eval" ("p".`"lhs") in
+           let "r2" := "eval" ("p".`"rhs") in
            "r1" + "r2"
        | `"Mul" "p" =>
-           let "r1" := "eval" ("p".("lhs")) in
-           let "r2" := "eval" ("p".("rhs")) in
+           let "r1" := "eval" ("p".`"lhs") in
+           let "r2" := "eval" ("p".`"rhs") in
            "r1" * "r2"
        end }>.
 
@@ -842,11 +842,22 @@ Example counting_sort_lt_10 xs :=
      in
      !"ref_xs" }>.
 
-Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list []))).
-Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [0]))).
-Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [0; 9; 1]))).
-Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [8; 7; 0; 9; 1]))).
-Compute (list_eval_term 100 (counting_sort_lt_10 (term_of_list [8; 7; 0; 7; 9; 1; 7]))).
+Compute (list_eval_term 11 (counting_sort_lt_10 (term_of_list []))).
+Compute (list_eval_term 11 (counting_sort_lt_10 (term_of_list [0]))).
+Compute (list_eval_term 11 (counting_sort_lt_10 (term_of_list [0; 9; 1]))).
+Compute (list_eval_term 11 (counting_sort_lt_10 (term_of_list [8; 7; 0; 9; 1]))).
+Compute (list_eval_term 11 (counting_sort_lt_10 (term_of_list [8; 7; 0; 7; 9; 1; 7]))).
+
+Example array_literal :=
+  <{ `[|0; 1; 2; 3; 4|] }>.
+
+Compute (run_term 1 array_literal).
+
+Example use_array_literal :=
+  <{ let "arr" := array_literal in
+     `(("arr".[0]), ("arr".[1]), ("arr".[2]), ("arr".[3]), ("arr".[4])) }>.
+
+Compute (eval_term 1 use_array_literal).
 
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)

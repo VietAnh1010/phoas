@@ -15,13 +15,14 @@ Definition dispatch_get_at (v1 v2 : val) : imonad val :=
       | Some a => imonad_pure (VChar a)
       end
   | VArray l z, VInt i =>
-      if i <? z then
+      if z <=? i then
+        imonad_throw_error (Invalid_argument "index out of bounds")
+      else
         let* h := imonad_get_heap in
         match iheap_read (loc_add l (Z.to_N i)) h with
         | None => imonad_throw_error (Memory_error "array_get_at")
         | Some v => imonad_pure v
         end
-      else imonad_throw_error (Invalid_argument "index out of bounds")
   | _, _ => imonad_throw_error (Type_error "dispatch_get_at")
   end.
 
@@ -101,13 +102,14 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       let* v3 := interpret_val_term t3 in
       let* '(Array l z) := unwrap_varray v1 in
       let* i := unwrap_vint v2 in
-      if i <? z then
+      if z <=? i then
+        imonad_throw_error (Invalid_argument "index out of bounds")
+      else
         let* h := imonad_get_heap in
         match iheap_write (loc_add l (Z.to_N i)) v3 h with
         | None => imonad_throw_error (Memory_error "array_set_at")
         | Some h' => VTt <$ imonad_set_heap h'
         end
-      else imonad_throw_error (Invalid_argument "index out of bounds")
   | TVExn tag t' => VExn tag <$> interpret_val_term t'
   | TVEff tag t' => VEff tag <$> interpret_val_term t'
   | TVAssert t' =>

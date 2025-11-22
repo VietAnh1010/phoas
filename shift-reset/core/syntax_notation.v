@@ -441,7 +441,7 @@ Notation "; tag := t1 t2" :=
 
 Notation "}" := TRecordNil (in custom record_term at level 23) : term_scope.
 
-Notation "t .( tag )" :=
+Notation "t .` tag" :=
   (TVProj t tag) (in custom term at level 23, tag constr at level 0) : term_scope.
 
 Notation "t1 .[ t2 ]" :=
@@ -453,3 +453,9 @@ Notation "t1 .[ t2 ] <- t3" :=
         t1 custom term,
         t2 custom term,
         t3 custom term) : term_scope.
+
+Notation "`[| t1 ; .. ; tn |]" :=
+  (TVArray (TTupleCons t1 .. (TTupleCons tn TTupleNil) ..))
+    (in custom term at level 0,
+        t1 custom term at level 23,
+        tn custom term at level 23) : term_scope.

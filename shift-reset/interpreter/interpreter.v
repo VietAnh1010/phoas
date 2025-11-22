@@ -318,16 +318,16 @@ Definition unwind_shallow_handle (e : env) (self : interpreter) (t1 : ret_term) 
 Fixpoint interpret_kont_app (self : interpreter) (k1 : kont) (k2 : ikont) (v : val) : imonad iresult :=
   match k1 with
   | KNil => ikont_app k2 v
-  | KSeq t e k1' => imonad_under_env e (self t (IKont (KApp k1' k2) (interpret_kont_app self k1' k2)))
-  | KLet b t e k1' => imonad_under_env (with_binder b v e) (self t (IKont (KApp k1' k2) (interpret_kont_app self k1' k2)))
+  | KCons0 t e k1' => imonad_under_env e (self t (IKont (KApp k1' k2) (interpret_kont_app self k1' k2)))
+  | KCons1 b t e k1' => imonad_under_env (with_binder b v e) (self t (IKont (KApp k1' k2) (interpret_kont_app self k1' k2)))
   | KApp k11 k12 => interpret_kont_app self k11 (IKont (KApp k12 k2) (interpret_kont_app self k12 k2)) v
   end.
 
 Fixpoint interpret_kont (self : interpreter) (k : kont) (v : val) : imonad iresult :=
   match k with
   | KNil => imonad_pure (IRVal v)
-  | KSeq t e k' => imonad_under_env e (self t (IKont k' (interpret_kont self k')))
-  | KLet b t e k' => imonad_under_env (with_binder b v e) (self t (IKont k' (interpret_kont self k')))
+  | KCons0 t e k' => imonad_under_env e (self t (IKont k' (interpret_kont self k')))
+  | KCons1 b t e k' => imonad_under_env (with_binder b v e) (self t (IKont k' (interpret_kont self k')))
   | KApp k1 k2 => interpret_kont_app self k1 (IKont k2 (interpret_kont self k2)) v
   end.
 
@@ -397,10 +397,10 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
         end
     | TSeq t1 t2 =>
         let* e := imonad_ask_env in
-        self' t1 (IKont (KSeq t2 e k) (fun _ => imonad_under_env e (self' t2 k)))
+        self' t1 (IKont (KCons0 t2 e k) (fun _ => imonad_under_env e (self' t2 k)))
     | TLet b t1 t2 =>
         let* e := imonad_ask_env in
-        self' t1 (IKont (KLet b t2 e k) (fun v => imonad_under_env (with_binder b v e) (self' t2 k)))
+        self' t1 (IKont (KCons1 b t2 e k) (fun v => imonad_under_env (with_binder b v e) (self' t2 k)))
     | TIf tv t1 t2 =>
         let* v := interpret_val_term tv in
         let* b := unwrap_vbool v in
@@ -421,7 +421,7 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
         let* b := unwrap_vbool v in
         if b then
           let* e := imonad_ask_env in
-          self' t' (IKont (KSeq t e k) (fun _ => imonad_under_env e (self t k)))
+          self' t' (IKont (KCons0 t e k) (fun _ => imonad_under_env e (self t k)))
         else ikont_app k VTt
     | TLetFix f b t1 t2 => imonad_local_env (fun e => ECons f (VFix f b t1 e) e) (self' t2 k)
     | TLetFixMut t1 t2 => imonad_local_env (with_fix_mut_term t1) (self' t2 k)

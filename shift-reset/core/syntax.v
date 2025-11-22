@@ -146,8 +146,8 @@ Inductive val : Type :=
 | VArray : loc -> Z -> val
 with kont : Type :=
 | KNil : kont
-| KSeq : term -> env -> kont -> kont
-| KLet : binder -> term -> env -> kont -> kont
+| KCons0 : term -> env -> kont -> kont
+| KCons1 : binder -> term -> env -> kont -> kont
 | KApp : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont

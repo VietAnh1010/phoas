@@ -109,6 +109,8 @@ Compute (eval_term 2 (append_direct1 (term_of_list [1]))).
 Compute (eval_term 2 (append_direct2 (term_of_list []) (term_of_list [1]))).
 Compute (eval_term 3 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 
+Definition ref_free := TVBuiltin1 "ref_free".
+
 Example either :=
   <{ fun "x" "y" => shift (fun "k" => "k" "x"; "k" "y") }>.
 
@@ -121,7 +123,7 @@ Example ex2 :=
         if ("p" || "q") && ("p" || not "q") && (not "p" || not "q")
         then "result" <- true else ());
      let "answer" := !"result" || "crash" in
-     free "result"; "answer" }>.
+     {ref_free "result"}; "answer" }>.
 
 Compute (eval_term 5 ex2).
 
@@ -143,7 +145,7 @@ Example sum xs :=
   <{ let "result" := ref 0 in
      reset (let "x" := choice xs in "result" <- "x" + !"result");
      let "answer" := !"result" in
-     free "result"; "answer" }>.
+     {ref_free "result"}; "answer" }>.
 
 Compute (eval_term 3 (sum (term_of_list []))).
 Compute (eval_term 4 (sum (term_of_list [1]))).
@@ -544,7 +546,7 @@ Example atomically :=
 Example update :=
   <{ fun "p" => perform effect "Update" "p" }>.
 
-Example int_to_string i := TVBuiltin "int_to_string" i.
+Definition int_to_string := TVBuiltin1 "int_to_string".
 
 Example run_transaction :=
   <{ let "stdout" := ref () in

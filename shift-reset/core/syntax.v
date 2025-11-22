@@ -89,13 +89,14 @@ with val_term : Type :=
 | TVGet : val_term -> val_term
 | TVSet : val_term -> val_term -> val_term
 | TVGetAt : val_term -> val_term -> val_term
-| TVFree : val_term -> val_term
+| TVSetAt : val_term -> val_term -> val_term -> val_term
 | TVExn : tag -> val_term -> val_term
 | TVEff : tag -> val_term -> val_term
 | TVAssert : val_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
-| TVBuiltin : tag -> val_term -> val_term
+| TVBuiltin1 : tag -> val_term -> val_term
+| TVBuiltin2 : tag -> val_term -> val_term -> val_term
 with ret_term : Type :=
 | TRetNone : ret_term
 | TRetSome : binder -> term -> ret_term
@@ -141,6 +142,7 @@ Inductive val : Type :=
 | VMKPure : metakont -> val
 | VMKReset : metakont -> val
 | VMKHandle : metakont -> ret_term -> eff_term -> env -> val
+| VArray : loc -> Z -> val
 with kont : Type :=
 | KNil : kont
 | KSeq : term -> env -> kont -> kont
@@ -179,3 +181,6 @@ Inductive exn : Type :=
 
 Inductive eff : Type :=
 | Eff : tag -> val -> eff.
+
+Inductive array : Type :=
+| Array : loc -> Z -> array.

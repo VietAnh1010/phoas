@@ -31,27 +31,3 @@ Definition VExn' (e : exn) : val :=
 
 Definition VEff' (e : eff) : val :=
   let (tag, v) := e in VEff tag v.
-
-Definition VInt_by {A} (f : A -> Z) (x : A) : val :=
-  VInt (f x).
-
-Definition VFloat_by {A} (f : A -> Qc) (x : A) : val :=
-  VFloat (f x).
-
-Definition VBool_by {A} (f : A -> bool) (x : A) : val :=
-  VBool (f x).
-
-Definition VString_by {A} (f : A -> string) (x : A) : val :=
-  VString (f x).
-
-Definition VInt_by2 {A B} (f : A -> B -> Z) (x : A) (y : B) : val :=
-  VInt (f x y).
-
-Definition VFloat_by2 {A B} (f : A -> B -> Qc) (x : A) (y : B) : val :=
-  VFloat (f x y).
-
-Definition VBool_by2 {A B} (f : A -> B -> bool) (x : A) (y : B) : val :=
-  VBool (f x y).
-
-Definition VString_by2 {A B} (f : A -> B -> string) (x : A) (y : B) : val :=
-  VString (f x y).

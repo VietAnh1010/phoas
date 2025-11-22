@@ -275,9 +275,6 @@ Notation "'ref' t" :=
 Notation "! t" :=
   (TVGet t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
-Notation "'free' t" :=
-  (TVFree t) (in custom term at level 23, t custom term at level 0) : term_scope.
-
 Notation "'assert' t" :=
   (TVAssert t) (in custom term at level 23, t custom term at level 0) : term_scope.
 

@@ -90,6 +90,12 @@ Definition unwrap_vrecord (v : val) : imonad record :=
   | _ => imonad_throw_error (Type_error "unwrap_vrecord")
   end.
 
+Definition unwrap_varray (v : val) : imonad array :=
+  match v with
+  | VArray l z => imonad_pure (Array l z)
+  | _ => imonad_throw_error (Type_error "unwrap_varray")
+  end.
+
 Definition unwrap_vclosure (v : val) : imonad closure :=
   match v with
   | VFun b t e => imonad_pure (CFun b t e)

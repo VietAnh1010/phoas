@@ -1,6 +1,8 @@
 From Stdlib Require Import PArith.
 From shift_reset.lib Require gmap.
 
+Local Open Scope positive_scope.
+
 Record loc : Type := Loc { loc_car : positive }.
 
 Lemma loc_eq_dec : forall (l1 l2 : loc), {l1 = l2} + {l1 <> l2}.
@@ -15,7 +17,13 @@ Definition loc_neqb (l1 l2 : loc) : bool :=
 Definition loc_succ (l : loc) : loc :=
   Loc (Pos.succ (loc_car l)).
 
-Definition loc_init : loc := Loc xH.
+Definition loc_add (l : loc) (n : N) : loc :=
+  match n with
+  | N0 => l
+  | Npos p => Loc (loc_car l + p)
+  end.
+
+Definition loc_init : loc := Loc 1.
 
 Module IsoPositiveLoc <: gmap.IsoPositiveType.
   Definition t := loc.

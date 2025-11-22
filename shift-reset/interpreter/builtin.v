@@ -56,23 +56,16 @@ Definition dispatch_builtin1 (tag : tag) : imonad (val -> imonad val) :=
   | None => imonad_throw_error (Name_error (tag_car tag))
   end.
 
-Fixpoint array_make_loop (n : nat) (v : val) (h : iheap) : option iheap :=
+Fixpoint array_make_loop (n : nat) (v : val) (h : iheap) : iheap :=
   match n with
-  | O => Some h
-  | S n' =>
-      match iheap_alloc v h with
-      | Some (_, h') => array_make_loop n' v h'
-      | None => None
-      end
+  | O => h
+  | S n' => array_make_loop n' v (iheap_alloc v h)
   end.
 
 Definition array_make (v1 v2 : val) : imonad val :=
   let* z := unwrap_vint v1 in
   let* h := imonad_get_heap in
-  match array_make_loop (Z.to_nat z) v2 h with
-  | Some h' => VArray (iheap_next_loc h) z <$ imonad_set_heap h'
-  | None => imonad_throw_error (Memory_error "array_make")
-  end.
+  VArray (iheap_next_loc h) z <$ imonad_set_heap (array_make_loop (Z.to_nat z) v2 h).
 
 Definition builtin2_registry : list (tag * (val -> val -> imonad val)) :=
   [(Tag "array_make", array_make)].

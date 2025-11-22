@@ -75,10 +75,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
   | TVRef t' =>
       let* v := interpret_val_term t' in
       let* h := imonad_get_heap in
-      match iheap_alloc v h with
-      | None => imonad_throw_error (Memory_error "new_ref")
-      | Some (l, h') => VRef l <$ imonad_set_heap h'
-      end
+      VRef (iheap_next_loc h) <$ imonad_set_heap (iheap_alloc v h)
   | TVGet t' =>
       let* v := interpret_val_term t' in
       let* l := unwrap_vref v in

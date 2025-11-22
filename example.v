@@ -1,4 +1,4 @@
-From Stdlib Require Import Extraction List String QArith Qcanon ZArith.
+From Stdlib Require Import List String QArith Qcanon ZArith.
 Import ListNotations.
 
 From shift_reset.core Require Import syntax syntax_notation coerce.
@@ -858,6 +858,11 @@ Example use_array_literal :=
      `(("arr".[0]), ("arr".[1]), ("arr".[2]), ("arr".[3]), ("arr".[4])) }>.
 
 Compute (eval_term 1 use_array_literal).
+
+From Stdlib Require Import Extraction.
+(*From Stdlib Require Import ExtrOcamlBasic ExtrOcamlChar ExtrOcamlNativeString
+From Stdlib Require Import ExtrOcamlNatInt ExtrOcamlZInt.
+Print LoadPath.*)
 
 Extraction Language OCaml.
 (*Extraction "interpreter.ml" run_term.*)

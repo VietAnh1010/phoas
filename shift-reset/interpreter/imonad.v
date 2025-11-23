@@ -35,7 +35,7 @@ Definition imonad_gets_heap {A} (f : iheap -> A) : imonad A :=
 Definition imonad_modify_heap (f : iheap -> iheap) : imonad unit :=
   IMonad (fun _ h => (inr tt, f h)).
 
-Definition imonad_map_heap {A B} (f : A * iheap -> B * iheap) (m : imonad A) : imonad B :=
+Definition imonad_map_state_heap {A B} (f : A * iheap -> B * iheap) (m : imonad A) : imonad B :=
   IMonad (fun env h =>
             let (r, h) := imonad_run m env h in
             match r with
@@ -43,7 +43,7 @@ Definition imonad_map_heap {A B} (f : A * iheap -> B * iheap) (m : imonad A) : i
             | inr x => let (y, h) := f (x, h) in (inr y, h)
             end).
 
-Definition imonad_with_heap {A} (f : iheap -> iheap) (m : imonad A) : imonad A :=
+Definition imonad_with_state_heap {A} (f : iheap -> iheap) (m : imonad A) : imonad A :=
   IMonad (fun env h => imonad_run m env (f h)).
 
 Definition imonad_throw_error {A} (e : ierror) : imonad A :=
@@ -64,10 +64,19 @@ Definition imonad_handle_error {A} (f : ierror -> imonad A) (m : imonad A) : imo
 Definition imonad_try_error {A} (m : imonad A) : imonad (ierror + A) :=
   IMonad (fun env h => let (r, h) := imonad_run m env h in (inr r, h)).
 
+Definition imonad_finally_error {A} (m1 : imonad A) (m2 : imonad unit) : imonad A :=
+  IMonad (fun env h =>
+            let (r, h) := imonad_run m1 env h in
+            let (s, h) := imonad_run m2 env h in
+            match s with
+            | inl e => (inl e, h)
+            | inr _ => (r, h)
+            end).
+
 Definition imonad_except_error {A} (r : ierror + A) : imonad A :=
   IMonad (fun _ h => (r, h)).
 
-Definition imonad_with_error {A} (f : ierror -> ierror) (m : imonad A) : imonad A :=
+Definition imonad_with_except_error {A} (f : ierror -> ierror) (m : imonad A) : imonad A :=
   IMonad (fun env h =>
             let p := imonad_run m env h in
             let (r, h) := p in
@@ -76,7 +85,7 @@ Definition imonad_with_error {A} (f : ierror -> ierror) (m : imonad A) : imonad 
             | inr _ => p
             end).
 
-Definition imonad_map_error {A B} (f : ierror + A -> ierror + B) (m : imonad A) : imonad B :=
+Definition imonad_map_except_error {A B} (f : ierror + A -> ierror + B) (m : imonad A) : imonad B :=
   IMonad (fun env h => let (r, h) := imonad_run m env h in (f r, h)).
 
 Definition imonad_map {A B} (f : A -> B) (m : imonad A) :=

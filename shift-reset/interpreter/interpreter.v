@@ -205,11 +205,12 @@ Fixpoint match_record (p : record_pattern) (r : record) (e : env) : option env :
   end.
 
 Definition with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
-  (fix go (t' : fix_mut_term) (e' : env) : env :=
-     match t' with
-     | TFixMutLast f _ _ => ECons f (VFixMut t f e) e'
-     | TFixMutCons f _ _ t'' => go t'' (ECons f (VFixMut t f e) e')
-     end) t e.
+  let fix go (t' : fix_mut_term) (e' : env) : env :=
+    match t' with
+    | TFixMutLast f _ _ => ECons f (VFixMut t f e) e'
+    | TFixMutCons f _ _ t'' => go t'' (ECons f (VFixMut t f e) e')
+    end
+  in go t e.
 
 Inductive iresult : Type :=
 | IRVal : val -> iresult
@@ -383,9 +384,9 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
   fix self' (t : term) (k : ikont) : imonad iresult :=
     match t with
     | TVal tv => interpret_val_term tv >>= ikont_app k
-    | TApp t1 t2 =>
-        let* v1 := interpret_val_term t1 in
-        let* v2 := interpret_val_term t2 in
+    | TApp tv1 tv2 =>
+        let* v1 := interpret_val_term tv1 in
+        let* v2 := interpret_val_term tv2 in
         let* c := unwrap_vclosure v1 in
         match c with
         | CFun b t' e => imonad_under_env (with_binder b v2 e) (self t' k)
@@ -393,7 +394,7 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
         | CFixMut t' f e => interpret_fix_mut_term_under (with_fix_mut_term t' e) self t' k f v2
         | CMKPure mk => interpret_metakont_app self mk k v2
         | CMKReset mk => interpret_metakont self mk v2 >>= unwind_reset k
-        | CMKHandle mk t1' t2' e => interpret_metakont self mk v2 >>= unwind_handle e self t1' t2' k
+        | CMKHandle mk t1 t2 e => interpret_metakont self mk v2 >>= unwind_handle e self t1 t2 k
         end
     | TSeq t1 t2 =>
         let* e := imonad_ask_env in
@@ -423,6 +424,26 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
           let* e := imonad_ask_env in
           self' t' (IKont (KCons0 t e k) (fun _ => imonad_under_env e (self t k)))
         else ikont_app k VTt
+    | TFor x tv1 fd tv2 t' =>
+        let* v1 := interpret_val_term tv1 in
+        let* v2 := interpret_val_term tv2 in
+        let* i1 := unwrap_vint v1 in
+        let* i2 := unwrap_vint v2 in
+        let* e := imonad_ask_env in
+        let tv2' := TVInt i2 in
+        let (f, z) := match fd with
+                      | Upto => (Z.succ, i2 - i1)
+                      | Downto => (Z.pred, i1 - i2)
+                      end
+        in
+        let fix go (n : nat) (i : Z) : imonad iresult :=
+          match n with
+          | O => imonad_under_env e (ikont_app k VTt)
+          | S n' =>
+              let i' := f i in
+              imonad_under_env (with_binder x (VInt i) e) (self' t' (IKont (KCons0 (TFor x (TVInt i') fd tv2' t') e k) (fun _ => go n' i')))
+          end
+        in go (Z.to_nat z) i1
     | TLetFix f b t1 t2 => imonad_local_env (fun e => ECons f (VFix f b t1 e) e) (self' t2 k)
     | TLetFixMut t1 t2 => imonad_local_env (with_fix_mut_term t1) (self' t2 k)
     | TLetTuple p tv t' =>

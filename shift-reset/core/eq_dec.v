@@ -35,8 +35,12 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 Lemma op2_eq_dec : forall (op1 op2 : op2), {op1 = op2} + {op1 <> op2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
+Lemma for_direction_eq_dec : forall (fd1 fd2 : for_direction), {fd1 = fd2} + {fd1 <> fd2}.
+Proof. decide equality; auto with eq_dec_db. Defined.
+
 Hint Resolve op1_eq_dec : eq_dec_db.
 Hint Resolve op2_eq_dec : eq_dec_db.
+Hint Resolve for_direction_eq_dec : eq_dec_db.
 
 Lemma term_eq_dec : forall (t1 t2 : term), {t1 = t2} + {t1 <> t2}
 with val_term_eq_dec : forall (t1 t2 : val_term), {t1 = t2} + {t1 <> t2}
@@ -86,7 +90,11 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 Lemma eff_eq_dec : forall (e1 e2 : eff), {e1 = e2} + {e1 <> e2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
+Lemma array_eq_dec : forall (a1 a2 : array), {a1 = a2} + {a1 <> a2}.
+Proof. decide equality; auto with eq_dec_db. Defined.
+
 Hint Resolve closure_eq_dec : eq_dec_db.
 Hint Resolve variant_eq_dec : eq_dec_db.
 Hint Resolve exn_eq_dec : eq_dec_db.
 Hint Resolve eff_eq_dec : eq_dec_db.
+Hint Resolve array_eq_dec : eq_dec_db.

@@ -155,6 +155,9 @@ Definition imonad_join {A} (m : imonad (imonad A)) : imonad A :=
             | inr m => imonad_run m env h
             end).
 
+Definition imonad_kleisli_compose {A B C} (f1 : A -> imonad B) (f2 : B -> imonad C) (x : A) : imonad C :=
+  imonad_bind (f1 x) f2.
+
 Definition imonad_eval {A} (m : imonad A) (env : env) (h : iheap) : ierror + A :=
   fst (imonad_run m env h).
 
@@ -171,31 +174,10 @@ Notation "x <$ m" := (imonad_replace x m) (at level 65, right associativity) : i
 Notation "m1 <*> m2" := (imonad_app m1 m2) (at level 55, left associativity) : imonad_scope.
 Notation "m >>= f" := (imonad_bind m f) (at level 50, left associativity) : imonad_scope.
 Notation "m1 >> m2" := (imonad_then m1 m2) (at level 50, left associativity) : imonad_scope.
+Notation "f1 >=> f2" := (imonad_kleisli_compose f1 f2) (at level 60, right associativity) : imonad_scope.
 
 Notation "let+ x := m 'in' y" :=
   (imonad_map (fun x => y) m) (at level 100, x binder, right associativity) : imonad_scope.
 
 Notation "let* x := m1 'in' m2" :=
   (imonad_bind m1 (fun x => m2)) (at level 100, x binder, right associativity) : imonad_scope.
-
-Definition imonad_kleisli_compose {A B C} (f1 : A -> imonad B) (f2 : B -> imonad C) (x : A) : imonad C :=
-  f1 x >>= f2.
-
-Fixpoint imonad_list_map {A B} (f : A -> imonad B) (xs : list A) : imonad (list B) :=
-  match xs with
-  | [] => imonad_pure []
-  | x :: xs' =>
-      let* y := f x in
-      cons y <$> imonad_list_map f xs'
-  end.
-
-Fixpoint imonad_list_forall2b {A B} (f : A -> B -> imonad bool) (xs : list A) (ys : list B) : imonad bool :=
-  match xs, ys with
-  | [], [] => imonad_pure true
-  | x :: xs', y :: ys' =>
-      let* b := f x y in
-      if b then imonad_list_forall2b f xs' ys' else imonad_pure false
-  | _, _ => imonad_pure false
-  end.
-
-Notation "f1 >=> f2" := (imonad_kleisli_compose f1 f2) (at level 60, right associativity) : imonad_scope.

@@ -39,6 +39,10 @@ Inductive op2 : Type :=
 | Op2Eq : op2
 | Op2Neq : op2.
 
+Inductive for_direction : Type :=
+| Upto : for_direction
+| Downto : for_direction.
+
 Inductive term : Type :=
 | TVal : val_term -> term
 | TApp : val_term -> val_term -> term
@@ -48,6 +52,7 @@ Inductive term : Type :=
 | TSplit : binder -> binder -> val_term -> term -> term
 | TCase : val_term -> binder -> term -> binder -> term -> term
 | TWhile : val_term -> term -> term
+| TFor : binder -> val_term -> for_direction -> val_term -> term -> term
 | TLetFix : var -> binder -> term -> term -> term
 | TLetFixMut : fix_mut_term -> term -> term
 | TLetTuple : tuple_pattern -> val_term -> term -> term

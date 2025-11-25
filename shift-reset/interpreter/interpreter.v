@@ -210,7 +210,8 @@ Definition with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
     | TFixMutLast f _ _ => ECons f (VFixMut t f e) e'
     | TFixMutCons f _ _ t'' => go t'' (ECons f (VFixMut t f e) e')
     end
-  in go t e.
+  in
+  go t e.
 
 Inductive iresult : Type :=
 | IRVal : val -> iresult
@@ -430,20 +431,22 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
         let* i1 := unwrap_vint v1 in
         let* i2 := unwrap_vint v2 in
         let* e := imonad_ask_env in
-        let tv2' := TVInt i2 in
-        let (f, z) := match fd with
-                      | Upto => (Z.succ, i2 - i1)
-                      | Downto => (Z.pred, i1 - i2)
-                      end
+        let tv := TVInt i2 in
+        let (f, z) :=
+          match fd with
+          | Upto => (Z.succ, i2 - i1)
+          | Downto => (Z.pred, i1 - i2)
+          end
         in
         let fix go (n : nat) (i : Z) : imonad iresult :=
           match n with
           | O => imonad_under_env e (ikont_app k VTt)
           | S n' =>
               let i' := f i in
-              imonad_under_env (with_binder x (VInt i) e) (self' t' (IKont (KCons0 (TFor x (TVInt i') fd tv2' t') e k) (fun _ => go n' i')))
+              imonad_under_env (with_binder x (VInt i) e) (self' t' (IKont (KCons0 (TFor x (TVInt i') fd tv t') e k) (fun _ => go n' i')))
           end
-        in go (Z.to_nat z) i1
+        in
+        go (Z.to_nat z) i1
     | TLetFix f b t1 t2 => imonad_local_env (fun e => ECons f (VFix f b t1 e) e) (self' t2 k)
     | TLetFixMut t1 t2 => imonad_local_env (with_fix_mut_term t1) (self' t2 k)
     | TLetTuple p tv t' =>
@@ -471,16 +474,16 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
     | TReset t' => self' t' ikont_nil >>= unwind_reset k
     | TControl b t' => imonad_asks_env (fun e => IRControl (MKPure k) (fun u => imonad_under_env (with_binder b u e) (self' t' ikont_nil)))
     | TPrompt t' => self' t' ikont_nil >>= unwind_prompt k
-    | TRaise t' =>
-        let* v := interpret_val_term t' in
+    | TRaise tv =>
+        let* v := interpret_val_term tv in
         let+ '(Exn tag v') := unwrap_vexn v in
         IRRaise tag v'
     | TTry t1 t2 =>
         let* r := self' t1 ikont_nil in
         let* e := imonad_ask_env in
         unwind_try e self' t2 k r
-    | TPerform t' =>
-        let* v := interpret_val_term t' in
+    | TPerform tv =>
+        let* v := interpret_val_term tv in
         let+ '(Eff tag v') := unwrap_veff v in
         IRPerform (MKPure k) tag v'
     | THandle t1 t2 t3 =>

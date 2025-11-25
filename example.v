@@ -403,17 +403,17 @@ Example collatz k :=
      in
      let "max_len" := ref 0 in
      let "n_of_max_len" := ref 0 in
-     let "i" := ref 1 in
-     (while (!"i" <= k) do
-        let "len" := "collatz_len" (!"i") in
-        (if "len" > !"max_len" then
+     let _ :=
+       for "i" from 1 upto k do
+         let "len" := "collatz_len" "i" in
+         if "len" > !"max_len" then
            "max_len" <- "len";
-           "n_of_max_len" <- !"i"
-         else ());
-        "i" <- !"i" + 1);
+           "n_of_max_len" <- "i"
+         else ()
+     in
      !"n_of_max_len", !"max_len" }>.
 
-Time Compute (eval_term 1000 (collatz 500)).
+Time Compute (eval_term 150 (collatz 500)).
 
 Example eval_ltr :=
   <{ fix "eval" "e" :=
@@ -613,12 +613,12 @@ Example delta_n :=
 Example run_delta_n it n k :=
   <{ let "it" := it in
      let "it" := delta_n ("it", n) in
-     let "i" := ref 0 in
      let "r" := ref () in
-     while (!"i" < k) do
-       (let "v" := "it" () in
-        "r" <- ("v", !"r");
-        "i" <- !"i" + 1);
+     let _ :=
+       for "i" from 0 upto k do
+         let "v" := "it" () in
+         "r" <- ("v", !"r")
+     in
      !"r" }>.
 
 Compute (eval_term 10 (run_delta_n (nat_iterator 0) 0 5)).
@@ -790,21 +790,19 @@ Example queue_display xs :=
 Example queue_reverse xs :=
   queue_module
     (use_queue xs
-     <{ let _ := "ref_xs" <- Inl () in
-        let _ :=
-          try
-            (while true do
-               (let "q" := !"ref_q" in
-                let "mt" := "is_empty_queue" "q" in
-                if "mt" then
-                  raise exception "Exit" ()
-                else
-                  let "x" := "head_queue" "q" in
-                  let "q" := "tail_queue" "q" in
-                  "ref_xs" <- Inr ("x", !"ref_xs");
-                  "ref_q" <- "q"));;
-          (fun '("Exit" _) => ())
-        in
+     <{ "ref_xs" <- Inl ();
+        (try
+           (while true do
+              (let "q" := !"ref_q" in
+               let "mt" := "is_empty_queue" "q" in
+               if "mt" then
+                 raise exception "Exit" ()
+               else
+                 let "x" := "head_queue" "q" in
+                 let "q" := "tail_queue" "q" in
+                 "ref_xs" <- Inr ("x", !"ref_xs");
+                 "ref_q" <- "q"));;
+         (fun '("Exit" _) => ()));
         !"ref_xs" }>).
 
 Compute (eval_term 100 (queue_display (term_of_list (sequence 0 20)))).
@@ -815,31 +813,20 @@ Example array_make := TVBuiltin2 "array_make".
 Example counting_sort_lt_10 xs :=
   <{ let "ref_xs" := ref xs in
      let "arr_fs" := {array_make 10 0} in
-     let _ :=
-       try
-         (while true do
-            (match !"ref_xs" with
-             | Inl _ => raise exception "Exit" ()
-             | Inr "p" =>
-                 let ("x", "xs'") := "p" in
-                 let _ := "arr_fs".["x"] <- ("arr_fs".["x"] + 1) in
-                 "ref_xs" <- "xs'"
-             end));;
-       (fun '("Exit" _) => ())
-     in
-     let _ := "ref_xs" <- Inl () in
-     let "i" := ref 9 in
-     let "f" := ref 0 in
-     let _ :=
-       while (!"i" >= 0) do
-         let _ := "f" <- "arr_fs".[!"i"] in
-         let _ :=
-           while (!"f" > 0) do
-             let _ := "ref_xs" <- Inr (!"i", !"ref_xs") in
-             "f" <- !"f" - 1
-         in
-         "i" <- !"i" - 1
-     in
+     (try
+        (while true do
+           (match !"ref_xs" with
+            | Inl _ => raise exception "Exit" ()
+            | Inr "p" =>
+                let ("x", "xs'") := "p" in
+                let _ := "arr_fs".["x"] <- ("arr_fs".["x"] + 1) in
+                "ref_xs" <- "xs'"
+            end));;
+      (fun '("Exit" _) => ()));
+     "ref_xs" <- Inl ();
+     (for "i" from 9 downto 0 do
+        (for _ from ("arr_fs".["i"]) downto 1 do
+           "ref_xs" <- Inr ("i", !"ref_xs")));
      !"ref_xs" }>.
 
 Compute (list_eval_term 11 (counting_sort_lt_10 (term_of_list []))).

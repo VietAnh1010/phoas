@@ -141,6 +141,22 @@ Notation "'let' 'fix' f x1 x2 .. xn := t1 'in' t2" :=
 Notation "'while' tv 'do' t" :=
   (TWhile tv t) (in custom term at level 69, tv custom term, t custom term) : term_scope.
 
+Notation "'for' x 'from' tv1 'upto' tv2 'do' t" :=
+  (TFor x tv1 Upto tv2 t)
+    (in custom term at level 69,
+        x custom binder' at level 0,
+        tv1 custom term,
+        tv2 custom term,
+        t custom term) : term_scope.
+
+Notation "'for' x 'from' tv1 'downto' tv2 'do' t" :=
+  (TFor x tv1 Downto tv2 t)
+    (in custom term at level 69,
+        x custom binder' at level 0,
+        tv1 custom term,
+        tv2 custom term,
+        t custom term) : term_scope.
+
 Notation "'shift' ( 'fun' k => t )" :=
   (TShift k t) (in custom term at level 69, k custom binder' at level 0, t custom term) : term_scope.
 

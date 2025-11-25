@@ -35,7 +35,7 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 Lemma op2_eq_dec : forall (op1 op2 : op2), {op1 = op2} + {op1 <> op2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Lemma for_direction_eq_dec : forall (fd1 fd2 : for_direction), {fd1 = fd2} + {fd1 <> fd2}.
+Lemma for_direction_eq_dec : forall (d1 d2 : for_direction), {d1 = d2} + {d1 <> d2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve op1_eq_dec : eq_dec_db.

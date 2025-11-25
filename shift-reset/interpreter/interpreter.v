@@ -205,7 +205,7 @@ Fixpoint match_record (p : record_pattern) (r : record) (e : env) : option env :
   end.
 
 Definition with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
-  let fix go (t' : fix_mut_term) (e' : env) : env :=
+  let fix go t' e' :=
     match t' with
     | TFixMutLast f _ _ => ECons f (VFixMut t f e) e'
     | TFixMutCons f _ _ t'' => go t'' (ECons f (VFixMut t f e) e')
@@ -382,7 +382,7 @@ Fixpoint interpret_fix_mut_term_under (e : env) (self : interpreter) (t : fix_mu
   end.
 
 Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult :=
-  fix self' (t : term) (k : ikont) : imonad iresult :=
+  fix self' t k :=
     match t with
     | TVal tv => interpret_val_term tv >>= ikont_app k
     | TApp tv1 tv2 =>
@@ -425,28 +425,29 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
           let* e := imonad_ask_env in
           self' t' (IKont (KCons0 t e k) (fun _ => imonad_under_env e (self t k)))
         else ikont_app k VTt
-    | TFor x tv1 fd tv2 t' =>
+    | TFor x tv1 d tv2 t' =>
         let* v1 := interpret_val_term tv1 in
         let* v2 := interpret_val_term tv2 in
         let* i1 := unwrap_vint v1 in
         let* i2 := unwrap_vint v2 in
         let* e := imonad_ask_env in
-        let tv := TVInt i2 in
-        let (f, z) :=
-          match fd with
+        let p :=
+          match d with
           | Upto => (Z.succ, i2 - i1)
           | Downto => (Z.pred, i1 - i2)
           end
         in
-        let fix go (n : nat) (i : Z) : imonad iresult :=
+        let (f, z) := p in
+        let tv := TVInt i2 in
+        let fix go n i :=
           match n with
-          | O => imonad_under_env e (ikont_app k VTt)
+          | O => ikont_app k VTt
           | S n' =>
               let i' := f i in
-              imonad_under_env (with_binder x (VInt i) e) (self' t' (IKont (KCons0 (TFor x (TVInt i') fd tv t') e k) (fun _ => go n' i')))
+              imonad_under_env (with_binder x (VInt i) e) (self' t' (IKont (KCons0 (TFor x (TVInt i') d tv t') e k) (fun _ => go n' i')))
           end
         in
-        go (Z.to_nat z) i1
+        go (Z.to_nat (Z.succ z)) i1
     | TLetFix f b t1 t2 => imonad_local_env (fun e => ECons f (VFix f b t1 e) e) (self' t2 k)
     | TLetFixMut t1 t2 => imonad_local_env (with_fix_mut_term t1) (self' t2 k)
     | TLetTuple p tv t' =>

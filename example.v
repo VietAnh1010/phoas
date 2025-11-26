@@ -847,8 +847,8 @@ Example use_array_literal :=
 Compute (eval_term 1 use_array_literal).
 
 From Stdlib Require Import Extraction.
-(*From Stdlib Require Import ExtrOcamlBasic ExtrOcamlChar ExtrOcamlNativeString
-From Stdlib Require Import ExtrOcamlNatInt ExtrOcamlZInt.
+From Stdlib Require Import ExtrOcamlBasic ExtrOcamlChar ExtrOcamlNativeString.
+(*From Stdlib Require Import ExtrOcamlNatInt ExtrOcamlZInt.
 Print LoadPath.*)
 
 Extraction Language OCaml.

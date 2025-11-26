@@ -26,6 +26,15 @@ Compute (eval_term 1 cmp3).
 Example arith3 := <{ {Q2Qc (4 # 6)} + {Q2Qc (4 # 5)} }>.
 Compute (eval_term 1 arith3).
 
+Example arith4 := <{ 10 / 0 }>.
+Compute (eval_term 1 arith4).
+
+Example arith5 := <{ 10 mod 0 }>.
+Compute (eval_term 1 arith5).
+
+Example arith6 := <{ {Q2Qc (6 # 9)} / {0%Qc} }>.
+Compute (eval_term 1 arith6).
+
 Example ex1 :=
   <{ let "f" :=
        reset

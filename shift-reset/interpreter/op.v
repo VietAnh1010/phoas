@@ -64,14 +64,23 @@ Definition dispatch_mul (v1 v2 : val) : imonad val :=
 
 Definition dispatch_div (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => if Z.eqb z2 0 then imonad_throw_error Division_by_zero else imonad_pure (VInt (z1 / z2))
-  | VFloat q1, VFloat q2 => if Qc_eqb q2 0 then imonad_throw_error Division_by_zero else imonad_pure (VFloat (q1 / q2))
+  | VInt z1, VInt z2 =>
+      if Z.eqb z2 0
+      then imonad_throw_error Division_by_zero
+      else imonad_pure (VInt (z1 / z2))
+  | VFloat q1, VFloat q2 =>
+      if Qc_eqb q2 0
+      then imonad_throw_error Division_by_zero
+      else imonad_pure (VFloat (q1 / q2))
   | _, _ => imonad_throw_error (Type_error "dispatch_div")
   end.
 
 Definition dispatch_mod (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => if Z.eqb z2 0 then imonad_throw_error Division_by_zero else imonad_pure (VInt (z1 mod z2))
+  | VInt z1, VInt z2 =>
+      if Z.eqb z2 0
+      then imonad_throw_error Division_by_zero
+      else imonad_pure (VInt (z1 mod z2))
   | _, _ => imonad_throw_error (Type_error "dispatch_mod")
   end.
 

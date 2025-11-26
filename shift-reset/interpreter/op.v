@@ -1,11 +1,13 @@
-From Stdlib Require Import Ascii Bool String Qcanon ZArith.
-From shift_reset.lib Require Import comparison.
+From Stdlib Require Import Ascii String Qcanon ZArith.
+From shift_reset.lib Require Import comparison float.
 From shift_reset.core Require Import syntax loc tag val.
 From shift_reset.interpreter Require Import ierror imonad unwrap.
 
+Local Open Scope Z_scope.
+Local Open Scope Qc_scope.
+Local Open Scope bool_scope.
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
-Local Open Scope lazy_bool_scope.
 
 (** Op1 *)
 
@@ -18,8 +20,8 @@ Definition dispatch_pos (v : val) : imonad val :=
 
 Definition dispatch_neg (v : val) : imonad val :=
   match v with
-  | VInt z => imonad_pure (VInt (Z.opp z))
-  | VFloat q => imonad_pure (VFloat (Qcopp q))
+  | VInt z => imonad_pure (VInt (-z))
+  | VFloat q => imonad_pure (VFloat (-q))
   | _ => imonad_throw_error (Type_error "dispatch_neg")
   end.
 
@@ -41,41 +43,41 @@ Definition dispatch_op1 (op : op1) : val -> imonad val :=
 
 Definition dispatch_add (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => imonad_pure (VInt (Z.add z1 z2))
-  | VFloat q1, VFloat q2 => imonad_pure (VFloat (Qcplus q1 q2))
+  | VInt z1, VInt z2 => imonad_pure (VInt (z1 + z2))
+  | VFloat q1, VFloat q2 => imonad_pure (VFloat (q1 + q2))
   | _, _ => imonad_throw_error (Type_error "dispatch_add")
   end.
 
 Definition dispatch_sub (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => imonad_pure (VInt (Z.sub z1 z2))
-  | VFloat q1, VFloat q2 => imonad_pure (VFloat (Qcminus q1 q2))
+  | VInt z1, VInt z2 => imonad_pure (VInt (z1 - z2))
+  | VFloat q1, VFloat q2 => imonad_pure (VFloat (q1 - q2))
   | _, _ => imonad_throw_error (Type_error "dispatch_sub")
   end.
 
 Definition dispatch_mul (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => imonad_pure (VInt (Z.mul z1 z2))
-  | VFloat q1, VFloat q2 => imonad_pure (VFloat (Qcmult q1 q2))
+  | VInt z1, VInt z2 => imonad_pure (VInt (z1 * z2))
+  | VFloat q1, VFloat q2 => imonad_pure (VFloat (q1 * q2))
   | _, _ => imonad_throw_error (Type_error "dispatch_mul")
   end.
 
 Definition dispatch_div (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => imonad_pure (VInt (Z.div z1 z2))
-  | VFloat q1, VFloat q2 => imonad_pure (VFloat (Qcdiv q1 q2))
+  | VInt z1, VInt z2 => if Z.eqb z2 0 then imonad_throw_error Division_by_zero else imonad_pure (VInt (z1 / z2))
+  | VFloat q1, VFloat q2 => if Qc_eqb q2 0 then imonad_throw_error Division_by_zero else imonad_pure (VFloat (q1 / q2))
   | _, _ => imonad_throw_error (Type_error "dispatch_div")
   end.
 
 Definition dispatch_mod (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => imonad_pure (VInt (Z.modulo z1 z2))
+  | VInt z1, VInt z2 => if Z.eqb z2 0 then imonad_throw_error Division_by_zero else imonad_pure (VInt (z1 mod z2))
   | _, _ => imonad_throw_error (Type_error "dispatch_mod")
   end.
 
 Definition dispatch_app (v1 v2 : val) : imonad val :=
   match v1, v2 with
-  | VString s1, VString s2 => imonad_pure (VString (String.append s1 s2))
+  | VString s1, VString s2 => imonad_pure (VString (s1 ++ s2))
   | _, _ => imonad_throw_error (Type_error "dispatch_app")
   end.
 
@@ -107,7 +109,7 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   match v1, v2 with
   | VTt, VTt => imonad_pure true
   | VInt z1, VInt z2 => imonad_pure (Z.eqb z1 z2)
-  | VFloat q1, VFloat q2 => imonad_pure (Qc_eq_bool q1 q2)
+  | VFloat q1, VFloat q2 => imonad_pure (Qc_eqb q1 q2)
   | VTrue, VTrue => imonad_pure true
   | VTrue, VFalse => imonad_pure false
   | VFalse, VTrue => imonad_pure false
@@ -127,7 +129,7 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   | VRef l1, VRef l2 => imonad_pure (loc_eqb l1 l2)
   | VExn tag1 v1', VExn tag2 v2' => if tag_eqb tag1 tag2 then equal_val v1' v2' else imonad_pure false
   | VEff tag1 v1', VEff tag2 v2' => if tag_eqb tag1 tag2 then equal_val v1' v2' else imonad_pure false
-  | VArray l1 z1, VArray l2 z2 => imonad_pure (loc_eqb l1 l2 &&& Z.eqb z1 z2)
+  | VArray l1 z1, VArray l2 z2 => imonad_pure (loc_eqb l1 l2 && Z.eqb z1 z2)
   | _, _ => imonad_throw_error (Type_error "equal_val")
   end
 with equal_tuple (t1 t2 : tuple) : imonad bool :=

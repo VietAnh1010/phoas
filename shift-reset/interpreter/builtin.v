@@ -48,7 +48,9 @@ Definition dispatch_builtin1 (tag : tag) : imonad (val -> imonad val) :=
 
 Definition array_make (v1 v2 : val) : imonad val :=
   let* z := unwrap_vint v1 in
-  imonad_state_heap (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
+  if Z.ltb z 0
+  then imonad_throw_error (Invalid_argument "array_make")
+  else imonad_state_heap (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
 
 Definition builtin2_registry : list (tag * (val -> val -> imonad val)) :=
   [(Tag "array_make", array_make)].

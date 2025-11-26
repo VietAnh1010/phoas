@@ -2,20 +2,24 @@ From Stdlib Require Import String Qcanon ZArith.
 From shift_reset.core Require Import syntax env loc record tag tuple var.
 From shift_reset.interpreter Require Import array builtin ierror iheap imonad op unwrap.
 
+Local Open Scope Z_scope.
+Local Open Scope bool_scope.
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
-Local Open Scope Z_scope.
 Local Unset Elimination Schemes.
 
 Definition dispatch_get_at (v1 v2 : val) : imonad val :=
   match v1, v2 with
   | VString s, VInt i =>
-      match String.get (Z.to_nat i) s with
-      | None => imonad_throw_error (Invalid_argument "index out of bounds")
-      | Some a => imonad_pure (VChar a)
-      end
+      if Z.ltb i 0 then
+        imonad_throw_error (Invalid_argument "index out of bounds")
+      else
+        match String.get (Z.to_nat i) s with
+        | None => imonad_throw_error (Invalid_argument "index out of bounds")
+        | Some a => imonad_pure (VChar a)
+        end
   | VArray l z, VInt i =>
-      if z <=? i then
+      if Z.ltb i 0 || Z.leb z i then
         imonad_throw_error (Invalid_argument "index out of bounds")
       else
         let* h := imonad_get_heap in
@@ -102,7 +106,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
       let* v3 := interpret_val_term t3 in
       let* '(Array l z) := unwrap_varray v1 in
       let* i := unwrap_vint v2 in
-      if z <=? i then
+      if Z.ltb i 0 || Z.leb z i then
         imonad_throw_error (Invalid_argument "index out of bounds")
       else
         let* h := imonad_get_heap in
@@ -506,8 +510,8 @@ Fixpoint interpret_term' (fuel : nat) (t : term) (k : ikont) : imonad iresult :=
 Definition unwrap_IRVal (r : iresult) : imonad val :=
   match r with
   | IRVal v => imonad_pure v
-  | IRShift _ _ => imonad_throw_error (Undelimited_shift "")
-  | IRControl _ _ => imonad_throw_error (Undelimited_control "")
+  | IRShift _ _ => imonad_throw_error Undelimited_shift
+  | IRControl _ _ => imonad_throw_error Undelimited_control
   | IRRaise _ _ => imonad_throw_error (Unhandled_exception "")
   | IRPerform _ _ _ => imonad_throw_error (Unhandled_effect "")
   end.

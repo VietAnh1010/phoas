@@ -1,13 +1,13 @@
-From Stdlib Require Import Ascii String Qcanon ZArith.
+From Stdlib Require Import Ascii Bool String Qcanon ZArith.
 From shift_reset.lib Require Import comparison float.
 From shift_reset.core Require Import syntax loc tag val.
 From shift_reset.interpreter Require Import ierror imonad unwrap.
 
 Local Open Scope Z_scope.
 Local Open Scope Qc_scope.
-Local Open Scope bool_scope.
 Local Open Scope string_scope.
 Local Open Scope imonad_scope.
+Local Open Scope lazy_bool_scope.
 
 (** Op1 *)
 
@@ -138,7 +138,7 @@ Fixpoint equal_val (v1 v2 : val) : imonad bool :=
   | VRef l1, VRef l2 => imonad_pure (loc_eqb l1 l2)
   | VExn tag1 v1', VExn tag2 v2' => if tag_eqb tag1 tag2 then equal_val v1' v2' else imonad_pure false
   | VEff tag1 v1', VEff tag2 v2' => if tag_eqb tag1 tag2 then equal_val v1' v2' else imonad_pure false
-  | VArray l1 z1, VArray l2 z2 => imonad_pure (loc_eqb l1 l2 && Z.eqb z1 z2)
+  | VArray l1 z1, VArray l2 z2 => imonad_pure (loc_eqb l1 l2 &&& Z.eqb z1 z2)
   | _, _ => imonad_throw_error (Type_error "equal_val")
   end
 with equal_tuple (t1 t2 : tuple) : imonad bool :=

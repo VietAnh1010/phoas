@@ -204,6 +204,12 @@ Fixpoint match_record (p : record_pattern) (r : record) (e : env) : option env :
       end
   end.
 
+Definition with_for_direction (d : for_direction) (i1 i2 : Z) : (Z -> Z) * Z :=
+  match d with
+  | Upto => (Z.succ, i2 - i1)
+  | Downto => (Z.pred, i1 - i2)
+  end.
+
 Definition with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
   let fix go t' e' :=
     match t' with
@@ -425,26 +431,20 @@ Definition interpret_term (self : interpreter) : term -> ikont -> imonad iresult
           let* e := imonad_ask_env in
           self' t' (IKont (KCons0 t e k) (fun _ => imonad_under_env e (self t k)))
         else ikont_app k VTt
-    | TFor x tv1 d tv2 t' =>
+    | TFor b tv1 d tv2 t' =>
         let* v1 := interpret_val_term tv1 in
         let* v2 := interpret_val_term tv2 in
         let* i1 := unwrap_vint v1 in
         let* i2 := unwrap_vint v2 in
         let* e := imonad_ask_env in
-        let p :=
-          match d with
-          | Upto => (Z.succ, i2 - i1)
-          | Downto => (Z.pred, i1 - i2)
-          end
-        in
-        let (f, z) := p in
         let tv := TVInt i2 in
+        let (f, z) := with_for_direction d i1 i2 in
         let fix go n i :=
           match n with
           | O => ikont_app k VTt
           | S n' =>
               let i' := f i in
-              imonad_under_env (with_binder x (VInt i) e) (self' t' (IKont (KCons0 (TFor x (TVInt i') d tv t') e k) (fun _ => go n' i')))
+              imonad_under_env (with_binder b (VInt i) e) (self' t' (IKont (KCons0 (TFor b (TVInt i') d tv t') e k) (fun _ => go n' i')))
           end
         in
         go (Z.to_nat (Z.succ z)) i1

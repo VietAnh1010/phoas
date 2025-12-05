@@ -1,5 +1,3 @@
-open Map
-
 module type Monad = sig
   type 'a t
   val pure : 'a -> 'a t
@@ -23,55 +21,92 @@ module type MonadState = sig
   val state : (s -> ('a * s)) -> 'a t
 end
 
-module type ReaderT = sig
-  module R : sig type t end
-  module M : Monad
-  type r = R.t
-  type 'a t
-  val reader_t : (r -> 'a M.t) -> 'a t
-  val run_reader_t : 'a t -> r -> 'a M.t
-end
-
-module type StateT = sig
-  module S : sig type t end
-  module M : Monad
-  type s = S.t
-  type 'a t
-  val state_t : (s -> ('a * s) M.t) -> 'a t
-  val run_state_t : 'a t -> s -> ('a * s) M.t
-end
-
 module Identity = struct
-  type 'a t = 'a
-  let pure x = x
-  let map f m = f m
-  let bind m f = f m
+  type 'a t = {run : 'a}
+  let pure x = {run = x}
+  let map f m = {run = f m.run}
+  let bind m f = f m.run
 end
 
-module Monad_StateT (T : StateT) = struct
-  open T
-  let pure x = state_t (fun s -> M.pure (x, s))
-  let bind m f = state_t (fun s -> M.bind (run_state_t m s) (fun (x, s) -> run_state_t (f x) s))
+module ReaderT (R : sig type t end) (M : sig type 'a t end) = struct
+  type r = R.t
+  type 'a m = 'a M.t
+  type 'a t = {run : r -> 'a m}
 end
 
-module MonadState_StateT (T : StateT) = struct
-  open T
-  let get = state_t (fun s -> M.pure (s, s))
-  let put s = state_t (fun _ -> M.pure ((), s))
-  let state f = state_t (fun s -> M.pure (f s))
+module Monad_ReaderT (R : sig type t end) (M : Monad) = struct
+  open ReaderT(R)(M)
+  let pure x = {run = fun _ -> M.pure x}
+  let map f m = {run = fun r -> M.map f (m.run r)}
+  let bind m f = {run = fun r -> M.bind (m.run r) (fun x -> (f x).run r)}
+end
+
+module MonadReader_ReaderT (R : sig type t end) (M : Monad) = struct
+  open ReaderT(R)(M)
+  let ask = {run = fun r -> M.pure r}
+  let local f m = {run = fun r -> m.run (f r)}
+  let reader f = {run = fun r -> M.pure (f r)}
+end
+
+module MonadState_ReaderT (R : sig type t end) (M : MonadState) = struct
+  open ReaderT(R)(M)
+  let get = {run = fun _ -> M.get}
+  let put s = {run = fun _ -> M.put s}
+  let state f = {run = fun _ -> M.state f}
+end
+
+module Reader (R : sig type t end) = struct
+  include ReaderT(R)(Identity)
+  include Monad_ReaderT(R)(Identity)
+  include MonadReader_ReaderT(R)(Identity)
+end
+
+module StateT (S : sig type t end) (M : sig type 'a t end) = struct
+  type s = S.t
+  type 'a m = 'a M.t
+  type 'a t = {run : s -> ('a * s) m}
+end
+
+module Monad_StateT (S : sig type t end) (M : Monad) = struct
+  open StateT(S)(M)
+  let pure x = {run = fun s -> M.pure (x, s)}
+  let map f m = {run = fun s -> M.map (fun (x, s) -> (f x, s)) (m.run s)}
+  let bind m f = {run = fun s -> M.bind (m.run s) (fun (x, s) -> (f x).run s)}
+end
+
+module MonadState_StateT (S : sig type t end) (M : Monad) = struct
+  open StateT(S)(M)
+  let get = {run = fun s -> M.pure (s, s)}
+  let put s = {run = fun _ -> M.pure ((), s)}
+  let state f = {run = fun s -> M.pure (f s)}
+end
+
+module MonadReader_StateT (S : sig type t end) (M : MonadReader) = struct
+  open StateT(S)(M)
+  let ask = {run = fun s -> M.map (fun r -> (r, s)) M.ask}
+  let local f m = {run = fun s -> M.local f (m.run s)}
+  let reader f = {run = fun s -> M.map (fun x -> (x, s)) (M.reader f)}
 end
 
 module State (S : sig type t end) = struct
-  module T = struct
-    module S = S
-    module M = Identity
-    type s = S.t
-    type 'a t = s -> ('a * s) M.t
-    let state_t f = f
-    let run_state_t m = m
-  end
-
-  include T
-  include Monad_StateT (T)
-  include MonadState_StateT (T)
+  include StateT(S)(Identity)
+  include Monad_StateT(S)(Identity)
+  include MonadState_StateT(S)(Identity)
 end
+
+module M0 = State(String)
+module M1 = struct
+  include ReaderT(Int)(M0)
+  include Monad_ReaderT(Int)(M0)
+  include MonadReader_ReaderT(Int)(M0)
+  include MonadState_ReaderT(Int)(M0)
+end
+
+let m : unit M1.t =
+  M1.bind M1.ask @@ fun r ->
+  M1.bind M1.get @@ fun s ->
+  M1.put (s ^ string_of_int r)
+
+let () =
+  let (_, s) = ((m.run 1).run "Max Verstappen ").run in
+  print_endline s

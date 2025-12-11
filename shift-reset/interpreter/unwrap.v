@@ -1,108 +1,107 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
 From shift_reset.core Require Import syntax loc.
-From shift_reset.interpreter Require Import ierror imonad.
+From shift_reset.monad Require Import except.
+From shift_reset.interpreter Require Import ierror.
 
-Local Open Scope string_scope.
-
-Definition unwrap_vunit (v : val) : imonad unit :=
+Definition unwrap_vunit (v : val) : except exn unit :=
   match v with
-  | VTt => imonad_pure tt
-  | _ => imonad_throw_error (Type_error "unwrap_vunit")
+  | VTt => pure tt
+  | _ => throw (Type_error "unwrap_vunit")
   end.
 
-Definition unwrap_vint (v : val) : imonad Z :=
+Definition unwrap_vint (v : val) : except exn Z :=
   match v with
-  | VInt z => imonad_pure z
-  | _ => imonad_throw_error (Type_error "unwrap_vint")
+  | VInt z => pure z
+  | _ => throw (Type_error "unwrap_vint")
   end.
 
-Definition unwrap_vfloat (v : val) : imonad Qc :=
+Definition unwrap_vfloat (v : val) : except exn Qc :=
   match v with
-  | VFloat q => imonad_pure q
-  | _ => imonad_throw_error (Type_error "unwrap_vfloat")
+  | VFloat q => pure q
+  | _ => throw (Type_error "unwrap_vfloat")
   end.
 
-Definition unwrap_vbool (v : val) : imonad bool :=
+Definition unwrap_vbool (v : val) : except exn bool :=
   match v with
-  | VTrue => imonad_pure true
-  | VFalse => imonad_pure false
-  | _ => imonad_throw_error (Type_error "unwrap_vbool")
+  | VTrue => pure true
+  | VFalse => pure false
+  | _ => throw (Type_error "unwrap_vbool")
   end.
 
-Definition unwrap_vchar (v : val) : imonad ascii :=
+Definition unwrap_vchar (v : val) : except exn ascii :=
   match v with
-  | VChar a => imonad_pure a
-  | _ => imonad_throw_error (Type_error "unwrap_vchar")
+  | VChar a => pure a
+  | _ => throw (Type_error "unwrap_vchar")
   end.
 
-Definition unwrap_vstring (v : val) : imonad string :=
+Definition unwrap_vstring (v : val) : except exn string :=
   match v with
-  | VString s => imonad_pure s
-  | _ => imonad_throw_error (Type_error "unwrap_vstring")
+  | VString s => pure s
+  | _ => throw (Type_error "unwrap_vstring")
   end.
 
-Definition unwrap_vref (v : val) : imonad loc :=
+Definition unwrap_vref (v : val) : except exn loc :=
   match v with
-  | VRef l => imonad_pure l
-  | _ => imonad_throw_error (Type_error "unwrap_vref")
+  | VRef l => pure l
+  | _ => throw (Type_error "unwrap_vref")
   end.
 
-Definition unwrap_vprod (v : val) : imonad (val * val) :=
+Definition unwrap_vprod (v : val) : except exn (val * val) :=
   match v with
-  | VPair v1 v2 => imonad_pure (v1, v2)
-  | _ => imonad_throw_error (Type_error "unwrap_vprod")
+  | VPair v1 v2 => pure (v1, v2)
+  | _ => throw (Type_error "unwrap_vprod")
   end.
 
-Definition unwrap_vsum (v : val) : imonad (val + val) :=
+Definition unwrap_vsum (v : val) : except exn (val + val) :=
   match v with
-  | VInl v' => imonad_pure (inl v')
-  | VInr v' => imonad_pure (inr v')
-  | _ => imonad_throw_error (Type_error "unwrap_vsum")
+  | VInl v' => pure (inl v')
+  | VInr v' => pure (inr v')
+  | _ => throw (Type_error "unwrap_vsum")
   end.
 
-Definition unwrap_vexn (v : val) : imonad exn :=
+Definition unwrap_vexn (v : val) : except exn exn :=
   match v with
-  | VExn tag v' => imonad_pure (Exn tag v')
-  | _ => imonad_throw_error (Type_error "unwrap_vexn")
+  | VExn tag v' => pure (Exn tag v')
+  | _ => throw (Type_error "unwrap_vexn")
   end.
 
-Definition unwrap_veff (v : val) : imonad eff :=
+Definition unwrap_veff (v : val) : except exn eff :=
   match v with
-  | VEff tag v' => imonad_pure (Eff tag v')
-  | _ => imonad_throw_error (Type_error "unwrap_veff")
+  | VEff tag v' => pure (Eff tag v')
+  | _ => throw (Type_error "unwrap_veff")
   end.
 
-Definition unwrap_vvariant (v : val) : imonad variant :=
+Definition unwrap_vvariant (v : val) : except exn variant :=
   match v with
-  | VVariant tag v' => imonad_pure (Variant tag v')
-  | _ => imonad_throw_error (Type_error "unwrap_vvariant")
+  | VVariant tag v' => pure (Variant tag v')
+  | _ => throw (Type_error "unwrap_vvariant")
   end.
 
-Definition unwrap_vtuple (v : val) : imonad tuple :=
+Definition unwrap_vtuple (v : val) : except exn tuple :=
   match v with
-  | VTuple t => imonad_pure t
-  | _ => imonad_throw_error (Type_error "unwrap_vtuple")
+  | VTuple t => pure t
+  | _ => throw (Type_error "unwrap_vtuple")
   end.
 
-Definition unwrap_vrecord (v : val) : imonad record :=
+Definition unwrap_vrecord (v : val) : except exn record :=
   match v with
-  | VRecord r => imonad_pure r
-  | _ => imonad_throw_error (Type_error "unwrap_vrecord")
+  | VRecord r => pure r
+  | _ => throw (Type_error "unwrap_vrecord")
   end.
 
-Definition unwrap_varray (v : val) : imonad array :=
+Definition unwrap_varray (v : val) : except exn array :=
   match v with
-  | VArray l z => imonad_pure (Array l z)
-  | _ => imonad_throw_error (Type_error "unwrap_varray")
+  | VArray l z => pure (Array l z)
+  | _ => throw (Type_error "unwrap_varray")
   end.
 
-Definition unwrap_vclosure (v : val) : imonad closure :=
+Definition unwrap_vclosure (v : val) : except exn closure :=
   match v with
-  | VFun b t e => imonad_pure (CFun b t e)
-  | VFix f b t e => imonad_pure (CFix f b t e)
-  | VFixMut t f e => imonad_pure (CFixMut t f e)
-  | VMKPure mk => imonad_pure (CMKPure mk)
-  | VMKReset mk => imonad_pure (CMKReset mk)
-  | VMKHandle mk t1 t2 e => imonad_pure (CMKHandle mk t1 t2 e)
-  | _ => imonad_throw_error (Type_error "unwrap_vclosure")
+  | VFun b t e => pure (CFun b t e)
+  | VFix f b t e => pure (CFix f b t e)
+  | VFixMut t f e => pure (CFixMut t f e)
+  | VMKPure mk => pure (CMKPure mk)
+  | VMKReset mk => pure (CMKReset mk)
+  | VMKHandle mk t1 t2 e => pure (CMKHandle mk t1 t2 e)
+  | _ => throw (Type_error "unwrap_vclosure")
   end.

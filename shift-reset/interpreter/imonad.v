@@ -1,168 +1,171 @@
-From Stdlib Require Import List.
-From shift_reset.core Require Import syntax.
-From shift_reset.interpreter Require Import ierror iheap.
-Import ListNotations.
+Record imonad (R S E A : Type) : Type := IMonad { imonad_run : R -> S -> (E + A) * S }.
 
-Record imonad (A : Type) : Type := IMonad { imonad_run : env -> iheap -> (ierror + A) * iheap }.
+Arguments IMonad {R S E A} _.
+Arguments imonad_run {R S E A} _ _ _.
 
-Arguments IMonad {A} _.
-Arguments imonad_run {A} _ _ _.
+Definition imonad_ask {R S E} : imonad R S E R :=
+  IMonad (fun r s => (inr r, s)).
 
-Definition imonad_ask_env : imonad env :=
-  IMonad (fun env h => (inr env, h)).
+Definition imonad_asks {R S E A} (f : R -> A) : imonad R S E A :=
+  IMonad (fun r s => (inr (f r), s)).
 
-Definition imonad_asks_env {A} (f : env -> A) : imonad A :=
-  IMonad (fun env h => (inr (f env), h)).
+Definition imonad_local {R S E A} (f : R -> R) (m : imonad R S E A) : imonad R S E A :=
+  IMonad (fun r => imonad_run m (f r)).
 
-Definition imonad_local_env {A} (f : env -> env) (m : imonad A) : imonad A :=
-  IMonad (fun env => imonad_run m (f env)).
+Definition imonad_under {R S E A} (r : R) (m : imonad R S E A) : imonad R S E A :=
+  IMonad (fun _ => imonad_run m r).
 
-Definition imonad_under_env {A} (env : env) (m : imonad A) : imonad A :=
-  IMonad (fun _ => imonad_run m env).
+Definition imonad_with_reader {R R' S E A} (f : R' -> R) (m : imonad R S E A) : imonad R' S E A :=
+  IMonad (fun r' => imonad_run m (f r')).
 
-Definition imonad_get_heap : imonad iheap :=
-  IMonad (fun _ h => (inr h, h)).
+Definition imonad_get {R S E} : imonad R S E S :=
+  IMonad (fun _ s => (inr s, s)).
 
-Definition imonad_set_heap (h : iheap) : imonad unit :=
-  IMonad (fun _ _ => (inr tt, h)).
+Definition imonad_put {R S E} (s : S) : imonad R S E unit :=
+  IMonad (fun _ _ => (inr tt, s)).
 
-Definition imonad_state_heap {A} (f : iheap -> A * iheap) : imonad A :=
-  IMonad (fun _ h => let (x, h) := f h in (inr x, h)).
+Definition imonad_state {R S E A} (f : S -> A * S) : imonad R S E A :=
+  IMonad (fun _ s => let (x, s) := f s in (inr x, s)).
 
-Definition imonad_gets_heap {A} (f : iheap -> A) : imonad A :=
-  IMonad (fun _ h => (inr (f h), h)).
+Definition imonad_gets {R S E A} (f : S -> A) : imonad R S E A :=
+  IMonad (fun _ s => (inr (f s), s)).
 
-Definition imonad_modify_heap (f : iheap -> iheap) : imonad unit :=
-  IMonad (fun _ h => (inr tt, f h)).
+Definition imonad_modify {R S E} (f : S -> S) : imonad R S E unit :=
+  IMonad (fun _ s => (inr tt, f s)).
 
-Definition imonad_map_state_heap {A B} (f : A * iheap -> B * iheap) (m : imonad A) : imonad B :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m env h in
-            match r with
+Definition imonad_map_state {R S E A B} (f : A * S -> B * S) (m : imonad R S E A) : imonad R S E B :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m r s in
+            match m with
+            | inl e => (inl e, s)
+            | inr x => let (y, s) := f (x, s) in (inr y, s)
+            end).
+
+Definition imonad_with_state {R S E A} (f : S -> S) (m : imonad R S E A) : imonad R S E A :=
+  IMonad (fun r s => imonad_run m r (f s)).
+
+Definition imonad_throw {R S E A} (e : E) : imonad R S E A :=
+  IMonad (fun _ s => (inl e, s)).
+
+Definition imonad_catch {R S E E' A} (m : imonad R S E A) (f : E -> imonad R S E' A) : imonad R S E' A :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m r s in
+            match m with
+            | inl e => imonad_run (f e) r s
+            | inr x => (inr x, s)
+            end).
+
+Definition imonad_handle {R S E E' A} (f : E -> imonad R S E' A) (m : imonad R S E A) : imonad R S E' A :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m r s in
+            match m with
+            | inl e => imonad_run (f e) r s
+            | inr x => (inr x, s)
+            end).
+
+Definition imonad_try {R S E A} (m : imonad R S E A) : imonad R S E (E + A) :=
+  IMonad (fun r s => let (m, s) := imonad_run m r s in (inr m, s)).
+
+Definition imonad_finally {R S E A} (m1 : imonad R S E A) (m2 : imonad R S E unit) : imonad R S E A :=
+  IMonad (fun r s =>
+            let (m1, s) := imonad_run m1 r s in
+            let (m2, s) := imonad_run m2 r s in
+            match m2 with
+            | inl e => (inl e, s)
+            | inr _ => (m1, s)
+            end).
+
+Definition imonad_except {R S E A} (m : E + A) : imonad R S E A :=
+  IMonad (fun _ s => (m, s)).
+
+Definition imonad_with_except {R S E E' A} (f : E -> E') (m : imonad R S E A) : imonad R S E' A :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m r s in
+            match m with
+            | inl e => (inl (f e), s)
+            | inr x => (inr x, s)
+            end).
+
+Definition imonad_map_except {R S E E' A B} (f : E + A -> E' + B) (m : imonad R S E A) : imonad R S E' B :=
+  IMonad (fun r s => let (m, s) := imonad_run m r s in (f m, s)).
+
+Definition imonad_map {R S E A B} (f : A -> B) (m : imonad R S E A) : imonad R S E B :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m r s in
+            match m with
+            | inl e => (inl e, s)
+            | inr x => (inr (f x), s)
+            end).
+
+Definition imonad_replace {R S E A B} (x : B) (m : imonad R S E A) : imonad R S E B :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m r s in
+            match m with
+            | inl e => (inl e, s)
+            | inr _ => (inr x, s)
+            end).
+
+Definition imonad_pure {R S E A} (x : A) : imonad R S E A :=
+  IMonad (fun _ s => (inr x, s)).
+
+Definition imonad_app {R S E A B} (m1 : imonad R S E (A -> B)) (m2 : imonad R S E A) : imonad R S E B :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m1 r s in
+            match m with
+            | inl e => (inl e, s)
+            | inr f =>
+                let (m, s) := imonad_run m2 r s in
+                match m with
+                | inl e => (inl e, s)
+                | inr x => (inr (f x), s)
+                end
+            end).
+
+Definition imonad_lift2 {R S E A B C} (f : A -> B -> C) (m1 : imonad R S E A) (m2 : imonad R S E B) : imonad R S E C :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m1 r s in
+            match m with
+            | inl e => (inl e, s)
+            | inr x =>
+                let (m, s) := imonad_run m2 r s in
+                match m with
+                | inl e => (inl e, s)
+                | inr y => (inr (f x y), s)
+                end
+            end).
+
+Definition imonad_bind {R S E A B} (m : imonad R S E A) (f : A -> imonad R S E B) : imonad R S E B :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m r s in
+            match m with
+            | inl e => (inl e, s)
+            | inr x => imonad_run (f x) r s
+            end).
+
+Definition imonad_then {R S E A B} (m1 : imonad R S E A) (m2 : imonad R S E B) : imonad R S E B :=
+  IMonad (fun r s =>
+            let (m, s) := imonad_run m1 r s in
+            match m with
+            | inl e => (inl e, s)
+            | inr _ => imonad_run m2 r s
+            end).
+
+Definition imonad_join {R S E A} (m : imonad R S E (imonad R S E A)) : imonad R S E A :=
+  IMonad (fun r s =>
+            let (m, h) := imonad_run m r s in
+            match m with
             | inl e => (inl e, h)
-            | inr x => let (y, h) := f (x, h) in (inr y, h)
+            | inr m => imonad_run m r h
             end).
 
-Definition imonad_with_state_heap {A} (f : iheap -> iheap) (m : imonad A) : imonad A :=
-  IMonad (fun env h => imonad_run m env (f h)).
-
-Definition imonad_throw_error {A} (e : ierror) : imonad A :=
-  IMonad (fun _ h => (inl e, h)).
-
-Definition imonad_catch_error {A} (m : imonad A) (f : ierror -> imonad A) : imonad A :=
-  IMonad (fun env h =>
-            let p := imonad_run m env h in
-            let (r, h) := p in
-            match r with
-            | inl e => imonad_run (f e) env h
-            | inr _ => p
-            end).
-
-Definition imonad_handle_error {A} (f : ierror -> imonad A) (m : imonad A) : imonad A :=
-  imonad_catch_error m f.
-
-Definition imonad_try_error {A} (m : imonad A) : imonad (ierror + A) :=
-  IMonad (fun env h => let (r, h) := imonad_run m env h in (inr r, h)).
-
-Definition imonad_finally_error {A} (m1 : imonad A) (m2 : imonad unit) : imonad A :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m1 env h in
-            let (s, h) := imonad_run m2 env h in
-            match s with
-            | inl e => (inl e, h)
-            | inr _ => (r, h)
-            end).
-
-Definition imonad_except_error {A} (r : ierror + A) : imonad A :=
-  IMonad (fun _ h => (r, h)).
-
-Definition imonad_with_except_error {A} (f : ierror -> ierror) (m : imonad A) : imonad A :=
-  IMonad (fun env h =>
-            let p := imonad_run m env h in
-            let (r, h) := p in
-            match r with
-            | inl e => (inl (f e), h)
-            | inr _ => p
-            end).
-
-Definition imonad_map_except_error {A B} (f : ierror + A -> ierror + B) (m : imonad A) : imonad B :=
-  IMonad (fun env h => let (r, h) := imonad_run m env h in (f r, h)).
-
-Definition imonad_map {A B} (f : A -> B) (m : imonad A) :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m env h in
-            match r with
-            | inl e => (inl e, h)
-            | inr x => (inr (f x), h)
-            end).
-
-Definition imonad_replace {A B} (x : A) (m : imonad B) : imonad A :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m env h in
-            match r with
-            | inl e => (inl e, h)
-            | inr _ => (inr x, h)
-            end).
-
-Definition imonad_pure {A} (x : A) : imonad A :=
-  IMonad (fun _ h => (inr x, h)).
-
-Definition imonad_app {A B} (m1 : imonad (A -> B)) (m2 : imonad A) : imonad B :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m1 env h in
-            match r with
-            | inl e => (inl e, h)
-            | inr f => let (r, h) := imonad_run m2 env h in
-                       match r with
-                       | inl e => (inl e, h)
-                       | inr x => (inr (f x), h)
-                       end
-            end).
-
-Definition imonad_lift2 {A B C} (f : A -> B -> C) (m1 : imonad A) (m2 : imonad B) : imonad C :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m1 env h in
-            match r with
-            | inl e => (inl e, h)
-            | inr x => let (r, h) := imonad_run m2 env h in
-                       match r with
-                       | inl e => (inl e, h)
-                       | inr y => (inr (f x y), h)
-                       end
-            end).
-
-Definition imonad_bind {A B} (m : imonad A) (f : A -> imonad B) : imonad B :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m env h in
-            match r with
-            | inl e => (inl e, h)
-            | inr x => imonad_run (f x) env h
-            end).
-
-Definition imonad_then {A B} (m1 : imonad A) (m2 : imonad B) : imonad B :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m1 env h in
-            match r with
-            | inl e => (inl e, h)
-            | inr _ => imonad_run m2 env h
-            end).
-
-Definition imonad_join {A} (m : imonad (imonad A)) : imonad A :=
-  IMonad (fun env h =>
-            let (r, h) := imonad_run m env h in
-            match r with
-            | inl e => (inl e, h)
-            | inr m => imonad_run m env h
-            end).
-
-Definition imonad_kleisli_compose {A B C} (f1 : A -> imonad B) (f2 : B -> imonad C) (x : A) : imonad C :=
+Definition imonad_kleisli_compose {R S E A B C} (f1 : A -> imonad R S E B) (f2 : B -> imonad R S E C) (x : A) : imonad R S E C :=
   imonad_bind (f1 x) f2.
 
-Definition imonad_eval {A} (m : imonad A) (env : env) (h : iheap) : ierror + A :=
-  fst (imonad_run m env h).
+Definition imonad_eval {R S E A} (m : imonad R S E A) (r : R) (s : S) : E + A :=
+  fst (imonad_run m r s).
 
-Definition imonad_exec {A} (m : imonad A) (env : env) (h : iheap) : iheap :=
-  snd (imonad_run m env h).
+Definition imonad_exec {R S E A} (m : imonad R S E A) (r : R) (s : S) : S :=
+  snd (imonad_run m r s).
 
 Declare Scope imonad_scope.
 Delimit Scope imonad_scope with imonad.

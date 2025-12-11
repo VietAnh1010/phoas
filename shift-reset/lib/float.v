@@ -1,5 +1,5 @@
 From Stdlib Require Import Qcanon.
-From shift_reset.lib Require Import comparison.
+From shift_reset.lib Require Import compare.
 
 Local Open Scope Qc_scope.
 

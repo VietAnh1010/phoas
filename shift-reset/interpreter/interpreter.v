@@ -1,151 +1,144 @@
 From Stdlib Require Import Bool String Qcanon ZArith.
 From shift_reset.core Require Import syntax env loc record tag tuple var.
-From shift_reset.monad Require except es_monad ers_monad.
+From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require Import array builtin ierror iheap op unwrap.
 
-Import es_monad.ESMonadNotations.
-Import ers_monad.ERSMonadNotations.
+Import ESMonadNotations.
 
 Local Open Scope Z_scope.
-Local Open Scope ers_monad_scope.
+Local Open Scope es_monad_scope.
 Local Open Scope lazy_bool_scope.
 
-Definition transform {E R S A} (m : except.t E A) : ers_monad.t E R S A :=
-  ers_monad.except (except.run_except m).
-
-Fixpoint interpret_val_term (t : val_term) : ers_monad.t exn env iheap val :=
+Fixpoint interpret_val_term (t : val_term) (e : env) : es_monad exn iheap val :=
   match t with
   | TVVar x =>
-      let* e := ers_monad.ask in
       match env_lookup x e with
-      | None => ers_monad.throw (Name_error (var_car x))
-      | Some v => ers_monad.pure v
+      | None => throw (Name_error (var_car x))
+      | Some v => pure v
       end
-  | TVTt => ers_monad.pure VTt
-  | TVInt z => ers_monad.pure (VInt z)
-  | TVFloat q => ers_monad.pure (VFloat q)
-  | TVTrue => ers_monad.pure VTrue
-  | TVFalse => ers_monad.pure VFalse
-  | TVChar a => ers_monad.pure (VChar a)
-  | TVString s => ers_monad.pure (VString s)
+  | TVTt => pure VTt
+  | TVInt z => pure (VInt z)
+  | TVFloat q => pure (VFloat q)
+  | TVTrue => pure VTrue
+  | TVFalse => pure VFalse
+  | TVChar a => pure (VChar a)
+  | TVString s => pure (VString s)
   | TVAnd t1 t2 =>
-      let* v := interpret_val_term t1 in
+      let* v := interpret_val_term t1 e in
       let* b := transform (unwrap_vbool v) in
-      if b then interpret_val_term t2 else ers_monad.pure VFalse
+      if b then interpret_val_term t2 e else pure VFalse
   | TVOr t1 t2 =>
-      let* v := interpret_val_term t1 in
+      let* v := interpret_val_term t1 e in
       let* b := transform (unwrap_vbool v) in
-      if b then ers_monad.pure VTrue else interpret_val_term t2
-  | TVFun b t' => ers_monad.reader (VFun b t')
-  | TVFix f b t' => ers_monad.reader (VFix f b t')
-  | TVFixMut t' f => ers_monad.reader (VFixMut t' f)
+      if b then pure VTrue else interpret_val_term t2 e
+  | TVFun b t' => pure (VFun b t' e)
+  | TVFix f b t' => pure (VFix f b t' e)
+  | TVFixMut t' f => pure (VFixMut t' f e)
   | TVPair t1 t2 =>
-      let* v := interpret_val_term t1 in
-      VPair v <$> interpret_val_term t2
+      let* v := interpret_val_term t1 e in
+      VPair v <$> interpret_val_term t2 e
   | TVFst t' =>
-      let* v := interpret_val_term t' in
+      let* v := interpret_val_term t' e in
       fst <$> transform (unwrap_vprod v)
   | TVSnd t' =>
-      let* v := interpret_val_term t' in
+      let* v := interpret_val_term t' e in
       snd <$> transform (unwrap_vprod v)
-  | TVTuple t' => VTuple <$> interpret_tuple_term t'
-  | TVRecord t' => VRecord <$> interpret_record_term t'
+  | TVTuple t' => VTuple <$> interpret_tuple_term t' e
+  | TVRecord t' => VRecord <$> interpret_record_term t' e
   | TVProj t' tag =>
-      let* v := interpret_val_term t' in
+      let* v := interpret_val_term t' e in
       let* r := transform (unwrap_vrecord v) in
       match record_lookup tag r with
-      | None => ers_monad.throw (Name_error (tag_car tag))
-      | Some v' => ers_monad.pure v'
+      | None => throw (Name_error (tag_car tag))
+      | Some v' => pure v'
       end
-  | TVInl t' => VInl <$> interpret_val_term t'
-  | TVInr t' => VInr <$> interpret_val_term t'
-  | TVVariant tag t' => VVariant tag <$> interpret_val_term t'
+  | TVInl t' => VInl <$> interpret_val_term t' e
+  | TVInr t' => VInr <$> interpret_val_term t' e
+  | TVVariant tag t' => VVariant tag <$> interpret_val_term t' e
   | TVRef t' =>
-      let* v := interpret_val_term t' in
-      ers_monad.state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))
+      let* v := interpret_val_term t' e in
+      state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))
   | TVGet t' =>
-      let* v := interpret_val_term t' in
+      let* v := interpret_val_term t' e in
       let* l := transform (unwrap_vref v) in
-      let* h := ers_monad.get in
+      let* h := get in
       match iheap_read l h with
-      | None => ers_monad.throw (Memory_error "ref_get")
-      | Some v' => ers_monad.pure v'
+      | None => throw (Memory_error "ref_get")
+      | Some v' => pure v'
       end
   | TVSet t1 t2 =>
-      let* v1 := interpret_val_term t1 in
-      let* v2 := interpret_val_term t2 in
+      let* v1 := interpret_val_term t1 e in
+      let* v2 := interpret_val_term t2 e in
       let* l := transform (unwrap_vref v1) in
-      let* h := ers_monad.get in
+      let* h := get in
       match iheap_write l v2 h with
-      | None => ers_monad.throw (Memory_error "ref_set")
-      | Some h' => VTt <$ ers_monad.put h'
+      | None => throw (Memory_error "ref_set")
+      | Some h' => VTt <$ put h'
       end
   | TVGetAt t1 t2 =>
-      let* v1 := interpret_val_term t1 in
-      let* v2 := interpret_val_term t2 in
+      let* v1 := interpret_val_term t1 e in
+      let* v2 := interpret_val_term t2 e in
       let* '(Array l z) := transform (unwrap_varray v1) in
       let* i := transform (unwrap_vint v2) in
       if (i <? 0) ||| (z <=? i) then
-        ers_monad.throw (Invalid_argument "index out of bounds")
+        throw (Invalid_argument "index out of bounds")
       else
-        let* h := ers_monad.get in
+        let* h := get in
         match iheap_read (loc_add l (Z.to_N i)) h with
-        | None => ers_monad.throw (Memory_error "array_get_at")
-        | Some v => ers_monad.pure v
+        | None => throw (Memory_error "array_get_at")
+        | Some v => pure v
         end
   | TVSetAt t1 t2 t3 =>
-      let* v1 := interpret_val_term t1 in
-      let* v2 := interpret_val_term t2 in
-      let* v3 := interpret_val_term t3 in
+      let* v1 := interpret_val_term t1 e in
+      let* v2 := interpret_val_term t2 e in
+      let* v3 := interpret_val_term t3 e in
       let* '(Array l z) := transform (unwrap_varray v1) in
       let* i := transform (unwrap_vint v2) in
       if (i <? 0) ||| (z <=? i) then
-        ers_monad.throw (Invalid_argument "index out of bounds")
+        throw (Invalid_argument "index out of bounds")
       else
-        let* h := ers_monad.get in
+        let* h := get in
         match iheap_write (loc_add l (Z.to_N i)) v3 h with
-        | None => ers_monad.throw (Memory_error "array_set_at")
-        | Some h' => VTt <$ ers_monad.put h'
+        | None => throw (Memory_error "array_set_at")
+        | Some h' => VTt <$ put h'
         end
-  | TVExn tag t' => VExn tag <$> interpret_val_term t'
-  | TVEff tag t' => VEff tag <$> interpret_val_term t'
+  | TVExn tag t' => VExn tag <$> interpret_val_term t' e
+  | TVEff tag t' => VEff tag <$> interpret_val_term t' e
   | TVAssert t' =>
-      let* v := interpret_val_term t' in
+      let* v := interpret_val_term t' e in
       let* b := transform (unwrap_vbool v) in
-      if b then ers_monad.pure VTt else ers_monad.throw (Assert_failure "")
+      if b then pure VTt else throw (Assert_failure "")
   | TVArray t' =>
-      let* t := interpret_tuple_term t' in
-      ers_monad.state (fun h => (VArray (iheap_next_loc h) (Z.of_nat (tuple_length t)), array_of_tuple_alloc t h))
+      let* t := interpret_tuple_term t' e in
+      state (fun h => (VArray (iheap_next_loc h) (Z.of_nat (tuple_length t)), array_of_tuple_alloc t h))
   | TVOp1 op t' =>
-      let* v := interpret_val_term t' in
+      let* v := interpret_val_term t' e in
       transform (dispatch_op1 op v)
   | TVOp2 op t1 t2 =>
-      let* v1 := interpret_val_term t1 in
-      let* v2 := interpret_val_term t2 in
+      let* v1 := interpret_val_term t1 e in
+      let* v2 := interpret_val_term t2 e in
       transform (dispatch_op2 op v1 v2)
   | TVBuiltin1 tag t' =>
       let* f := transform (dispatch_builtin1 tag) in
-      let* v := interpret_val_term t' in
-      ers_monad.ERSMonad (fun _ => es_monad.run_es_monad (f v))
+      interpret_val_term t' e >>= f
   | TVBuiltin2 tag t1 t2 =>
       let* f := transform (dispatch_builtin2 tag) in
-      let* v1 := interpret_val_term t1 in
-      let* v2 := interpret_val_term t2 in
-      ers_monad.ERSMonad (fun _ => es_monad.run_es_monad (f v1 v2))
+      let* v := interpret_val_term t1 e in
+      interpret_val_term t2 e >>= f v
   end
-with interpret_tuple_term (t : tuple_term) : ers_monad.t exn env iheap tuple :=
+with interpret_tuple_term (t : tuple_term) (e : env) : es_monad exn iheap tuple :=
   match t with
-  | TTupleNil => ers_monad.pure TupleNil
+  | TTupleNil => pure TupleNil
   | TTupleCons t1 t2 =>
-      let* v := interpret_val_term t1 in
-      TupleCons v <$> interpret_tuple_term t2
+      let* v := interpret_val_term t1 e in
+      TupleCons v <$> interpret_tuple_term t2 e
   end
-with interpret_record_term (t : record_term) : ers_monad.t exn env iheap record :=
+with interpret_record_term (t : record_term) (e : env) : es_monad exn iheap record :=
   match t with
-  | TRecordNil => ers_monad.pure RecordNil
+  | TRecordNil => pure RecordNil
   | TRecordCons tag t1 t2 =>
-      let* v := interpret_val_term t1 in
-      RecordCons tag v <$> interpret_record_term t2
+      let* v := interpret_val_term t1 e in
+      RecordCons tag v <$> interpret_record_term t2 e
   end.
 
 Definition with_binder (b : binder) (v : val) (e : env) : env :=
@@ -154,16 +147,14 @@ Definition with_binder (b : binder) (v : val) (e : env) : env :=
   | BVar x => ECons x v e
   end.
 
-Definition match_variant (p : variant_pattern) (v : variant) (e : env) : option env :=
-  let (tag, v) := v in
+Definition match_variant (p : variant_pattern) (tag : tag) (v : val) (e : env) : option env :=
   match p with
   | PVariantAny => Some e
   | PVariantVar x => Some (ECons x (VVariant tag v) e)
   | PVariantTag tag' b => if tag_eqb tag tag' then Some (with_binder b v e) else None
   end.
 
-Definition match_exn (p : variant_pattern) (exn : exn) (e : env) : option env :=
-  let (tag, v) := exn in
+Definition match_exn (p : variant_pattern) (tag : tag) (v : val) (e : env) : option env :=
   match p with
   | PVariantAny => Some e
   | PVariantVar x => Some (ECons x (VExn tag v) e)
@@ -223,336 +214,305 @@ Definition with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
   in
   go t e.
 
-Notation ienv := (env * kont)%type.
-
 Inductive iresult : Type :=
-| IRShift : metakont -> (val -> ers_monad.t iresult ienv iheap val) -> iresult
-| IRControl : metakont -> (val -> ers_monad.t iresult ienv iheap val) -> iresult
-| IRRaise : exn -> iresult
-| IRPerform : metakont -> eff -> iresult.
+| IRShift : metakont -> (val -> es_monad iresult iheap val) -> iresult
+| IRControl : metakont -> (val -> es_monad iresult iheap val) -> iresult
+| IRRaise : tag -> val -> iresult
+| IRPerform : metakont -> tag -> val -> iresult.
 
-Definition imonad : Type -> Type := ers_monad.t iresult ienv iheap.
-Definition interpreter : Type := term -> imonad val.
+Definition IRRaise' (exn : exn) : iresult :=
+  let (tag, v) := exn in IRRaise tag v.
 
-Definition interpret_ret_term_under (e : ienv) (self : interpreter) (t : ret_term) (v : val) :  imonad val :=
+Definition interpreter : Type := term -> env -> kont -> es_monad iresult iheap val.
+
+Definition interpret_ret_term (self : interpreter) (t : ret_term) (e : env) (k : kont) (v : val) : es_monad iresult iheap val :=
   match t with
-  | TRetNone => ers_monad.pure v
-  | TRetSome b t' => ers_monad.scope (with_binder b v (fst e), snd e) (self t')
+  | TRetNone => pure v
+  | TRetSome b t' => self t' (with_binder b v e) k
   end.
 
-Fixpoint interpret_exn_term_under (e : ienv) (self : interpreter) (t : exn_term) (exn : exn) : option (imonad val) :=
-  let (e', k) := e in
+Fixpoint interpret_exn_term (self : interpreter) (t : exn_term) (e : env) (k : kont) (tag : tag) (v : val) : option (es_monad iresult iheap val) :=
   match t with
   | TExnLast p t' =>
-      match match_exn p exn e' with
-      | Some e' => Some (ers_monad.scope (e', k) (self t'))
+      match match_exn p tag v e with
+      | Some e' => Some (self t' e' k)
       | None => None
       end
   | TExnCons p t1 t2 =>
-      match match_exn p exn e' with
-      | Some e' => Some (ers_monad.scope (e', k) (self t1))
-      | None => interpret_exn_term_under e self t2 exn
+      match match_exn p tag v e with
+      | Some e' => Some (self t1 e' k)
+      | None => interpret_exn_term self t2 e k tag v
       end
   end.
 
-(*
-Fixpoint interpret_eff_term_under (e : ienv) (self : interpreter) (t : eff_term) (k : kont) (tag : tag) (v u : val) : option (imonad val) :=
+Fixpoint interpret_eff_term (self : interpreter) (t : eff_term) (e : env) (k : kont) (tag : tag) (v u : val) : option (es_monad iresult iheap val) :=
   match t with
   | TEffLast p b t' =>
       match match_eff p tag v e with
-      | Some e' => Some (imonad_under (with_binder b u e') (self t' k))
+      | Some e' => Some (self t' (with_binder b u e') k)
       | None => None
       end
   | TEffCons p b t1 t2 =>
       match match_eff p tag v e with
-      | Some e' => Some (imonad_under (with_binder b u e') (self t1 k))
-      | None => interpret_eff_term_under e self t2 k tag v u
+      | Some e' => Some (self t1 (with_binder b u e') k)
+      | None => interpret_eff_term self t2 e k tag v u
       end
   end.
-*)
 
-Fixpoint unwind_reset (k : kont) (r : iresult) : imonad val :=
+Fixpoint unwind_reset (k : kont) (r : iresult) : es_monad iresult iheap val :=
   match r with
-  | IRShift mk f => ers_monad.catch (f (VMKReset mk)) (unwind_reset k)
-  | IRControl mk f => ers_monad.throw (IRControl (MKReset mk k) f)
-  | IRRaise _ => ers_monad.throw r
-  | IRPerform mk eff => ers_monad.throw (IRPerform (MKReset mk k) eff)
+  | IRShift mk f => catch (f (VMKReset mk)) (unwind_reset k)
+  | IRControl mk f => throw (IRControl (MKReset mk k) f)
+  | IRRaise _ _ => throw r
+  | IRPerform mk tag v => throw (IRPerform (MKReset mk k) tag v)
   end.
 
-Fixpoint unwind_prompt (k : kont) (r : iresult) : imonad val :=
+Fixpoint unwind_prompt (k : kont) (r : iresult) : es_monad iresult iheap val :=
   match r with
-  | IRShift mk f => ers_monad.throw (IRShift (MKPrompt mk k) f)
-  | IRControl mk f => ers_monad.catch (f (VMKPure mk)) (unwind_prompt k)
-  | IRRaise _ => ers_monad.throw r
-  | IRPerform mk eff => ers_monad.throw (IRPerform (MKPrompt mk k) eff)
+  | IRShift mk f => throw (IRShift (MKPrompt mk k) f)
+  | IRControl mk f => catch (f (VMKPure mk)) (unwind_prompt k)
+  | IRRaise _ _ => throw r
+  | IRPerform mk tag v => throw (IRPerform (MKPrompt mk k) tag v)
   end.
 
-Definition unwind_try (self : interpreter) (t : exn_term) (r : iresult) : imonad val :=
-  let* '((e, k) as ie) := ers_monad.ask in
+Definition unwind_try (self : interpreter) (t : exn_term) (e : env) (k : kont) (r : iresult) : es_monad iresult iheap val :=
   match r with
-  | IRShift mk f => ers_monad.throw (IRShift (MKTry mk t e k) f)
-  | IRControl mk f => ers_monad.throw (IRControl (MKTry mk t e k) f)
-  | IRRaise exn =>
-      match interpret_exn_term_under ie self t exn with
+  | IRShift mk f => throw (IRShift (MKTry mk t e k) f)
+  | IRControl mk f => throw (IRControl (MKTry mk t e k) f)
+  | IRRaise tag v =>
+      match interpret_exn_term self t e k tag v with
       | Some m => m
-      | None => ers_monad.throw r
+      | None => throw r
       end
-  | IRPerform mk eff => ers_monad.throw (IRPerform (MKTry mk t e k) eff)
+  | IRPerform mk tag v => throw (IRPerform (MKTry mk t e k) tag v)
   end.
 
-Definition unwind_handle (self : interpreter) (t1 : ret_term) (t2 : eff_term) (r : iresult) : imonad val :=
-  let* '((e, k) as ie) := ers_monad.ask in
-  match r with
-  | IRShift mk f => ers_monad.throw (IRShift (MKHandle mk t1 t2 e k) f)
-  | IRControl mk f => ers_monad.throw (IRControl (MKHandle mk t1 t2 e k) f)
-  | IRRaise _ => ers_monad.throw r
-  | IRPerform mk e => ers_monad.throw r
-                        (*
-      match interpret_eff_term_under e self t2 k tag v (VMKHandle mk t1 t2 e) with
-      | Some m => m
-      | None => ers_monad.throw (IRPerform (MKHandle mk t1 t2 e k) tag v)
-      end*)
-  end.
-
-Definition unwind_shallow_handle (e : env) (self : interpreter) (t1 : ret_term) (t2 : eff_term) (k : kont) (r : iresult) : imonad3 :=
-  match r with
-  | IRShift mk f => imonad_throw (IRShift (MKShallowHandle mk t1 t2 e k) f)
-  | IRControl mk f => imonad_throw (IRControl (MKShallowHandle mk t1 t2 e k) f)
-  | IRRaise _ _ => imonad_throw r
-  | IRPerform mk tag v =>
-      match interpret_eff_term_under e self t2 k tag v (VMKPure mk) with
-      | Some m => m
-      | None => imonad_throw (IRPerform (MKShallowHandle mk t1 t2 e k) tag v)
+Definition unwind_handle (self : interpreter) (t1 : ret_term) (t2 : eff_term) (e : env) (k : kont) (m : iresult + val) : es_monad iresult iheap val :=
+  match m with
+  | inr v => interpret_ret_term self t1 e k v
+  | inl r =>
+      match r with
+      | IRShift mk f => throw (IRShift (MKHandle mk t1 t2 e k) f)
+      | IRControl mk f => throw (IRControl (MKHandle mk t1 t2 e k) f)
+      | IRRaise _ _ => throw r
+      | IRPerform mk tag v =>
+          match interpret_eff_term self t2 e k tag v (VMKHandle mk t1 t2 e) with
+          | Some m => m
+          | None => throw (IRPerform (MKHandle mk t1 t2 e k) tag v)
+          end
       end
   end.
-*)
 
-Fixpoint interpret_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) : imonad val :=
+Definition unwind_shallow_handle (self : interpreter) (t1 : ret_term) (t2 : eff_term) (e : env) (k : kont) (m : iresult + val) : es_monad iresult iheap val :=
+  match m with
+  | inr v => interpret_ret_term self t1 e k v
+  | inl r =>
+      match r with
+      | IRShift mk f => throw (IRShift (MKShallowHandle mk t1 t2 e k) f)
+      | IRControl mk f => throw (IRControl (MKShallowHandle mk t1 t2 e k) f)
+      | IRRaise _ _ => throw r
+      | IRPerform mk tag v =>
+          match interpret_eff_term self t2 e k tag v (VMKPure mk) with
+          | Some m => m
+          | None => throw (IRPerform (MKShallowHandle mk t1 t2 e k) tag v)
+          end
+      end
+  end.
+
+Fixpoint refine_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) : es_monad iresult iheap val :=
   match k1 with
-  | KNil => ers_monad.pure v
-  | KCons0 t e k1' => ers_monad.scope (e, KApp k1' k2) (self t) >>= interpret_kont_app self k1' k2
-  | KCons1 b t e k1' => ers_monad.scope (with_binder b v e, KApp k1' k2) (self t) >>= interpret_kont_app self k1' k2
-  | KApp k11 k12 => interpret_kont_app self k11 (KApp k12 k2) v >>= interpret_kont_app self k12 k2
+  | KNil => pure v
+  | KCons0 t e k1' => self t e (KApp k1' k2) >>= refine_kont_app self k1' k2
+  | KCons1 b t e k1' => self t (with_binder b v e) (KApp k1' k2) >>= refine_kont_app self k1' k2
+  | KApp k11 k12 => refine_kont_app self k11 (KApp k12 k2) v >>= refine_kont_app self k12 k2
   end.
 
-Fixpoint interpret_kont (self : interpreter) (k : kont) (v : val) : imonad val :=
+Fixpoint refine_kont (self : interpreter) (k : kont) (v : val) : es_monad iresult iheap val :=
   match k with
-  | KNil => ers_monad.pure v
-  | KCons0 t e k' => ers_monad.scope (e, k') (self t) >>= interpret_kont self k'
-  | KCons1 b t e k' => ers_monad.scope (with_binder b v e, k') (self t) >>= interpret_kont self k'
-  | KApp k1 k2 => interpret_kont_app self k1 k2 v >>= interpret_kont self k2
+  | KNil => pure v
+  | KCons0 t e k' => self t e k' >>= refine_kont self k'
+  | KCons1 b t e k' => self t (with_binder b v e) k' >>= refine_kont self k'
+  | KApp k1 k2 => refine_kont_app self k1 k2 v >>= refine_kont self k2
   end.
-(*
-Definition refine_kont (self : interpreter) (k : kont) : ikont :=
-  IKont k (interpret_kont self k).
 
-Definition refine_kont_app (self : interpreter) (k1 : kont) (k2 : ikont) : ikont :=
-  IKont (KApp k1 k2) (interpret_kont_app self k1 k2).
-*)
-
-(*
-Fixpoint interpret_metakont (self : interpreter) (mk : metakont) (v : val) : imonad3 :=
+Fixpoint refine_metakont (self : interpreter) (mk : metakont) (v : val) : es_monad iresult iheap val :=
   match mk with
-  | MKPure k => interpret_kont self k v
-  | MKReset mk' k => imonad_catch (interpret_metakont self mk' v) (unwind_reset k)
-  | MKPrompt mk' k => imonad_catch (interpret_metakont self mk' v) (unwind_prompt k)
-  | MKTry mk' t e k => imonad_catch (interpret_metakont self mk' v) (unwind_try e self t k)
+  | MKPure k => refine_kont self k v
+  | MKReset mk' k => catch (refine_metakont self mk' v) (unwind_reset k) >>= refine_kont self k
+  | MKPrompt mk' k => catch (refine_metakont self mk' v) (unwind_prompt k) >>= refine_kont self k
+  | MKTry mk' t e k => catch (refine_metakont self mk' v) (unwind_try self t e k) >>= refine_kont self k
   | MKHandle mk' t1 t2 e k =>
-      imonad_catch (interpret_metakont self mk' v >>= interpret_ret_term_under e self t1 k) (unwind_handle e self t1 t2 k)
+      let* m := try (refine_metakont self mk' v) in
+      unwind_handle self t1 t2 e k m >>= refine_kont self k
   | MKShallowHandle mk' t1 t2 e k =>
-      imonad_catch (interpret_metakont self mk' v >>= interpret_ret_term_under e self t1 k) (unwind_shallow_handle e self t1 t2 k)
+      let* m := try (refine_metakont self mk' v) in
+      unwind_shallow_handle self t1 t2 e k m >>= refine_kont self k
   end.
-*)
 
-(*
-Definition interpret_metakont_app (self : interpreter) (mk : metakont) (k : ikont) (v : val) : imonad iresult :=
+Definition refine_metakont_app (self : interpreter) (mk : metakont) (k : kont) (v : val) : es_monad iresult iheap val :=
   match mk with
-  | MKPure k' => interpret_kont_app self k' k v
-  | MKReset mk' k' => interpret_metakont self mk' v >>= unwind_reset (refine_kont_app self k' k)
-  | MKPrompt mk' k' => interpret_metakont self mk' v >>= unwind_prompt (refine_kont_app self k' k)
-  | MKTry mk' t e k' => interpret_metakont self mk' v >>= unwind_try e self t (refine_kont_app self k' k)
-  | MKHandle mk' t1 t2 e k' => interpret_metakont self mk' v >>= unwind_handle e self t1 t2 (refine_kont_app self k' k)
-  | MKShallowHandle mk' t1 t2 e k' => interpret_metakont self mk' v >>= unwind_shallow_handle e self t1 t2 (refine_kont_app self k' k)
+  | MKPure k' => refine_kont_app self k' k v
+  | MKReset mk' k' => catch (refine_metakont self mk' v) (unwind_reset (KApp k' k)) >>= refine_kont_app self k' k
+  | MKPrompt mk' k' => catch (refine_metakont self mk' v) (unwind_prompt (KApp k' k)) >>= refine_kont_app self k' k
+  | MKTry mk' t e k' => catch (refine_metakont self mk' v) (unwind_try self t e (KApp k' k)) >>= refine_kont_app self k' k
+  | MKHandle mk' t1 t2 e k' =>
+      let* m := try (refine_metakont self mk' v) in
+      unwind_handle self t1 t2 e (KApp k' k) m >>= refine_kont_app self k' k
+  | MKShallowHandle mk' t1 t2 e k' =>
+      let* m := try (refine_metakont self mk' v) in
+      unwind_shallow_handle self t1 t2 e (KApp k' k) m >>= refine_kont_app self k' k
   end.
-*)
 
-Fixpoint interpret_variant_term (self : interpreter) (t : variant_term) (v : variant) : imonad val :=
-  let* '(e, k) := ers_monad.ask in
+Fixpoint interpret_variant_term (self : interpreter) (t : variant_term) (e : env) (k : kont) (tag : tag) (v : val) : es_monad iresult iheap val :=
   match t with
-  | TVariantNil => ers_monad.throw (IRRaise (Match_failure ""))
+  | TVariantNil => throw (IRRaise' (Match_failure ""))
   | TVariantCons p t1 t2 =>
-      match match_variant p v e with
-      | Some e' => ers_monad.scope (e', k) (self t1)
-      | None => interpret_variant_term self t2 v
+      match match_variant p tag v e with
+      | Some e' => self t1 e' k
+      | None => interpret_variant_term self t2 e k tag v
       end
   end.
 
-(*
-Fixpoint interpret_fix_mut_term_under (e : env) (self : interpreter) (t : fix_mut_term) (k : ikont) (f : var) (v : val) : imonad iresult :=
+Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env) (k : kont) (f : var) (v : val) : es_monad iresult iheap val :=
   match t with
-  | TFixMutLast f' b t' =>
-      if var_eqb f f'
-      then imonad_under_env (with_binder b v e) (self t' k)
-      else imonad_throw_error (Name_error (var_car f))
-  | TFixMutCons f' b t1 t2 =>
-      if var_eqb f f'
-      then imonad_under_env (with_binder b v e) (self t1 k)
-      else interpret_fix_mut_term_under e self t2 k f v
+  | TFixMutLast f' b t' => if var_eqb f f' then self t' (with_binder b v e) k else throw (IRRaise' (Name_error (var_car f)))
+  | TFixMutCons f' b t1 t2 => if var_eqb f f' then self t1 (with_binder b v e) k else interpret_fix_mut_term self t2 e k f v
   end.
-*)
 
-Axiom cast : forall {A B}, A -> B.
+Definition cast0 {E E' S A} (f : E -> E') (m : es_monad E S A) : es_monad E' S A :=
+  ESMonad
+    (fun s =>
+       let (m, s) := run_es_monad m s in
+       match m with
+       | inl e => (inl (f e), s)
+       | inr x => (inr x, s)
+       end).
 
-Axiom cast' : forall {A}, except.t exn A -> imonad A.
+Definition cast {A} : es_monad exn iheap A -> es_monad iresult iheap A := cast0 IRRaise'.
 
-Definition interpret_term (self : interpreter) : term -> imonad val :=
-  fix self' t :=
+Definition cast' {A} (m : except.t exn A) : es_monad iresult iheap A :=
+  cast (transform m).
+
+Definition interpret_term (self : interpreter) : term -> env -> kont -> es_monad iresult iheap val :=
+  fix self' t e k :=
     match t with
-    | TVal tv => cast (interpret_val_term tv)
+    | TVal tv => cast (interpret_val_term tv e)
     | TApp tv1 tv2 =>
-        ers_monad.throw (IRRaise (Failure "todo"))
-        (*
-        let* v1 := interpret_val_term tv1 in
-        let* v2 := interpret_val_term tv2 in
-        let* c := unwrap_vclosure v1 in
+        let* v1 := cast (interpret_val_term tv1 e) in
+        let* v2 := cast (interpret_val_term tv2 e) in
+        let* c := cast' (unwrap_vclosure v1) in
         match c with
-        | CFun b t' e => imonad_under_env (with_binder b v2 e) (self t' k)
-        | CFix f b t' e => imonad_under_env (with_binder b v2 (ECons f v1 e)) (self t' k)
-        | CFixMut t' f e => interpret_fix_mut_term_under (with_fix_mut_term t' e) self t' k f v2
-        | CMKPure mk => interpret_metakont_app self mk k v2
-        | CMKReset mk => interpret_metakont self mk v2 >>= unwind_reset k
-        | CMKHandle mk t1 t2 e => interpret_metakont self mk v2 >>= unwind_handle e self t1 t2 k
-        end*)
+        | CFun b t' e => self t' (with_binder b v2 e) k
+        | CFix f b t' e => self t' (with_binder b v2 (ECons f v1 e)) k
+        | CFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
+        | CMKPure mk => refine_metakont_app self mk k v2
+        | CMKReset mk => catch (refine_metakont self mk v2) (unwind_reset k)
+        | CMKHandle mk t1 t2 e => try (refine_metakont self mk v2) >>= unwind_handle self t1 t2 e k
+        end
     | TSeq t1 t2 =>
-        let* '(e, k) := ers_monad.ask in
-        let* _ := ers_monad.scope (e, KCons0 t2 e k) (self' t1) in
-        ers_monad.scope (e, k) (self' t2)
+        let* _ := self' t1 e (KCons0 t2 e k) in
+        self' t2 e k
     | TLet b t1 t2 =>
-        let* '(e, k) := ers_monad.ask in
-        let* v := ers_monad.scope (e, KCons1 b t2 e k) (self' t1) in
-        ers_monad.scope (with_binder b v e, k) (self' t2)
+        let* v := self' t1 e (KCons1 b t2 e k) in
+        self' t2 (with_binder b v e) k
+    | TLetFix f b t1 t2 => self' t2 (ECons f (VFix f b t1 e) e) k
+    | TLetFixMut t1 t2 => self' t2 (with_fix_mut_term t1 e) k
+    | TLetTuple p tv t' =>
+        let* v := cast (interpret_val_term tv e) in
+        let* t := cast' (unwrap_vtuple v) in
+        match match_tuple p t e with
+        | Some e' => self' t' e' k
+        | None => throw (IRRaise' (Match_failure ""))
+        end
+    | TLetRecord p tv t' =>
+        let* v := cast (interpret_val_term tv e) in
+        let* r := cast' (unwrap_vrecord v) in
+        match match_record p r e with
+        | Some e' => self' t' e' k
+        | None => throw (IRRaise' (Match_failure ""))
+        end
     | TIf tv t1 t2 =>
-        let* v := cast (interpret_val_term tv) in
+        let* v := cast (interpret_val_term tv e) in
         let* b := cast' (unwrap_vbool v) in
-        if b then self' t1 else self' t2
+        if b then self' t1 e k else self' t2 e k
     | TSplit b1 b2 tv t' =>
-        let* v := cast (interpret_val_term tv) in
+        let* v := cast (interpret_val_term tv e) in
         let* '(v1, v2) := cast' (unwrap_vprod v) in
-        ers_monad.local (fun '(e, k) => (with_binder b2 v2 (with_binder b1 v1 e), k)) (self' t')
+        self' t' (with_binder b2 v2 (with_binder b1 v1 e)) k
     | TCase tv b1 t1 b2 t2 =>
-        let* v := cast (interpret_val_term tv) in
+        let* v := cast (interpret_val_term tv e) in
         let* s := cast' (unwrap_vsum v) in
         match s with
-        | inl v' => ers_monad.local (fun '(e, k) => (with_binder b1 v' e, k)) (self' t1)
-        | inr v' => ers_monad.local (fun '(e, k) => (with_binder b2 v' e, k)) (self' t2)
+        | inl v' => self' t1 (with_binder b1 v' e) k
+        | inr v' => self' t2 (with_binder b2 v' e) k
         end
     | TMatchVariant tv t' =>
-        let* v := cast (interpret_val_term tv) in
-        cast' (unwrap_vvariant v) >>= interpret_variant_term self' t'
+        let* v := cast (interpret_val_term tv e) in
+        let* '(Variant tag v) := cast' (unwrap_vvariant v) in
+        interpret_variant_term self' t' e k tag v
     | TWhile tv t' =>
-        let* v := cast (interpret_val_term tv) in
+        let* v := cast (interpret_val_term tv e) in
         let* b := cast' (unwrap_vbool v) in
         if b then
-          let* _ := ers_monad.local (fun '(e, k) => (e, KCons0 t e k)) (self' t') in
-          self t
+          let* _ := self' t' e (KCons0 t e k) in
+          self t e k
         else
-          ers_monad.pure VTt
-    | TShift b t' =>
-        let* '(e, k) := ers_monad.ask in
-        ers_monad.throw (IRShift (MKPure k) (fun u => ers_monad.scope (with_binder b u e, KNil) (self' t')))
-    | TReset t' =>
-        let* '(e, k) := ers_monad.ask in
-        ers_monad.catch (ers_monad.scope (e, KNil) (self' t')) (unwind_reset k)
-    | TControl b t' =>
-        let* '(e, k) := ers_monad.ask in
-        ers_monad.throw (IRControl (MKPure k) (fun u => ers_monad.scope (with_binder b u e, KNil) (self' t')))
-    | TPrompt t' =>
-        let* '(e, k) := ers_monad.ask in
-        ers_monad.catch (ers_monad.scope (e, KNil) (self' t')) (unwind_reset k)
-    | TRaise tv =>
-        let* v := cast (interpret_val_term tv) in
-        let* e := cast' (unwrap_vexn v) in
-        ers_monad.throw (IRRaise e)
-    | TTry t1 t2 =>
-        ers_monad.catch (ers_monad.local (fun '(e, _) => (e, KNil)) (self' t1)) (unwind_try self t2)
-    | TPerform tv =>
-        let* v := cast (interpret_val_term tv) in
-        let* e := cast' (unwrap_veff v) in
-        let* '(_, k) := ers_monad.ask in
-        ers_monad.throw (IRPerform (MKPure k) e)
-    | _ =>
-        ers_monad.throw (IRRaise (Failure "todo"))
-    end.
-(*
+          pure VTt
     | TFor b tv1 d tv2 t' =>
-        let* v1 := interpret_val_term tv1 in
-        let* v2 := interpret_val_term tv2 in
-        let* i1 := unwrap_vint v1 in
-        let* i2 := unwrap_vint v2 in
-        let* e := imonad_ask_env in
+        let* v1 := cast (interpret_val_term tv1 e) in
+        let* v2 := cast (interpret_val_term tv2 e) in
+        let* i1 := cast' (unwrap_vint v1) in
+        let* i2 := cast' (unwrap_vint v2) in
         let tv := TVInt i2 in
         let (f, z) := with_for_direction d i1 i2 in
         let fix go n i :=
           match n with
-          | O => ikont_app k VTt
+          | O => pure VTt
           | S n' =>
-          let i' := f i in
-              imonad_under_env (with_binder b (VInt i) e) (self' t' (IKont (KCons0 (TFor b (TVInt i') d tv t') e k) (fun _ => go n' i')))
+              let i' := f i in
+              let* _ := self' t' (with_binder b (VInt i) e) (KCons0 (TFor b (TVInt i') d tv t') e k) in
+              go n' i'
           end
         in
         go (Z.to_nat (Z.succ z)) i1
-    | TLetFix f b t1 t2 => imonad_local_env (fun e => ECons f (VFix f b t1 e) e) (self' t2 k)
-    | TLetFixMut t1 t2 => imonad_local_env (with_fix_mut_term t1) (self' t2 k)
-    | TLetTuple p tv t' =>
-        let* v := interpret_val_term tv in
-        let* t := unwrap_vtuple v in
-        let* e := imonad_ask_env in
-        match match_tuple p t e with
-        | Some e' => imonad_under_env e' (self' t' k)
-        | None => imonad_throw_error (Match_failure "")
-        end
-    | TLetRecord p tv t' =>
-        let* v := interpret_val_term tv in
-        let* r := unwrap_vrecord v in
-        let* e := imonad_ask_env in
-        match match_record p r e with
-        | Some e' => imonad_under_env e' (self' t' k)
-        | None => imonad_throw_error (Match_failure "")
-        end
-    | THandle t1 t2 t3 =>
-        let* r := self' t1 ikont_nil in
-        let* e := imonad_ask_env in
-        unwind_handle e self' t2 t3 k r
-    | TShallowHandle t1 t2 t3 =>
-        let* r := self' t1 ikont_nil in
-        let* e := imonad_ask_env in
-        unwind_shallow_handle e self' t2 t3 k r
+    | TShift b t' => throw (IRShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
+    | TReset t' => catch (self' t' e KNil) (unwind_reset k)
+    | TControl b t' => throw (IRControl (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
+    | TPrompt t' => catch (self' t' e KNil) (unwind_prompt k)
+    | TRaise tv =>
+        let* v := cast (interpret_val_term tv e) in
+        let* '(Exn tag v) := cast' (unwrap_vexn v) in
+        throw (IRRaise tag v)
+    | TTry t1 t2 => catch (self' t1 e KNil) (unwind_try self' t2 e k)
+    | TPerform tv =>
+        let* v := cast (interpret_val_term tv e) in
+        let* '(Eff tag v) := cast' (unwrap_veff v) in
+        throw (IRPerform (MKPure k) tag v)
+    | THandle t1 t2 t3 => try (self' t1 e KNil) >>= unwind_handle self' t2 t3 e k
+    | TShallowHandle t1 t2 t3 => try (self' t1 e KNil) >>= unwind_shallow_handle self' t2 t3 e k
     end.
-*)
 
-Fixpoint interpret_term' (fuel : nat) (t : term) : imonad val :=
+Fixpoint interpret_term' (fuel : nat) (t : term) (e : env) (k : kont) : es_monad iresult iheap val :=
   match fuel with
-  | O => ers_monad.throw (IRRaise Out_of_fuel)
-  | S fuel' => interpret_term (interpret_term' fuel') t
+  | O => throw (IRRaise' Out_of_fuel)
+  | S fuel' => interpret_term (interpret_term' fuel') t e k
   end.
 
-(*
-Definition unwrap_IRVal (r : iresult) : imonad val :=
+Definition iresult_to_exn (r : iresult) : exn :=
   match r with
-  | IRShift _ _ => imonad_throw_error Undelimited_shift
-  | IRControl _ _ => imonad_throw_error Undelimited_control
-  | IRRaise _ _ => imonad_throw_error (Unhandled_exception "")
-  | IRPerform _ _ _ => imonad_throw_error (Unhandled_effect "")
+  | IRShift _ _ => Undelimited_shift
+  | IRControl _ _ => Undelimited_control
+  | IRRaise tag v => Exn tag v
+  | IRPerform _ _ _ => Unhandled_effect ""
   end.
-*)
 
-(*
-Definition run_term (fuel : nat) (t : term) : (ierror + val) * iheap :=
-  imonad_run (interpret_term' fuel t ikont_nil >>= unwrap_IRVal) ENil iheap_empty.
+Definition cast'' {A} : es_monad iresult iheap A -> es_monad exn iheap A := cast0 iresult_to_exn.
 
-Definition eval_term (fuel : nat) (t : term) : ierror + val :=
+Definition run_term (fuel : nat) (t : term) : (exn + val) * iheap :=
+  run_es_monad (cast'' (interpret_term' fuel t ENil KNil)) iheap_empty.
+
+Definition eval_term (fuel : nat) (t : term) : exn + val :=
   fst (run_term fuel t).
 
 Definition exec_term (fuel : nat) (t : term) : iheap :=
   snd (run_term fuel t).
-*)

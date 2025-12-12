@@ -51,12 +51,30 @@ Definition bind {E A B} (m : except E A) (f : A -> except E B) : except E B :=
     | inr x => run_except (f x)
     end.
 
+Definition join {E A} (m : except E (except E A)) : except E A :=
+  Except match run_except m with
+    | inl e => inl e
+    | inr m => run_except m
+    end.
+
 Definition throw {E A} (e : E) : except E A :=
   Except (inl e).
 
 Definition catch {E A} (m : except E A) (f : E -> except E A) : except E A :=
   Except match run_except m with
     | inl e => run_except (f e)
+    | inr x => inr x
+    end.
+
+Definition try {E A} (m : except E A) : except E (E + A) :=
+  Except (inr (run_except m)).
+
+Definition map_except {E E' A B} (f : E + A -> E' + B) (m : except E A) : except E' B :=
+  Except (f (run_except m)).
+
+Definition with_except {E E' A} (f : E -> E') (m : except E A) : except E' A :=
+  Except match run_except m with
+    | inl e => inl (f e)
     | inr x => inr x
     end.
 

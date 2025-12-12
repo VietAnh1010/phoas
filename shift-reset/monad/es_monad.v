@@ -123,6 +123,30 @@ Definition finally {E S A} (m1 : es_monad E S A) (m2 : es_monad E S unit) : es_m
        | inr _ => (m1, s)
        end).
 
+Definition map_state {E S A B} (f : A * S -> B * S) (m : es_monad E S A) : es_monad E S B :=
+  ESMonad
+    (fun s =>
+       let (m, s) := run_es_monad m s in
+       match m with
+       | inl e => (inl e, s)
+       | inr x => let (y, s) := f (x, s) in (inr y, s)
+       end).
+
+Definition with_state {E S A} (f : S -> S) (m : es_monad E S A) : es_monad E S A :=
+  ESMonad (fun s => run_es_monad m (f s)).
+
+Definition map_except {E E' S A B} (f : E + A -> E' + B) (m : es_monad E S A) : es_monad E' S B :=
+  ESMonad (fun s => let (m, s) := run_es_monad m s in (f m, s)).
+
+Definition with_except {E E' S A} (f : E -> E') (m : es_monad E S A) : es_monad E' S A :=
+  ESMonad
+    (fun s =>
+       let (m, s) := run_es_monad m s in
+       match m with
+       | inl e => (inl (f e), s)
+       | inr x => (inr x, s)
+       end).
+
 Module ESMonadNotations.
   Declare Scope es_monad_scope.
   Delimit Scope es_monad_scope with es_monad.

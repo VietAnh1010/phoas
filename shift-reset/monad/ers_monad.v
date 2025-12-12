@@ -135,6 +135,33 @@ Definition finally {E R S A} (m1 : ers_monad E R S A) (m2 : ers_monad E R S unit
        | inr _ => (m1, s)
        end).
 
+Definition with_reader {E R' R S A} (f : R' -> R) (m : ers_monad E R S A) : ers_monad E R' S A :=
+  ERSMonad (fun r => run_ers_monad m (f r)).
+
+Definition map_state {E R S A B} (f : A * S -> B * S) (m : ers_monad E R S A) : ers_monad E R S B :=
+  ERSMonad
+    (fun r s =>
+       let (m, s) := run_ers_monad m r s in
+       match m with
+       | inl e => (inl e, s)
+       | inr x => let (y, s) := f (x, s) in (inr y, s)
+       end).
+
+Definition with_state {E R S A} (f : S -> S) (m : ers_monad E R S A) : ers_monad E R S A :=
+  ERSMonad (fun r s => run_ers_monad m r (f s)).
+
+Definition map_except {E E' R S A B} (f : E + A -> E' + B) (m : ers_monad E R S A) : ers_monad E' R S B :=
+  ERSMonad (fun r s => let (m, s) := run_ers_monad m r s in (f m, s)).
+
+Definition with_except {E E' R S A} (f : E -> E') (m : ers_monad E R S A) : ers_monad E' R S A :=
+  ERSMonad
+    (fun r s =>
+       let (m, s) := run_ers_monad m r s in
+       match m with
+       | inl e => (inl (f e), s)
+       | inr x => (inr x, s)
+       end).
+
 Module ERSMonadNotations.
   Declare Scope ers_monad_scope.
   Delimit Scope ers_monad_scope with ers_monad.

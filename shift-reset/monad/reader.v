@@ -22,6 +22,9 @@ Definition appr {R A B} (_ : reader R A) (m : reader R B) : reader R B := m.
 Definition bind {R A B} (m : reader R A) (f : A -> reader R B) : reader R B :=
   Reader (fun r => run_reader (f (run_reader m r)) r).
 
+Definition join {R A} (m : reader R (reader R A)) : reader R A :=
+  Reader (fun r => run_reader (run_reader m r) r).
+
 Definition ask {R} : reader R R :=
   Reader (fun r => r).
 
@@ -30,6 +33,9 @@ Definition local {R A} (f : R -> R) (m : reader R A) : reader R A :=
 
 Definition scope {R A} (r : R) (m : reader R A) : reader R A :=
   Reader (fun _ => run_reader m r).
+
+Definition with_reader {R' R A} (f : R' -> R) (m : reader R A) : reader R' A :=
+  Reader (fun r => run_reader m (f r)).
 
 Module ReaderNotations.
   Declare Scope reader_scope.

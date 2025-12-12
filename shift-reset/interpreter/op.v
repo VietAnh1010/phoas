@@ -2,7 +2,7 @@ From Stdlib Require Import Ascii Bool String Qcanon ZArith.
 From shift_reset.lib Require Import compare float.
 From shift_reset.core Require Import syntax loc tag val.
 From shift_reset.monad Require Import except.
-From shift_reset.interpreter Require Import ierror unwrap.
+From shift_reset.interpreter Require Import ierror.
 Import ExceptNotations.
 
 Local Open Scope Z_scope.

@@ -2,7 +2,6 @@ From Stdlib Require Import Bool String Qcanon ZArith.
 From shift_reset.core Require Import syntax env loc record tag tuple var.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require Import array builtin ierror iheap op unwrap.
-
 Import ESMonadNotations.
 
 Local Open Scope Z_scope.

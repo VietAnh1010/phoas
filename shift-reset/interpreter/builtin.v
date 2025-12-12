@@ -9,7 +9,6 @@ Import ListNotations.
 Import ESMonadNotations.
 
 Local Open Scope Z_scope.
-Local Open Scope string_scope.
 Local Open Scope es_monad_scope.
 
 Definition transform {E S A} (m : except.t E A) : es_monad E S A :=
@@ -55,7 +54,7 @@ Definition dispatch_builtin1 (tag : tag) : except.t exn (val -> es_monad exn ihe
 
 Definition array_make (v1 v2 : val) : es_monad exn iheap val :=
   let* z := transform (unwrap_vint v1) in
-  if (z <? 0)%Z then throw (Invalid_argument "array_make")
+  if z <? 0 then throw (Invalid_argument "array_make")
   else state (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
 
 Definition builtin2_registry : list (tag * (val -> val -> es_monad exn iheap val)) :=

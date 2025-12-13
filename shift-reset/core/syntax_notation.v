@@ -22,16 +22,16 @@ Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_sco
 Notation "'_'" := PVariantAny (in custom variant_pattern at level 0) : term_scope.
 Notation "x" := x (in custom variant_pattern at level 0, x constr at level 0) : term_scope.
 
-Notation "' ( tag x )" :=
-  (PVariantTag tag x)
+Notation "' ( l x )" :=
+  (PVariantTag l x)
     (in custom variant_pattern at level 0,
-        tag constr at level 0,
+        l constr at level 0,
         x custom binder' at level 0) : term_scope.
 
-Notation "` tag x" :=
-  (PVariantTag tag x)
+Notation "` l x" :=
+  (PVariantTag l x)
     (in custom variant_pattern at level 0,
-        tag constr at level 0,
+        l constr at level 0,
         x custom binder' at level 0) : term_scope.
 
 Notation "<{ t }>" := t (t custom term at level 99) : term_scope.
@@ -385,10 +385,10 @@ Notation "'match' tv 'with' | 'Inl' x1 => t1 | 'Inr' x2 => t2 'end'" :=
         t1 custom term,
         t2 custom term) : term_scope.
 
-Notation "'exception' tag t" :=
-  (TVExn tag t)
+Notation "'exception' l t" :=
+  (TVExn l t)
     (in custom term at level 23,
-        tag constr at level 0,
+        l constr at level 0,
         t custom term at level 0) : term_scope.
 
 Notation "'raise' t" :=
@@ -397,10 +397,10 @@ Notation "'raise' t" :=
 Notation "'try' t1 ;; t2" :=
   (TTry t1 t2) (in custom term at level 69, t1 custom term, t2 custom exn_term) : term_scope.
 
-Notation "'effect' tag t" :=
-  (TVEff tag t)
+Notation "'effect' l t" :=
+  (TVEff l t)
     (in custom term at level 23,
-        tag constr at level 0,
+        l constr at level 0,
         t custom term at level 0) : term_scope.
 
 Notation "'perform' t" :=
@@ -432,33 +432,33 @@ Notation "'shallow' 'handle' t1 ;;; t2" :=
         t1 custom term,
         t2 custom eff_term) : term_scope.
 
-Notation "` tag t" :=
-  (TVVariant tag t)
+Notation "` l t" :=
+  (TVVariant l t)
     (in custom term at level 23,
-        tag constr at level 0,
+        l constr at level 0,
         t custom term at level 0) : term_scope.
 
 Notation "'match' tv 'with' t 'end'" :=
   (TMatchVariant tv t) (in custom term at level 69, tv custom term, t custom variant_term) : term_scope.
 
-Notation "`{ tag := t1 t2" :=
-  (TVRecord (TRecordCons tag t1 t2))
+Notation "`{ l := t1 t2" :=
+  (TVRecord (TRecordCons l t1 t2))
     (in custom term at level 0,
-        tag constr at level 0,
+        l constr at level 0,
         t1 custom term at level 23,
         t2 custom record_term at level 23) : term_scope.
 
-Notation "; tag := t1 t2" :=
-  (TRecordCons tag t1 t2)
+Notation "; l := t1 t2" :=
+  (TRecordCons l t1 t2)
     (in custom record_term at level 23,
-        tag constr at level 0,
+        l constr at level 0,
         t1 custom term at level 23,
         t2 custom record_term at level 23) : term_scope.
 
 Notation "}" := TRecordNil (in custom record_term at level 23) : term_scope.
 
-Notation "t .` tag" :=
-  (TVProj t tag) (in custom term at level 23, tag constr at level 0) : term_scope.
+Notation "t .` l" :=
+  (TVProj t l) (in custom term at level 23, l constr at level 0) : term_scope.
 
 Notation "t1 .[ t2 ]" :=
   (TVGetAt t1 t2) (in custom term at level 64, t1 custom term, t2 custom term) : term_scope.

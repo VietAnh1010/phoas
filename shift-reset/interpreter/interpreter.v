@@ -1,5 +1,6 @@
 From Stdlib Require Import Bool String Qcanon ZArith.
 From shift_reset.core Require Import syntax env loc record tag tuple var.
+From shift_reset.monad Require except.
 From shift_reset.monad Require Import es_monad conversions.
 From shift_reset.interpreter Require Import array builtin error iheap op unwrap.
 Import ESMonadNotations.
@@ -222,6 +223,12 @@ Inductive ievent : Type :=
 Definition imonad : Type -> Type := es_monad ievent iheap.
 Definition interpreter : Type := term -> env -> kont -> imonad val.
 
+Definition interpret_val_term' (t : val_term) (e : env) : imonad val :=
+  with_except IERaise (interpret_val_term t e).
+
+Definition except_exn_to_imonad {A} (m : except.t exn A) : imonad A :=
+  except_to_es_monad (except.with_except IERaise m).
+
 Definition interpret_ret_term (self : interpreter) (t : ret_term) (e : env) (k : kont) (v : val) : imonad val :=
   match t with
   | TRetNone => pure v
@@ -379,11 +386,11 @@ Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env
 Definition interpret_term (self : interpreter) : term -> env -> kont -> imonad val :=
   fix self' t e k :=
     match t with
-    | TVal tv => with_except IERaise (interpret_val_term tv e)
+    | TVal tv => interpret_val_term' tv e
     | TApp tv1 tv2 =>
-        let* v1 := with_except IERaise (interpret_val_term tv1 e) in
-        let* v2 := with_except IERaise (interpret_val_term tv2 e) in
-        let* c := with_except IERaise (except_to_es_monad (unwrap_vclosure v1)) in
+        let* v1 := interpret_val_term' tv1 e in
+        let* v2 := interpret_val_term' tv2 e in
+        let* c := except_exn_to_imonad (unwrap_vclosure v1) in
         match c with
         | CFun b t' e => self t' (with_binder b v2 e) k
         | CFix f b t' e => self t' (with_binder b v2 (ECons f v1 e)) k
@@ -398,52 +405,33 @@ Definition interpret_term (self : interpreter) : term -> env -> kont -> imonad v
     | TLet b t1 t2 =>
         let* v := self' t1 e (KCons1 b t2 e k) in
         self' t2 (with_binder b v e) k
-    | TLetFix f b t1 t2 => self' t2 (ECons f (VFix f b t1 e) e) k
-    | TLetFixMut t1 t2 => self' t2 (with_fix_mut_term t1 e) k
-    | TLetTuple p tv t' =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* t := with_except IERaise (except_to_es_monad (unwrap_vtuple v)) in
-        match match_tuple p t e with
-        | Some e' => self' t' e' k
-        | None => throw (IERaise (Match_failure ""))
-        end
-    | TLetRecord p tv t' =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* r := with_except IERaise (except_to_es_monad (unwrap_vrecord v)) in
-        match match_record p r e with
-        | Some e' => self' t' e' k
-        | None => throw (IERaise (Match_failure ""))
-        end
     | TIf tv t1 t2 =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* b := with_except IERaise (except_to_es_monad (unwrap_vbool v)) in
+        let* v := interpret_val_term' tv e in
+        let* b := except_exn_to_imonad (unwrap_vbool v) in
         if b then self' t1 e k else self' t2 e k
     | TSplit b1 b2 tv t' =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* '(v1, v2) := (with_except IERaise (except_to_es_monad (unwrap_vprod v))) in
+        let* v := interpret_val_term' tv e in
+        let* '(v1, v2) := except_exn_to_imonad (unwrap_vprod v) in
         self' t' (with_binder b2 v2 (with_binder b1 v1 e)) k
     | TCase tv b1 t1 b2 t2 =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* s := with_except IERaise (except_to_es_monad (unwrap_vsum v)) in
+        let* v := interpret_val_term' tv e in
+        let* s := except_exn_to_imonad (unwrap_vsum v) in
         match s with
         | inl v' => self' t1 (with_binder b1 v' e) k
         | inr v' => self' t2 (with_binder b2 v' e) k
         end
-    | TMatchVariant tv t' =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        with_except IERaise (except_to_es_monad (unwrap_vvariant v)) >>= interpret_variant_term self' t' e k
     | TWhile tv t' =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* b := with_except IERaise (except_to_es_monad (unwrap_vbool v)) in
+        let* v := interpret_val_term' tv e in
+        let* b := except_exn_to_imonad (unwrap_vbool v) in
         if b then
           let* _ := self' t' e (KCons0 t e k) in
           self t e k
         else pure VTt
     | TFor b tv1 d tv2 t' =>
-        let* v1 := with_except IERaise (interpret_val_term tv1 e) in
-        let* v2 := with_except IERaise (interpret_val_term tv2 e) in
-        let* i1 := with_except IERaise (except_to_es_monad (unwrap_vint v1)) in
-        let* i2 := with_except IERaise (except_to_es_monad (unwrap_vint v2)) in
+        let* v1 := interpret_val_term' tv1 e in
+        let* v2 := interpret_val_term' tv2 e in
+        let* i1 := except_exn_to_imonad (unwrap_vint v1) in
+        let* i2 := except_exn_to_imonad (unwrap_vint v2) in
         let tv := TVInt i2 in
         let (f, z) := with_for_direction d i1 i2 in
         let fix go n i :=
@@ -455,18 +443,37 @@ Definition interpret_term (self : interpreter) : term -> env -> kont -> imonad v
               go n' i'
           end
         in go (Z.to_nat (Z.succ z)) i1
+    | TLetFix f b t1 t2 => self' t2 (ECons f (VFix f b t1 e) e) k
+    | TLetFixMut t1 t2 => self' t2 (with_fix_mut_term t1 e) k
+    | TLetTuple p tv t' =>
+        let* v := interpret_val_term' tv e in
+        let* t := except_exn_to_imonad (unwrap_vtuple v) in
+        match match_tuple p t e with
+        | Some e' => self' t' e' k
+        | None => throw (IERaise (Match_failure ""))
+        end
+    | TLetRecord p tv t' =>
+        let* v := interpret_val_term' tv e in
+        let* r := except_exn_to_imonad (unwrap_vrecord v) in
+        match match_record p r e with
+        | Some e' => self' t' e' k
+        | None => throw (IERaise (Match_failure ""))
+        end
+    | TMatchVariant tv t' =>
+        let* v := interpret_val_term' tv e in
+        except_exn_to_imonad (unwrap_vvariant v) >>= interpret_variant_term self' t' e k
     | TShift b t' => throw (IEShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
     | TReset t' => catch (self' t' e KNil) (unwind_reset k)
     | TControl b t' => throw (IEControl (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
     | TPrompt t' => catch (self' t' e KNil) (unwind_prompt k)
     | TRaise tv =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* x := with_except IERaise (except_to_es_monad (unwrap_vexn v)) in
+        let* v := interpret_val_term' tv e in
+        let* x := except_exn_to_imonad (unwrap_vexn v) in
         throw (IERaise x)
     | TTry t1 t2 => catch (self' t1 e KNil) (unwind_try self' t2 e k)
     | TPerform tv =>
-        let* v := with_except IERaise (interpret_val_term tv e) in
-        let* f := with_except IERaise (except_to_es_monad (unwrap_veff v)) in
+        let* v := interpret_val_term' tv e in
+        let* f := except_exn_to_imonad (unwrap_veff v) in
         throw (IEPerform (MKPure k) f)
     | THandle t1 t2 t3 => try (self' t1 e KNil) >>= unwind_handle self' t2 t3 e k
     | TShallowHandle t1 t2 t3 => try (self' t1 e KNil) >>= unwind_shallow_handle self' t2 t3 e k

@@ -383,7 +383,7 @@ Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env
   | TFixMutCons f' b t1 t2 => if var_eqb f f' then self t1 (with_binder b v e) k else interpret_fix_mut_term self t2 e k f v
   end.
 
-Definition interpret_term (self : interpreter) : term -> env -> kont -> imonad val :=
+Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> imonad val :=
   fix self' t e k :=
     match t with
     | TVal tv => interpret_val_term' tv e
@@ -482,7 +482,7 @@ Definition interpret_term (self : interpreter) : term -> env -> kont -> imonad v
 Fixpoint interpret_term' (fuel : nat) (t : term) (e : env) (k : kont) : imonad val :=
   match fuel with
   | O => throw (IERaise Out_of_fuel)
-  | S fuel' => interpret_term (interpret_term' fuel') t e k
+  | S fuel' => interpret_term'_aux (interpret_term' fuel') t e k
   end.
 
 Definition ievent_to_exn (u : ievent) : exn :=
@@ -493,8 +493,11 @@ Definition ievent_to_exn (u : ievent) : exn :=
   | IEPerform _ f => Unhandled_effect f
   end.
 
+Definition interpret_term (fuel : nat) (t : term) (e : env) (k : kont) : es_monad exn iheap val :=
+  with_except ievent_to_exn (interpret_term' fuel t e k).
+
 Definition run_term (fuel : nat) (t : term) : (exn + val) * iheap :=
-  run_es_monad (with_except ievent_to_exn (interpret_term' fuel t ENil KNil)) iheap_empty.
+  run_es_monad (interpret_term fuel t ENil KNil) iheap_empty.
 
 Definition eval_term (fuel : nat) (t : term) : exn + val :=
   fst (run_term fuel t).

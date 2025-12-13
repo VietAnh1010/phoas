@@ -1,7 +1,7 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
 From shift_reset.core Require Import syntax loc.
 From shift_reset.monad Require Import except.
-From shift_reset.interpreter Require Import ierror.
+From shift_reset.interpreter Require Import error.
 
 Definition unwrap_vunit (v : val) : except exn unit :=
   match v with
@@ -61,19 +61,19 @@ Definition unwrap_vsum (v : val) : except exn (val + val) :=
 
 Definition unwrap_vexn (v : val) : except exn exn :=
   match v with
-  | VExn tag v' => pure (Exn tag v')
+  | VExn l v' => pure (Exn l v')
   | _ => throw (Type_error "unwrap_vexn")
   end.
 
 Definition unwrap_veff (v : val) : except exn eff :=
   match v with
-  | VEff tag v' => pure (Eff tag v')
+  | VEff l v' => pure (Eff l v')
   | _ => throw (Type_error "unwrap_veff")
   end.
 
 Definition unwrap_vvariant (v : val) : except exn variant :=
   match v with
-  | VVariant tag v' => pure (Variant tag v')
+  | VVariant l v' => pure (Variant l v')
   | _ => throw (Type_error "unwrap_vvariant")
   end.
 

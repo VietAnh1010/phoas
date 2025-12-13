@@ -1,5 +1,5 @@
 From Stdlib Require Import String.
-From shift_reset.core Require Import syntax tag.
+From shift_reset.core Require Import syntax tag val.
 
 Definition Failure (s : string) : exn :=
   Exn (Tag "Failure") (VString s).
@@ -22,11 +22,11 @@ Definition Match_failure (s : string) : exn :=
 Definition Invalid_argument (s : string) : exn :=
   Exn (Tag "Invalid_argument") (VString s).
 
-Definition Unhandled_exception (s : string) : exn :=
-  Exn (Tag "Unhandled_exception") (VString s).
+Definition Unhandled_exception (x : exn) : exn :=
+  Exn (Tag "Unhandled_exception") (VExn' x).
 
-Definition Unhandled_effect (s : string) : exn :=
-  Exn (Tag "Unhandled_effect") (VString s).
+Definition Unhandled_effect (f : eff) : exn :=
+  Exn (Tag "Unhandled_effect") (VEff' f).
 
 Definition Division_by_zero : exn :=
   Exn (Tag "Division_by_zero") VTt.

@@ -3,25 +3,23 @@ From shift_reset.lib Require list.
 From shift_reset.lib Require Import int.
 From shift_reset.core Require Import syntax tag.
 From shift_reset.monad Require except.
-From shift_reset.monad Require Import es_monad.
-From shift_reset.interpreter Require Import array ierror iheap unwrap.
+From shift_reset.monad Require Import es_monad conversions.
+From shift_reset.interpreter Require Import array error iheap unwrap.
+
 Import ListNotations.
 Import ESMonadNotations.
 
 Local Open Scope Z_scope.
 Local Open Scope es_monad_scope.
 
-Definition transform {E S A} (m : except.t E A) : es_monad E S A :=
-  ESMonad (fun s => (except.run_except m, s)).
-
 Definition string_length (v : val) : es_monad exn iheap val :=
-  let+ s := transform (unwrap_vstring v) in VInt (Z.of_nat (String.length s)).
+  let+ s := except_to_es_monad (unwrap_vstring v) in VInt (Z.of_nat (String.length s)).
 
 Definition array_length (v : val) : es_monad exn iheap val :=
-  let+ '(Array _ z) := transform (unwrap_varray v) in VInt z.
+  let+ '(Array _ z) := except_to_es_monad (unwrap_varray v) in VInt z.
 
 Definition array_free (v : val) : es_monad exn iheap val :=
-  let* '(Array l z) := transform (unwrap_varray v) in
+  let* '(Array l z) := except_to_es_monad (unwrap_varray v) in
   let* h := get in
   match array_free_dealloc (Z.to_nat z) l h with
   | Some h' => VTt <$ put h'
@@ -29,7 +27,7 @@ Definition array_free (v : val) : es_monad exn iheap val :=
   end.
 
 Definition ref_free (v : val) : es_monad exn iheap val :=
-  let* l := transform (unwrap_vref v) in
+  let* l := except_to_es_monad (unwrap_vref v) in
   let* h := get in
   match iheap_dealloc l h with
   | Some h' => VTt <$ put h'
@@ -37,7 +35,7 @@ Definition ref_free (v : val) : es_monad exn iheap val :=
   end.
 
 Definition int_to_string (v : val) : es_monad exn iheap val :=
-  let+ z := transform (unwrap_vint v) in VString (Z_to_string z).
+  let+ z := except_to_es_monad (unwrap_vint v) in VString (Z_to_string z).
 
 Definition builtin1_registry : list (tag * (val -> es_monad exn iheap val)) :=
   [(Tag "int_to_string", int_to_string);
@@ -46,22 +44,22 @@ Definition builtin1_registry : list (tag * (val -> es_monad exn iheap val)) :=
    (Tag "ref_free", ref_free);
    (Tag "array_free", array_free)].
 
-Definition dispatch_builtin1 (tag : tag) : except.t exn (val -> es_monad exn iheap val) :=
-  match list.lookup tag_eqb tag builtin1_registry with
+Definition dispatch_builtin1 (l : tag) : except.t exn (val -> es_monad exn iheap val) :=
+  match list.lookup tag_eqb l builtin1_registry with
   | Some f => except.pure f
-  | None => except.throw (Name_error (tag_car tag))
+  | None => except.throw (Name_error (tag_car l))
   end.
 
 Definition array_make (v1 v2 : val) : es_monad exn iheap val :=
-  let* z := transform (unwrap_vint v1) in
+  let* z := except_to_es_monad (unwrap_vint v1) in
   if z <? 0 then throw (Invalid_argument "array_make")
   else state (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
 
 Definition builtin2_registry : list (tag * (val -> val -> es_monad exn iheap val)) :=
   [(Tag "array_make", array_make)].
 
-Definition dispatch_builtin2 (tag : tag) : except.t exn (val -> val -> es_monad exn iheap val) :=
-  match list.lookup tag_eqb tag builtin2_registry with
+Definition dispatch_builtin2 (l : tag) : except.t exn (val -> val -> es_monad exn iheap val) :=
+  match list.lookup tag_eqb l builtin2_registry with
   | Some f => except.pure f
-  | None => except.throw (Name_error (tag_car tag))
+  | None => except.throw (Name_error (tag_car l))
   end.

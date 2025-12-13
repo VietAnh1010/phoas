@@ -84,10 +84,10 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 Lemma variant_eq_dec : forall (v1 v2 : variant), {v1 = v2} + {v1 <> v2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Lemma exn_eq_dec : forall (e1 e2 : exn), {e1 = e2} + {e1 <> e2}.
+Lemma exn_eq_dec : forall (x1 x2 : exn), {x1 = x2} + {x1 <> x2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Lemma eff_eq_dec : forall (e1 e2 : eff), {e1 = e2} + {e1 <> e2}.
+Lemma eff_eq_dec : forall (f1 f2 : eff), {f1 = f2} + {f1 <> f2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
 Lemma array_eq_dec : forall (a1 a2 : array), {a1 = a2} + {a1 <> a2}.

@@ -2,7 +2,7 @@ From Stdlib Require Import Ascii Bool String Qcanon ZArith.
 From shift_reset.lib Require Import compare float.
 From shift_reset.core Require Import syntax loc tag val.
 From shift_reset.monad Require Import except.
-From shift_reset.interpreter Require Import ierror.
+From shift_reset.interpreter Require Import error.
 Import ExceptNotations.
 
 Local Open Scope Z_scope.
@@ -123,10 +123,10 @@ Fixpoint equal_val (v1 v2 : val) : except exn bool :=
   | VInr v1', VInr v2' => equal_val v1' v2'
   | VInl _, VInr _ => pure false
   | VInr _, VInl _ => pure false
-  | VVariant tag1 v1', VVariant tag2 v2' => if tag_eqb tag1 tag2 then equal_val v1' v2' else pure false
+  | VVariant l1 v1', VVariant l2 v2' => if tag_eqb l1 l2 then equal_val v1' v2' else pure false
+  | VExn l1 v1', VExn l2 v2' => if tag_eqb l1 l2 then equal_val v1' v2' else pure false
+  | VEff l1 v1', VEff l2 v2' => if tag_eqb l1 l2 then equal_val v1' v2' else pure false
   | VRef l1, VRef l2 => pure (loc_eqb l1 l2)
-  | VExn tag1 v1', VExn tag2 v2' => if tag_eqb tag1 tag2 then equal_val v1' v2' else pure false
-  | VEff tag1 v1', VEff tag2 v2' => if tag_eqb tag1 tag2 then equal_val v1' v2' else pure false
   | VArray l1 z1, VArray l2 z2 => pure (loc_eqb l1 l2 &&& (z1 =? z2)%Z)
   | _, _ => throw (Type_error "equal_val")
   end
@@ -141,8 +141,8 @@ with equal_tuple (t1 t2 : tuple) : except exn bool :=
 with equal_record (r1 r2 : record) : except exn bool :=
   match r1, r2 with
   | RecordNil, RecordNil => pure true
-  | RecordCons tag1 v1 r1', RecordCons tag2 v2 r2' =>
-      if tag_eqb tag1 tag2 then
+  | RecordCons l1 v1 r1', RecordCons l2 v2 r2' =>
+      if tag_eqb l1 l2 then
         let* b := equal_val v1 v2 in
         if b then equal_record r1' r2' else pure false
       else pure false

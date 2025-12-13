@@ -1,4 +1,3 @@
-From Stdlib Require Import String Qcanon ZArith.
 From shift_reset.core Require Import syntax.
 
 Definition VBool (b : bool) : val :=
@@ -24,10 +23,10 @@ Definition VClosure (c : closure) : val :=
   end.
 
 Definition VVariant' (v : variant) : val :=
-  let (tag, v) := v in VVariant tag v.
+  let (l, v) := v in VVariant l v.
 
-Definition VExn' (e : exn) : val :=
-  let (tag, v) := e in VExn tag v.
+Definition VExn' (x : exn) : val :=
+  let (l, v) := x in VExn l v.
 
-Definition VEff' (e : eff) : val :=
-  let (tag, v) := e in VEff tag v.
+Definition VEff' (f : eff) : val :=
+  let (l, v) := f in VEff l v.

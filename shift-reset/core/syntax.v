@@ -90,15 +90,15 @@ with val_term : Type :=
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
 | TVVariant : tag -> val_term -> val_term
+| TVExn : tag -> val_term -> val_term
+| TVEff : tag -> val_term -> val_term
 | TVRef : val_term -> val_term
+| TVArray : tuple_term -> val_term
 | TVGet : val_term -> val_term
 | TVSet : val_term -> val_term -> val_term
 | TVGetAt : val_term -> val_term -> val_term
 | TVSetAt : val_term -> val_term -> val_term -> val_term
-| TVExn : tag -> val_term -> val_term
-| TVEff : tag -> val_term -> val_term
 | TVAssert : val_term -> val_term
-| TVArray : tuple_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
 | TVBuiltin1 : tag -> val_term -> val_term
@@ -142,13 +142,13 @@ Inductive val : Type :=
 | VInl : val -> val
 | VInr : val -> val
 | VVariant : tag -> val -> val
-| VRef : loc -> val
 | VExn : tag -> val -> val
 | VEff : tag -> val -> val
+| VRef : loc -> val
+| VArray : loc -> Z -> val
 | VMKPure : metakont -> val
 | VMKReset : metakont -> val
 | VMKHandle : metakont -> ret_term -> eff_term -> env -> val
-| VArray : loc -> Z -> val
 with kont : Type :=
 | KNil : kont
 | KCons0 : term -> env -> kont -> kont

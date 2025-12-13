@@ -37,4 +37,4 @@ Module IsoPositiveLoc <: gmap.IsoPositiveType.
   Proof. exact (fun _ => eq_refl). Qed.
 End IsoPositiveLoc.
 
-Module LocMap := gmap.Make (IsoPositiveLoc).
+Module LocMap := gmap.Make IsoPositiveLoc.

@@ -4,6 +4,9 @@ Definition t : Type -> Type -> Type := except.
 Arguments Except {E A} _.
 Arguments run_except {E A} _.
 
+Definition pure {E A} (x : A) : except E A :=
+  Except (inr x).
+
 Definition map {E A B} (f : A -> B) (m : except E A) : except E B :=
   Except match run_except m with
     | inl e => inl e
@@ -15,9 +18,6 @@ Definition mapl {E A B} (x : B) (m : except E A) : except E B :=
     | inl e => inl e
     | inr _ => inr x
     end.
-
-Definition pure {E A} (x : A) : except E A :=
-  Except (inr x).
 
 Definition app {E A B} (m1 : except E (A -> B)) (m2 : except E A) : except E B :=
   Except match run_except m1 with

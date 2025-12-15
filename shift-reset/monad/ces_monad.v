@@ -95,3 +95,19 @@ Definition map_state {R E S A B} (f : A * S -> B * S) (m : ces_monad R E S A) : 
 
 Definition with_state {R E S A} (f : S -> S) (m : ces_monad R E S A) : ces_monad R E S A :=
   CESMonad (fun k s => run_ces_monad m k (f s)).
+
+Module CESMonadNotations.
+  Declare Scope ces_monad_scope.
+  Delimit Scope ces_monad_scope with ces_monad.
+  Bind Scope ces_monad_scope with ces_monad.
+
+  Notation "f <$> m" := (map f m) (at level 65, right associativity) : ces_monad_scope.
+  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : ces_monad_scope.
+  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : ces_monad_scope.
+  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : ces_monad_scope.
+  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : ces_monad_scope.
+  Notation "m >>= f" := (bind m f) (at level 50, left associativity) : ces_monad_scope.
+
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : ces_monad_scope.
+  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : ces_monad_scope.
+End CESMonadNotations.

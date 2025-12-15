@@ -31,6 +31,30 @@ Definition join {R E S A} (m : ces_monad R E S (ces_monad R E S A)) : ces_monad 
 Definition callcc {R E S A B} (f : (A -> ces_monad R E S B) -> ces_monad R E S A) : ces_monad R E S A :=
   CESMonad (fun k => run_ces_monad (f (fun x => CESMonad (fun _ => k x))) k).
 
+Definition reset {R R' E S} (m : ces_monad R E S R) : ces_monad R' E S R :=
+  CESMonad
+    (fun k s =>
+       let (m, s) := run_ces_monad m (fun x s => (inr x, s)) s in
+       match m with
+       | inl e => (inl e, s)
+       | inr x => k x s
+       end).
+
+Definition shift {R R' E S A} (f : (A -> ces_monad R' E S R) -> ces_monad R E S R) : ces_monad R E S A :=
+  CESMonad
+    (fun k s =>
+       run_ces_monad
+         (f
+            (fun x =>
+               CESMonad
+                 (fun k' s =>
+                    let (m, s) := k x s in
+                    match m with
+                    | inl e => (inl e, s)
+                    | inr y => k' y s
+                    end)))
+         (fun x s => (inr x, s)) s).
+
 Definition throw {R E S A} (e : E) : ces_monad R E S A :=
   CESMonad (fun _ s => (inl e, s)).
 
@@ -40,15 +64,6 @@ Definition except {R E S A} (m : E + A) : ces_monad R E S A :=
        match m with
        | inl e => (inl e, s)
        | inr x => k x s
-       end).
-
-Definition catch {R E S A} (m : ces_monad R E S A) (f : E -> ces_monad R E S A) : ces_monad R E S A :=
-  CESMonad
-    (fun k s =>
-       let (m, s) := run_ces_monad m k s in
-       match m with
-       | inl e => run_ces_monad (f e) k s
-       | inr x => (inr x, s)
        end).
 
 Definition get {R E S} : ces_monad R E S S :=

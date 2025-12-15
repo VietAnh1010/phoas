@@ -34,8 +34,8 @@ Definition callcc {R A B} (f : (A -> cont R B) -> cont R A) : cont R A :=
 Definition reset {R R'} (m : cont R R) : cont R' R :=
   Cont (fun k => k (run_cont m (fun x => x))).
 
-Definition shift {R A} (f : (A -> R) -> cont R R) : cont R A :=
-  Cont (fun k => run_cont (f k) (fun x => x)).
+Definition shift {R R' A} (f : (A -> cont R' R) -> cont R R) : cont R A :=
+  Cont (fun k => run_cont (f (fun x => Cont (fun k' => k' (k x)))) (fun x => x)).
 
 Definition map_cont {R A} (f : R -> R) (m : cont R A) : cont R A :=
   Cont (fun k => run_cont m (fun x => f (k x))).

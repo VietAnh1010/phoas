@@ -94,7 +94,7 @@ Definition with_state {E S R A} (f : S -> S) (m : esc_monad E S R A) : esc_monad
   ESCMonad (fun s => run_esc_monad m (f s)).
 
 Definition map_cont {E S R A} (f : R -> R) (m : esc_monad E S R A) : esc_monad E S R A :=
-  ESCMonad (fun s h k => run_esc_monad m s h (fun x s => f (k x s))).
+  ESCMonad (fun s h k => f (run_esc_monad m s h k)).
 
 Definition with_cont {E S R A B} (f : (B -> R) -> A -> R) (m : esc_monad E S R A) : esc_monad E S R B :=
   ESCMonad (fun s h k => run_esc_monad m s h (fun x s => f (fun y => k y s) x)).

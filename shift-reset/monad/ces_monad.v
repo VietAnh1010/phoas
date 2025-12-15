@@ -80,3 +80,18 @@ Definition gets {R E S A} (f : S -> A) : ces_monad R E S A :=
 
 Definition modify {R E S} (f : S -> S) : ces_monad R E S unit :=
   CESMonad (fun k s => k tt (f s)).
+
+Definition map_cont {R E S A} (f : R -> R) (m : ces_monad R E S A) : ces_monad R E S A :=
+  CESMonad
+    (fun k s =>
+       let (m, s) := run_ces_monad m k s in
+       match m with
+       | inl e => (inl e, s)
+       | inr x => (inr (f x), s)
+       end).
+
+Definition map_state {R E S A B} (f : A * S -> B * S) (m : ces_monad R E S A) : ces_monad R E S B :=
+  CESMonad (fun k s => run_ces_monad m (fun x s => let (y, s) := f (x, s) in k y s) s).
+
+Definition with_state {R E S A} (f : S -> S) (m : ces_monad R E S A) : ces_monad R E S A :=
+  CESMonad (fun k s => run_ces_monad m k (f s)).

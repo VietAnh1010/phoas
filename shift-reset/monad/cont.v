@@ -38,7 +38,7 @@ Definition shift {R R' A} (f : (A -> cont R' R) -> cont R R) : cont R A :=
   Cont (fun k => run_cont (f (fun x => Cont (fun k' => k' (k x)))) (fun x => x)).
 
 Definition map_cont {R A} (f : R -> R) (m : cont R A) : cont R A :=
-  Cont (fun k => run_cont m (fun x => f (k x))).
+  Cont (fun k => f (run_cont m k)).
 
 Definition with_cont {R A B} (f : (B -> R) -> A -> R) (m : cont R A) : cont R B :=
   Cont (fun k => run_cont m (f k)).

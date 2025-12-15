@@ -73,7 +73,7 @@ Definition with_except {E E' R A} (f : E -> E') (m : ec_monad E R A) : ec_monad 
   ECMonad (fun h => run_ec_monad m (fun e => h (f e))).
 
 Definition map_cont {E R A} (f : R -> R) (m : ec_monad E R A) : ec_monad E R A :=
-  ECMonad (fun h k => run_ec_monad m h (fun x => f (k x))).
+  ECMonad (fun h k => f (run_ec_monad m h k)).
 
 Definition with_cont {E R A B} (f : (B -> R) -> A -> R) (m : ec_monad E R A) : ec_monad E R B :=
   ECMonad (fun h k => run_ec_monad m h (f k)).

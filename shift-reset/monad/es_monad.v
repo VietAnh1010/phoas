@@ -80,21 +80,6 @@ Definition join {E S A} (m : es_monad E S (es_monad E S A)) : es_monad E S A :=
        | inr m => run_es_monad m s
        end).
 
-Definition get {E S} : es_monad E S S :=
-  ESMonad (fun s => (inr s, s)).
-
-Definition put {E S} (s : S) : es_monad E S unit :=
-  ESMonad (fun _ => (inr tt, s)).
-
-Definition state {E S A} (f : S -> A * S) : es_monad E S A :=
-  ESMonad (fun s => let (x, s) := f s in (inr x, s)).
-
-Definition gets {E S A} (f : S -> A) : es_monad E S A :=
-  ESMonad (fun s => (inr (f s), s)).
-
-Definition modify {E S} (f : S -> S) : es_monad E S unit :=
-  ESMonad (fun s => (inr tt, f s)).
-
 Definition throw {E S A} (e : E) : es_monad E S A :=
   ESMonad (fun s => (inl e, s)).
 
@@ -122,6 +107,21 @@ Definition finally {E S A} (m1 : es_monad E S A) (m2 : es_monad E S unit) : es_m
        | inl e => (inl e, s)
        | inr _ => (m1, s)
        end).
+
+Definition get {E S} : es_monad E S S :=
+  ESMonad (fun s => (inr s, s)).
+
+Definition put {E S} (s : S) : es_monad E S unit :=
+  ESMonad (fun _ => (inr tt, s)).
+
+Definition state {E S A} (f : S -> A * S) : es_monad E S A :=
+  ESMonad (fun s => let (x, s) := f s in (inr x, s)).
+
+Definition gets {E S A} (f : S -> A) : es_monad E S A :=
+  ESMonad (fun s => (inr (f s), s)).
+
+Definition modify {E S} (f : S -> S) : es_monad E S unit :=
+  ESMonad (fun s => (inr tt, f s)).
 
 Definition map_state {E S A B} (f : A * S -> B * S) (m : es_monad E S A) : es_monad E S B :=
   ESMonad

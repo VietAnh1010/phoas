@@ -69,6 +69,9 @@ Definition cont {E S R A} (f : (A -> R) -> R) : esc_monad E S R A :=
 Definition callcc {E S R A B} (f : (A -> esc_monad E S R B) -> esc_monad E S R A) : esc_monad E S R A :=
   ESCMonad (fun s h k => run_esc_monad (f (fun x => ESCMonad (fun _ _ _ => k x s))) s h k).
 
+Definition callcc' {E S R A B} (f : (A -> esc_monad E S R B) -> esc_monad E S R A) : esc_monad E S R A :=
+  ESCMonad (fun s h k => run_esc_monad (f (fun x => ESCMonad (fun s _ _ => k x s))) s h k).
+
 Definition map_except {E E' S R A B} (f : E + A -> E' + B) (m : esc_monad E S R A) : esc_monad E' S R B :=
   ESCMonad
     (fun s h k =>

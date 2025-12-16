@@ -44,8 +44,7 @@ Definition shift {R R' E S A} (f : (A -> ces_monad R' E S R) -> ces_monad R E S 
   CESMonad
     (fun k s =>
        run_ces_monad
-         (f
-            (fun x =>
+         (f (fun x =>
                CESMonad
                  (fun k' s =>
                     let (m, s) := k x s in

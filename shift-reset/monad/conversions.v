@@ -1,10 +1,25 @@
-From shift_reset.monad Require Import cont except state cs_monad ec_monad es_monad ces_monad esc_monad.
+From shift_reset.monad Require Import cont except state.
+From shift_reset.monad Require Import ce_monad cs_monad.
+From shift_reset.monad Require Import ec_monad es_monad.
+From shift_reset.monad Require Import sc_monad se_monad.
+From shift_reset.monad Require Import ces_monad esc_monad.
 
 Definition except_to_es_monad {E S A} (m : except.except E A) : es_monad E S A :=
   ESMonad (fun s => (run_except m, s)).
 
 Definition state_to_es_monad {E S A} (m : state.state S A) : es_monad E S A :=
   ESMonad (fun s => let (x, s) := run_state m s in (inr x, s)).
+
+Definition except_to_se_monad {S E A} (m : except.except E A) : se_monad S E A :=
+  SEMonad
+    (fun s =>
+       match run_except m with
+       | inl e => inl e
+       | inr x => inr (x, s)
+       end).
+
+Definition state_to_se_monad {S E A} (m : state.state S A) : se_monad S E A :=
+  SEMonad (fun s => inr (run_state m s)).
 
 Definition except_to_ec_monad {E R A} (m : except.except E A) : ec_monad E R A :=
   ECMonad
@@ -16,6 +31,12 @@ Definition except_to_ec_monad {E R A} (m : except.except E A) : ec_monad E R A :
 
 Definition cont_to_ec_monad {E R A} (m : cont.cont R A) : ec_monad E R A :=
   ECMonad (fun _ => run_cont m).
+
+Definition state_to_sc_monad {S R A} (m : state.state S A) : sc_monad S R A :=
+  SCMonad (fun s k => let (x, s) := run_state m s in k x s).
+
+Definition cont_to_sc_monad {S R A} (m : cont.cont R A) : sc_monad S R A :=
+  SCMonad (fun s k => run_cont m (fun x => k x s)).
 
 Definition except_to_esc_monad {E S R A} (m : except.except E A) : esc_monad E S R A :=
   ESCMonad

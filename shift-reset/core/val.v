@@ -19,6 +19,7 @@ Definition VClosure (c : closure) : val :=
   | CFixMut t f e => VFixMut t f e
   | CMKPure mk => VMKPure mk
   | CMKReset mk => VMKReset mk
+  | CMKReset0 mk => VMKReset0 mk
   | CMKHandle mk t1 t2 e => VMKHandle mk t1 t2 e
   end.
 

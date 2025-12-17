@@ -217,6 +217,8 @@ Fixpoint with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
 Inductive ievent : Type :=
 | IEShift : metakont -> (val -> es_monad ievent iheap val) -> ievent
 | IEControl : metakont -> (val -> es_monad ievent iheap val) -> ievent
+| IEShift0 : metakont -> (val -> kont -> es_monad ievent iheap val) -> ievent
+| IEControl0 : metakont -> (val -> kont -> es_monad ievent iheap val) -> ievent
 | IERaise : exn -> ievent
 | IEPerform : metakont -> eff -> ievent.
 
@@ -267,6 +269,8 @@ Fixpoint unwind_reset (k : kont) (u : ievent) : imonad val :=
   match u with
   | IEShift mk f => catch (f (VMKReset mk)) (unwind_reset k)
   | IEControl mk f => throw (IEControl (MKReset mk k) f)
+  | IEShift0 mk f => throw (IEShift0 (MKReset mk k) f)
+  | IEControl0 mk f => throw (IEControl0 (MKReset mk k) f)
   | IERaise _ => throw u
   | IEPerform mk f => throw (IEPerform (MKReset mk k) f)
   end.
@@ -275,14 +279,38 @@ Fixpoint unwind_prompt (k : kont) (u : ievent) : imonad val :=
   match u with
   | IEShift mk f => throw (IEShift (MKPrompt mk k) f)
   | IEControl mk f => catch (f (VMKPure mk)) (unwind_prompt k)
+  | IEShift0 mk f => throw (IEShift0 (MKPrompt mk k) f)
+  | IEControl0 mk f => throw (IEControl0 (MKPrompt mk k) f)
   | IERaise _ => throw u
   | IEPerform mk f => throw (IEPerform (MKPrompt mk k) f)
+  end.
+
+Definition unwind_reset0 (k : kont) (u : ievent) : imonad val :=
+  match u with
+  | IEShift mk f => throw (IEShift (MKReset0 mk k) f)
+  | IEControl mk f => throw (IEControl (MKReset0 mk k) f)
+  | IEShift0 mk f => f (VMKReset0 mk) k
+  | IEControl0 mk f => throw (IEControl0 (MKReset0 mk k) f)
+  | IERaise _ => throw u
+  | IEPerform mk f => throw (IEPerform (MKReset0 mk k) f)
+  end.
+
+Definition unwind_prompt0 (k : kont) (u : ievent) : imonad val :=
+  match u with
+  | IEShift mk f => throw (IEShift (MKPrompt0 mk k) f)
+  | IEControl mk f => throw (IEControl (MKPrompt0 mk k) f)
+  | IEShift0 mk f => throw (IEShift0 (MKPrompt0 mk k) f)
+  | IEControl0 mk f => f (VMKPure mk) k
+  | IERaise _ => throw u
+  | IEPerform mk f => throw (IEPerform (MKPrompt0 mk k) f)
   end.
 
 Definition unwind_try (self : interpreter) (t : exn_term) (e : env) (k : kont) (u : ievent) : imonad val :=
   match u with
   | IEShift mk f => throw (IEShift (MKTry mk t e k) f)
   | IEControl mk f => throw (IEControl (MKTry mk t e k) f)
+  | IEShift0 mk f => throw (IEShift0 (MKTry mk t e k) f)
+  | IEControl0 mk f => throw (IEControl0 (MKTry mk t e k) f)
   | IERaise x =>
       match interpret_exn_term self t e k x with
       | Some m => m
@@ -298,6 +326,8 @@ Definition unwind_handle (self : interpreter) (t1 : ret_term) (t2 : eff_term) (e
       match u with
       | IEShift mk f => throw (IEShift (MKHandle mk t1 t2 e k) f)
       | IEControl mk f => throw (IEControl (MKHandle mk t1 t2 e k) f)
+      | IEShift0 mk f => throw (IEShift0 (MKHandle mk t1 t2 e k) f)
+      | IEControl0 mk f => throw (IEControl0 (MKHandle mk t1 t2 e k) f)
       | IERaise _ => throw u
       | IEPerform mk f =>
           match interpret_eff_term self t2 e k f (VMKHandle mk t1 t2 e) with
@@ -314,6 +344,8 @@ Definition unwind_shallow_handle (self : interpreter) (t1 : ret_term) (t2 : eff_
       match u with
       | IEShift mk f => throw (IEShift (MKShallowHandle mk t1 t2 e k) f)
       | IEControl mk f => throw (IEControl (MKShallowHandle mk t1 t2 e k) f)
+      | IEShift0 mk f => throw (IEShift0 (MKShallowHandle mk t1 t2 e k) f)
+      | IEControl0 mk f => throw (IEControl0 (MKShallowHandle mk t1 t2 e k) f)
       | IERaise _ => throw u
       | IEPerform mk f =>
           match interpret_eff_term self t2 e k f (VMKPure mk) with
@@ -344,6 +376,8 @@ Fixpoint invoke_metakont (self : interpreter) (mk : metakont) (v : val) : imonad
   | MKPure k => invoke_kont self k v
   | MKReset mk' k => catch (invoke_metakont self mk' v) (unwind_reset k) >>= invoke_kont self k
   | MKPrompt mk' k => catch (invoke_metakont self mk' v) (unwind_prompt k) >>= invoke_kont self k
+  | MKReset0 mk' k => catch (invoke_metakont self mk' v) (unwind_reset0 k) >>= invoke_kont self k
+  | MKPrompt0 mk' k => catch (invoke_metakont self mk' v) (unwind_prompt0 k) >>= invoke_kont self k
   | MKTry mk' t e k => catch (invoke_metakont self mk' v) (unwind_try self t e k) >>= invoke_kont self k
   | MKHandle mk' t1 t2 e k =>
       let* m := try (invoke_metakont self mk' v) in
@@ -358,6 +392,8 @@ Definition invoke_metakont_app (self : interpreter) (mk : metakont) (k : kont) (
   | MKPure k' => invoke_kont_app self k' k v
   | MKReset mk' k' => catch (invoke_metakont self mk' v) (unwind_reset (KApp k' k)) >>= invoke_kont_app self k' k
   | MKPrompt mk' k' => catch (invoke_metakont self mk' v) (unwind_prompt (KApp k' k)) >>= invoke_kont_app self k' k
+  | MKReset0 mk' k' => catch (invoke_metakont self mk' v) (unwind_reset0 (KApp k' k)) >>= invoke_kont_app self k' k
+  | MKPrompt0 mk' k' => catch (invoke_metakont self mk' v) (unwind_prompt0 (KApp k' k)) >>= invoke_kont_app self k' k
   | MKTry mk' t e k' => catch (invoke_metakont self mk' v) (unwind_try self t e (KApp k' k)) >>= invoke_kont_app self k' k
   | MKHandle mk' t1 t2 e k' =>
       let* m := try (invoke_metakont self mk' v) in
@@ -397,6 +433,7 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> imo
         | CFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
         | CMKPure mk => invoke_metakont_app self mk k v2
         | CMKReset mk => catch (invoke_metakont self mk v2) (unwind_reset k)
+        | CMKReset0 mk => catch (invoke_metakont self mk v2) (unwind_reset0 k)
         | CMKHandle mk t1 t2 e => try (invoke_metakont self mk v2) >>= unwind_handle self t1 t2 e k
         end
     | TSeq t1 t2 =>
@@ -463,9 +500,13 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> imo
         let* v := interpret_val_term' tv e in
         except_exn_to_imonad (unwrap_vvariant v) >>= interpret_variant_term self' t' e k
     | TShift b t' => throw (IEShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
-    | TReset t' => catch (self' t' e KNil) (unwind_reset k)
     | TControl b t' => throw (IEControl (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
+    | TShift0 b t' => throw (IEShift0 (MKPure k) (fun u => self' t' (with_binder b u e)))
+    | TControl0 b t' => throw (IEControl0 (MKPure k) (fun u => self' t' (with_binder b u e)))
+    | TReset t' => catch (self' t' e KNil) (unwind_reset k)
     | TPrompt t' => catch (self' t' e KNil) (unwind_prompt k)
+    | TReset0 t' => catch (self' t' e KNil) (unwind_reset0 k)
+    | TPrompt0 t' => catch (self' t' e KNil) (unwind_prompt0 k)
     | TRaise tv =>
         let* v := interpret_val_term' tv e in
         let* x := except_exn_to_imonad (unwrap_vexn v) in
@@ -489,6 +530,8 @@ Definition ievent_to_exn (u : ievent) : exn :=
   match u with
   | IEShift _ _ => Undelimited_shift
   | IEControl _ _ => Undelimited_control
+  | IEShift0 _ _ => Undelimited_shift0
+  | IEControl0 _ _ => Undelimited_control0
   | IERaise x => Unhandled_exception x
   | IEPerform _ f => Unhandled_effect f
   end.

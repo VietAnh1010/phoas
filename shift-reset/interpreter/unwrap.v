@@ -102,6 +102,7 @@ Definition unwrap_vclosure (v : val) : except exn closure :=
   | VFixMut t f e => pure (CFixMut t f e)
   | VMKPure mk => pure (CMKPure mk)
   | VMKReset mk => pure (CMKReset mk)
+  | VMKReset0 mk => pure (CMKReset0 mk)
   | VMKHandle mk t1 t2 e => pure (CMKHandle mk t1 t2 e)
   | _ => throw (Type_error "unwrap_vclosure")
   end.

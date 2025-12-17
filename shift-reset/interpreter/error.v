@@ -37,5 +37,11 @@ Definition Undelimited_shift : exn :=
 Definition Undelimited_control : exn :=
   Exn (Tag "Undelimited_control") VTt.
 
+Definition Undelimited_shift0 : exn :=
+  Exn (Tag "Undelimited_shift0") VTt.
+
+Definition Undelimited_control0 : exn :=
+  Exn (Tag "Undelimited_control0") VTt.
+
 Definition Out_of_fuel : exn :=
   Exn (Tag "Out_of_fuel") VTt.

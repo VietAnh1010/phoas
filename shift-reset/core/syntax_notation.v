@@ -163,10 +163,22 @@ Notation "'shift' ( 'fun' k => t )" :=
 Notation "'control' ( 'fun' k => t )" :=
   (TControl k t) (in custom term at level 69, k custom binder' at level 0, t custom term) : term_scope.
 
+Notation "'shift0' ( 'fun' k => t )" :=
+  (TShift0 k t) (in custom term at level 69, k custom binder' at level 0, t custom term) : term_scope.
+
+Notation "'control0' ( 'fun' k => t )" :=
+  (TControl0 k t) (in custom term at level 69, k custom binder' at level 0, t custom term) : term_scope.
+
 Notation "'reset' t" :=
   (TReset t) (in custom term at level 69, t custom term) : term_scope.
 
 Notation "'prompt' t" :=
+  (TPrompt t) (in custom term at level 69, t custom term) : term_scope.
+
+Notation "'reset0' t" :=
+  (TReset0 t) (in custom term at level 69, t custom term) : term_scope.
+
+Notation "'prompt0' t" :=
   (TPrompt t) (in custom term at level 69, t custom term) : term_scope.
 
 Notation "'fun' x1 .. xn => t" :=

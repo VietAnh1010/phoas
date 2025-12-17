@@ -855,6 +855,44 @@ Example use_array_literal :=
 
 Compute (eval_term 1 use_array_literal).
 
+Example foldr :=
+  <{ fun "f" "z" "xs" =>
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => "z"
+         | Inr "p" =>
+             let ("x", "xs'") := "p" in
+             let "f" := "f" "x" in
+             let "r" := "go" "xs'" in
+             "f" "r"
+         end
+       in "go" "xs" }>.
+
+Example compare_int :=
+  <{ fun "p" =>
+       let ("x", "y") := "p" in
+       if "x" < "y" then `"Lt" () else if "x" = "y" then `"Eq" () else `"Gt" () }>.
+
+Example partition x xs :=
+  <{ let fix "go" "xs" :=
+       match "xs" with
+       | Inl _ => Inl ()
+       | Inr "p" =>
+           let ("x", "xs'") := "p" in
+           let "c" := compare_int (x, "x") in
+           match "c" with
+           | `"Lt" _ => let "r" := "go" "xs'" in Inr ("x", "r")
+           | `"Eq" _ => shift0 (fun "k" => let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in Inr ("x", "r"))
+           | `"Gt" _ => shift0 (fun "k" => shift0 (fun "k'" => let "r" := reset0 let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in "k'" "r"
+                                                               in Inr ("x", "r")))
+           end
+       end
+     in reset0 reset0 "go" xs }>.
+
+Compute (list_eval_term 20 <{ {partition 1 (term_of_list [4; 1; 3; 5; 2; 3])} }>).
+Compute (list_eval_term 20 <{ {partition 2 (term_of_list [4; 1; 3; 5; 2; 3])} }>).
+Compute (list_eval_term 20 <{ {partition 3 (term_of_list [4; 1; 3; 5; 2; 3])} }>).
+
 From Stdlib Require Import Extraction.
 From Stdlib Require Import ExtrOcamlBasic ExtrOcamlChar ExtrOcamlNativeString.
 (*From Stdlib Require Import ExtrOcamlNatInt ExtrOcamlZInt.

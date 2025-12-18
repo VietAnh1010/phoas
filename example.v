@@ -96,6 +96,8 @@ Fixpoint sequence start len : list Z :=
   | S len' => start :: sequence (start + 1) len'
   end.
 
+Time Compute (option.map (@List.length val) (list_eval_term 8000 (append2 (term_of_list (sequence 0 7500)) (term_of_list [])))).
+
 Example append_direct :=
   <{ fix "append_direct" "xs" "ys" :=
        match "xs" with

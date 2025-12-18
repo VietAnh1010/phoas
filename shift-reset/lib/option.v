@@ -18,7 +18,7 @@ Definition filter {A} (f : A -> bool) (o : option A) : option A :=
   | Some x => if f x then o else None
   end.
 
-Definition fold {A B} (f : A -> B) (z : B) (o : option A) : B :=
+Definition fold {A B} (z : B) (f : A -> B) (o : option A) : B :=
   match o with
   | None => z
   | Some x => f x

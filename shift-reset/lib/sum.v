@@ -12,10 +12,10 @@ Definition bind {E A B} (s : E + A) (f : A -> E + B) : E + B :=
   | inr x => f x
   end.
 
-Definition fold {E A B} (f : A -> B) (g : E -> B) (s : E + A) : B :=
+Definition fold {E A B} (f : E -> B) (g : A -> B) (s : E + A) : B :=
   match s with
-  | inl e => g e
-  | inr x => f x
+  | inl e => f e
+  | inr x => g x
   end.
 
 Lemma eq_dec :

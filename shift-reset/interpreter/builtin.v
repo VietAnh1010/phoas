@@ -55,8 +55,20 @@ Definition array_make (v1 v2 : val) : es_monad exn iheap val :=
   if z <? 0 then throw (Invalid_argument "array_make")
   else state (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
 
+Definition string_get (v1 v2 : val) : es_monad exn iheap val :=
+  let* s := except_to_es_monad (unwrap_vstring v1) in
+  let* i := except_to_es_monad (unwrap_vint v2) in
+  if i <? 0 then
+    throw (Invalid_argument "index out of bounds")
+  else
+    match String.get (Z.to_nat i) s with
+    | Some a => pure (VChar a)
+    | None => throw (Invalid_argument "index out of bounds")
+    end.
+
 Definition builtin2_registry : list (tag * (val -> val -> es_monad exn iheap val)) :=
-  [(Tag "array_make", array_make)].
+  [(Tag "array_make", array_make);
+   (Tag "string_get", string_get)].
 
 Definition dispatch_builtin2 (l : tag) : except.t exn (val -> val -> es_monad exn iheap val) :=
   match list.lookup tag_eqb l builtin2_registry with

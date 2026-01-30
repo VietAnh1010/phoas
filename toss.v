@@ -1,11 +1,9 @@
-From Stdlib Require Import List String QArith Qcanon ZArith.
-Import ListNotations.
-
+From Stdlib Require Import String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
 
-Open Scope string_scope.
 Open Scope Z_scope.
+Open Scope string_scope.
 Open Scope term_scope.
 
 Example incr :=
@@ -15,9 +13,9 @@ Example do_toss :=
   <{ fun "x" =>
        shift
          (fun "k" =>
-            let _ := incr "x" in
+            incr "x";
             let "r1" := "k" true in
-            let _ := incr "x" in
+            incr "x";
             let "r2" := "k" false in
             "r1" + "r2") }>.
 
@@ -36,12 +34,12 @@ Compute (eval_term 4 (run_toss 0)).
 
 Example do_toss_n :=
   <{ fix "go" "args" :=
-        let ("n", "x") := "args" in
-        if "n" = 0 then true
-        else
-          let "r1" := do_toss "x" in
-          let "r2" := "go" ("n" - 1, "x") in
-          "r1" && "r2" }>.
+       let ("n", "x") := "args" in
+       if "n" = 0 then true
+       else
+         let "r1" := do_toss "x" in
+         let "r2" := "go" ("n" - 1, "x") in
+         "r1" && "r2" }>.
 
 Example toss_n :=
   <{ fun "args" =>

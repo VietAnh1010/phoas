@@ -179,7 +179,7 @@ Notation "'reset0' t" :=
   (TReset0 t) (in custom term at level 69, t custom term) : term_scope.
 
 Notation "'prompt0' t" :=
-  (TPrompt t) (in custom term at level 69, t custom term) : term_scope.
+  (TPrompt0 t) (in custom term at level 69, t custom term) : term_scope.
 
 Notation "'fun' x1 .. xn => t" :=
   (TVFun x1 .. (TVFun xn t) ..)

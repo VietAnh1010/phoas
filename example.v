@@ -768,15 +768,15 @@ Example tail_queue :=
 
 Example queue_module t :=
   lazy_module
-    <{ let "nil_stream" := nil_stream in
-       let "empty_queue" := empty_queue in
-       let "is_empty_queue" := is_empty_queue in
-       let "rotate_queue" := rotate_queue in
-       let "exec_queue" := exec_queue in
-       let "snoc_queue" := snoc_queue in
-       let "head_queue" := head_queue in
-       let "tail_queue" := tail_queue in
-       t }>.
+  <{ let "nil_stream" := nil_stream in
+     let "empty_queue" := empty_queue in
+     let "is_empty_queue" := is_empty_queue in
+     let "rotate_queue" := rotate_queue in
+     let "exec_queue" := exec_queue in
+     let "snoc_queue" := snoc_queue in
+     let "head_queue" := head_queue in
+     let "tail_queue" := tail_queue in
+     t }>.
 
 Example use_queue xs t :=
   <{ let "ref_xs" := ref xs in

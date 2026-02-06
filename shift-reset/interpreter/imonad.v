@@ -1,6 +1,6 @@
 From shift_reset.core Require Import syntax.
 From shift_reset.monad Require except.
-From shift_reset.monad Require Import es_monad.
+From shift_reset.monad Require Import es_monad conversions.
 From shift_reset.interpreter Require Import error iheap.
 
 Local Unset Elimination Schemes.
@@ -33,11 +33,8 @@ Definition ixmonad_to_irmonad {A} : ixmonad A -> irmonad A :=
 Definition irmonad_to_ixmonad {A} : irmonad A -> ixmonad A :=
   with_except irequest_to_exn.
 
-Definition except_exn_to_ixmonad {A} (m : except.t exn A) : ixmonad A :=
-  except (except.run_except m).
+Definition except_exn_to_ixmonad {A} : except.t exn A -> ixmonad A :=
+  except_to_es_monad.
 
 Definition except_exn_to_irmonad {A} (m : except.t exn A) : irmonad A :=
-  except match except.run_except m with
-    | inl x => inl (IRRaise x)
-    | inr x => inr x
-    end.
+  except_to_es_monad (except.with_except IRRaise m).

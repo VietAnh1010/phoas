@@ -52,4 +52,4 @@ Example run_toss_n n x :=
      let "r" := toss_n (n, "x") in
      !"x", "r" }>.
 
-Compute (eval_term 100 (run_toss_n 10 0)).
+Time Compute (eval_term 100 (run_toss_n 15 0)).

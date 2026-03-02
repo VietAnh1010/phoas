@@ -45,18 +45,14 @@ Example ex1 :=
 
 Compute (eval_term 2 ex1).
 
-Example append_aux :=
-  <{ fix "append_aux" "xs" :=
-       match "xs" with
-       | Inl _ => shift (fun "k" => "k")
-       | Inr "xs" =>
-           let ("x", "xs'") := "xs" in
-           let "r" := "append_aux" "xs'" in
-           Inr ("x", "r")
-       end }>.
-
-Example append :=
-  <{ fun "xs" => reset (append_aux "xs") }>.
+Definition range (s e : Z) :=
+  let fix go s l :=
+    match l with
+    | O => []
+    | S l' => s :: go (s + 1) l'
+    end
+  in
+  go s (Z.to_nat (e - s)).
 
 Fixpoint term_of_list (xs : list Z) :=
   match xs with
@@ -76,48 +72,6 @@ Definition list_eval_term (n : nat) (t : term) : option (list val) :=
   | inl _ => None
   | inr l => list_of_val l
   end.
-
-Example append1 xs :=
-  <{ let "append" := append in "append" xs }>.
-
-Example append2 xs ys :=
-  <{ let "append" := {append1 xs} in "append" ys }>.
-
-Compute (eval_term 3 (append1 (term_of_list []))).
-Compute (eval_term 4 (append1 (term_of_list [1]))).
-Compute (eval_term 5 (append1 (term_of_list [1; 2]))).
-Compute (list_eval_term 3 (append2 (term_of_list []) (term_of_list [1]))).
-Compute (list_eval_term 4 (append2 (term_of_list [1]) (term_of_list [2]))).
-
-Fixpoint sequence start len : list Z :=
-  match len with
-  | O => []
-  | S len' => start :: sequence (start + 1) len'
-  end.
-
-Time Compute (option.map (@List.length val) (list_eval_term 8000 (append2 (term_of_list (sequence 0 7500)) (term_of_list [])))).
-
-Example append_direct :=
-  <{ fix "append_direct" "xs" "ys" :=
-       match "xs" with
-       | Inl _ => "ys"
-       | Inr "xs" =>
-           let ("x", "xs'") := "xs" in
-           let "append_direct" := "append_direct" "xs'" in
-           let "r" := "append_direct" "ys" in
-           Inr ("x", "r")
-       end }>.
-
-Example append_direct1 xs :=
-  <{ let "append_direct" := append_direct in "append_direct" xs }>.
-
-Example append_direct2 xs ys :=
-  <{ let "append_direct" := {append_direct1 xs} in "append_direct" ys }>.
-
-Compute (eval_term 2 (append_direct1 (term_of_list []))).
-Compute (eval_term 2 (append_direct1 (term_of_list [1]))).
-Compute (eval_term 2 (append_direct2 (term_of_list []) (term_of_list [1]))).
-Compute (eval_term 3 (append_direct2 (term_of_list [1]) (term_of_list [2]))).
 
 Definition ref_free := TVBuiltin1 "ref_free".
 
@@ -160,7 +114,7 @@ Example sum xs :=
 Compute (eval_term 3 (sum (term_of_list []))).
 Compute (eval_term 4 (sum (term_of_list [1]))).
 Compute (eval_term 5 (sum (term_of_list [1; 2]))).
-Time Compute (eval_term 5005 (sum (term_of_list (sequence 0 5000)))).
+Time Compute (eval_term 5005 (sum (term_of_list (range 0 5000)))).
 
 Example yield :=
   <{ fun "x" => shift (fun "k" => Inr ("x", "k")) }>.
@@ -327,9 +281,9 @@ Example reverse1 xs :=
 Example reverse_while1 xs :=
   <{ let "reverse_while" := reverse_while in "reverse_while" xs }>.
 
-Time Compute (list_eval_term 2010 (copy1 (term_of_list (sequence 0 1000)))).
-Time Compute (list_eval_term 2010 (reverse1 (term_of_list (sequence 0 1000)))).
-Time Compute (list_eval_term 1010 (reverse_while1 (term_of_list (sequence 0 1000)))).
+Time Compute (list_eval_term 2010 (copy1 (term_of_list (range 0 1000)))).
+Time Compute (list_eval_term 2010 (reverse1 (term_of_list (range 0 1000)))).
+Time Compute (list_eval_term 1010 (reverse_while1 (term_of_list (range 0 1000)))).
 
 Example unhandled_exception :=
   <{ raise exception "Segfault" 139 }>.
@@ -815,8 +769,8 @@ Example queue_reverse xs :=
          (fun '("Exit" _) => ()));
         !"ref_xs" }>).
 
-Compute (eval_term 100 (queue_display (term_of_list (sequence 0 20)))).
-Compute (list_eval_term 2000 (queue_reverse (term_of_list (sequence 0 1000)))).
+Compute (eval_term 100 (queue_display (term_of_list (range 0 20)))).
+Compute (list_eval_term 2000 (queue_reverse (term_of_list (range 0 1000)))).
 
 Example array_make := TVBuiltin2 "array_make".
 

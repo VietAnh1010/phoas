@@ -1,8 +1,7 @@
 From Stdlib Require Import List String QArith Qcanon ZArith.
-Import ListNotations.
-
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
+Import ListNotations.
 
 Open Scope string_scope.
 Open Scope Z_scope.
@@ -13,15 +12,6 @@ Compute (eval_term 1 arith1).
 
 Example arith2 := <{ 1 + 6 / 6 }>.
 Compute (eval_term 1 arith2).
-
-Example cmp1 := <{ 4 + 2 < 6 + 9 }>.
-Compute (eval_term 1 cmp1).
-
-Example cmp2 := <{ true < true }>.
-Compute (eval_term 1 cmp2).
-
-Example cmp3 := <{ (4, 2) < (6, 9) }>.
-Compute (eval_term 1 cmp3).
 
 Example arith3 := <{ {Q2Qc (4 # 6)} + {Q2Qc (4 # 5)} }>.
 Compute (eval_term 1 arith3).
@@ -34,6 +24,15 @@ Compute (eval_term 1 arith5).
 
 Example arith6 := <{ {Q2Qc (6 # 9)} / {0%Qc} }>.
 Compute (eval_term 1 arith6).
+
+Example cmp1 := <{ 4 + 2 < 6 + 9 }>.
+Compute (eval_term 1 cmp1).
+
+Example cmp2 := <{ true < true }>.
+Compute (eval_term 1 cmp2).
+
+Example cmp3 := <{ (4, 2) < (6, 9) }>.
+Compute (eval_term 1 cmp3).
 
 Example ex1 :=
   <{ let "f" :=

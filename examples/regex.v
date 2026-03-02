@@ -1,6 +1,7 @@
-From Stdlib Require Import Ascii String ZArith List.
+From Stdlib Require Import Ascii List String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
+From examples.lib Require Import list.
 Import ListNotations.
 
 Open Scope Z_scope.
@@ -14,7 +15,7 @@ Example flip :=
   <{ fun _ => shift0 (fun "k" => "k" true; "k" false) }>.
 
 Example ndfa :=
-  <{ fix "ndfa" "args" :=
+  <{ fix "go" "args" :=
        let ("r", "l") := "args" in
        match "r" with
        | `"Char" "c" =>
@@ -26,17 +27,17 @@ Example ndfa :=
            end
        | `"Concat" "p" =>
            let ("r1", "r2") := "p" in
-           let "l" := "ndfa" ("r1", "l") in
-           "ndfa" ("r2", "l")
+           let "l" := "go" ("r1", "l") in
+           "go" ("r2", "l")
        | `"Union" "p" =>
            let ("r1", "r2") := "p" in
            let "b" := flip () in
-           if "b" then "ndfa" ("r1", "l") else "ndfa" ("r2", "l")
+           if "b" then "go" ("r1", "l") else "go" ("r2", "l")
        | `"Star" "r'" =>
            let "b" := flip () in
            if "b" then "l" else
-             let "l" := "ndfa" ("r'", "l") in
-             "ndfa" ("r", "l")
+             let "l" := "go" ("r'", "l") in
+             "go" ("r", "l")
        end }>.
 
 Example accept :=
@@ -54,32 +55,37 @@ Example accept :=
        in
        "answer", !"counter" }>.
 
-Fixpoint term_of_list (xs : list Z) :=
-  match xs with
-  | [] => <{ Inl () }>
-  | x :: xs' => <{ Inr (x, {term_of_list xs'}) }>
-  end.
+Inductive regex (A : Type) : Type :=
+| Char : A -> regex A
+| Concat : regex A -> regex A -> regex A
+| Union : regex A -> regex A -> regex A
+| Star : regex A -> regex A.
 
-Inductive regex : Type :=
-| Char : Z -> regex
-| Concat : regex -> regex -> regex
-| Union : regex -> regex -> regex
-| Star : regex -> regex.
+Arguments Char {A} _.
+Arguments Concat {A} _ _.
+Arguments Union {A} _ _.
+Arguments Star {A} _.
 
-Fixpoint term_of_regex (r : regex) :=
+Fixpoint int_regex_to_val_term (r : regex Z) : val_term :=
   match r with
   | Char c => <{ `"Char" c }>
-  | Concat r1 r2 => <{ `"Concat" ({term_of_regex r1}, {term_of_regex r2}) }>
-  | Union r1 r2 => <{ `"Union" ({term_of_regex r1}, {term_of_regex r2}) }>
-  | Star r' => <{ `"Star" {term_of_regex r'} }>
+  | Concat r1 r2 => <{ `"Concat" ({int_regex_to_val_term r1}, {int_regex_to_val_term r2}) }>
+  | Union r1 r2 => <{ `"Union" ({int_regex_to_val_term r1}, {int_regex_to_val_term r2}) }>
+  | Star r' => <{ `"Star" {int_regex_to_val_term r'} }>
   end.
 
-Module Examples.
+Definition eval_accept (fuel : nat) (r : regex Z) (l : list Z) :=
+  eval_term fuel <{ accept ({int_regex_to_val_term r}, {int_list_to_val_term l}) }>.
+
+Definition test_accept (fuel : nat) (r : regex Z) (l : list Z) (t : term) :=
+  eval_accept fuel r l = eval_term 1 t.
+
+Module Tests.
   Example regex_1 := Concat (Char 67) (Char 69).
   Example list_1_1 := [0].
   Example list_1_2 := [67; 69].
-  Compute (eq_refl : eval_term 1000 <{ accept ({term_of_regex regex_1}, {term_of_list list_1_1}) }> = inr (VPair (VString "no") (VInt 0))).
-  Compute (eq_refl : eval_term 1000 <{ accept ({term_of_regex regex_1}, {term_of_list list_1_2}) }> = inr (VPair (VString "yes") (VInt 1))).
+  Compute (eq_refl : test_accept 1000 regex_1 list_1_1 <{ {TVString "no"}, 0 }>).
+  Compute (eq_refl : test_accept 1000 regex_1 list_1_2 <{ {TVString "yes"}, 1 }>).
 
   Example regex_2 := Star (Concat (Char 7) (Char 12)).
   Example list_2_1 : list Z := [].
@@ -87,9 +93,9 @@ Module Examples.
   Example list_2_3 := [7; 12].
   Example list_2_4 := [7; 12; 7].
   Example list_2_5 := [7; 12; 7; 12].
-  Compute (eval_term 1000 <{ accept ({term_of_regex regex_2}, {term_of_list list_2_1}) }>).
-  Compute (eval_term 1000 <{ accept ({term_of_regex regex_2}, {term_of_list list_2_2}) }>).
-  Compute (eval_term 1000 <{ accept ({term_of_regex regex_2}, {term_of_list list_2_3}) }>).
-  Compute (eval_term 1000 <{ accept ({term_of_regex regex_2}, {term_of_list list_2_4}) }>).
-  Compute (eval_term 1000 <{ accept ({term_of_regex regex_2}, {term_of_list list_2_5}) }>).
-End Examples.
+  Compute (eval_accept 1000 regex_2 list_2_1).
+  Compute (eval_accept 1000 regex_2 list_2_2).
+  Compute (eval_accept 1000 regex_2 list_2_3).
+  Compute (eval_accept 1000 regex_2 list_2_4).
+  Compute (eval_accept 1000 regex_2 list_2_5).
+End Tests.

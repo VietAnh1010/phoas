@@ -1,6 +1,7 @@
-From Stdlib Require Import String ZArith.
+From Stdlib Require Import List String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
-From shift_reset.interpreter Require Import interpreter.
+From examples.lib Require Import list.
+Import ListNotations.
 
 Open Scope Z_scope.
 Open Scope string_scope.
@@ -12,25 +13,25 @@ Example fib_it :=
   <{ fun _ =>
        let fix "go" "args" :=
          let ("a", "b") := "args" in
-         let _ := yield "a" in
+         yield "a";
          "go" ("b", "a" + "b")
-       in reset ("go" (0, 1); Inl ()) }>.
+       in reset "go" (0, 1) }>.
 
-Example take_n :=
+Example take :=
   <{ fix "go" "args" :=
        let ("n", "it") := "args" in
-       if "n" <= 0 then Inl () else
-         (match "it" with
-          | Inl _ => Inl ()
-          | Inr "p" =>
-              let ("v", "k") := "p" in
-              let "it" := "k" () in
-              let "vs" := "go" ("n" - 1, "it") in
-              Inr ("v", "vs")
-          end) }>.
+       if "n" <= 0 then Inl ()
+       else
+         let "it" := "it" () in
+         match "it" with
+         | Inl _ => Inl ()
+         | Inr "p" =>
+             let ("v", "it") := "p" in
+             let "vs" := "go" ("n" - 1, "it") in
+             Inr ("v", "vs")
+         end }>.
 
-Example run_fib n :=
-  <{ let "it" := fib_it () in
-     take_n (n, "it") }>.
+Example eval_fib (fuel : nat) (n : Z) :=
+  eval_term_to_int_list fuel <{ take (n, fib_it) }>.
 
-Compute (eval_term 100 (run_fib 10)).
+Compute (eval_fib 100 50).

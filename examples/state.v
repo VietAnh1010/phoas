@@ -24,4 +24,4 @@ Example ex1 :=
        let "v3" := get () in
        `("v1", "v2", "v3") }>.
 
-Compute (eq_refl : eval_term 100 <{ eval_state (ex1, 5) }> = eval_term 100 (<{ `(5, 15, 30), 30 }>)).
+Compute (eq_refl : eval_term 100 <{ eval_state (ex1, 5) }> = eval_term 1 <{ `(5, 15, 30), 30 }>).

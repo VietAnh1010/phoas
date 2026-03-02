@@ -227,64 +227,6 @@ Compute (list_eval_term 100 (dfs1 (make_balanced_tree3 1))).
 Compute (list_eval_term 100 (dfs1 (make_balanced_tree3 2))).
 Compute (list_eval_term 100 (dfs1 (make_balanced_tree3 3))).
 
-Example copy :=
-  <{ fix "copy" "xs" :=
-       match "xs" with
-       | Inl _ => Inl ()
-       | Inr "xs" =>
-           let ("x", "xs'") := "xs" in
-           let "xs" :=
-             shift
-               (fun "k" =>
-                  let "xs'" := "k" "xs'" in
-                  Inr ("x", "xs'"))
-           in
-           "copy" "xs"
-       end }>.
-
-Example reverse :=
-  <{ fix "reverse" "xs" :=
-       match "xs" with
-       | Inl _ => Inl ()
-       | Inr "xs" =>
-           let ("x", "xs'") := "xs" in
-           let "xs" :=
-             control
-               (fun "k" =>
-                  let "xs'" := "k" "xs'" in
-                  Inr ("x", "xs'"))
-           in
-           "reverse" "xs"
-       end }>.
-
-Example reverse_while :=
-  <{ fun "xs" =>
-       let "in" := ref "xs" in
-       let "out" := ref (Inl ()) in
-       try
-         (while true do
-            (match !"in" with
-             | Inl _ => raise exception "Exit" ()
-             | Inr "xs" =>
-                 let ("x", "xs'") := "xs" in
-                 "in" <- "xs'";
-                 "out" <- Inr ("x", !"out")
-             end));;
-       (fun '("Exit" _) => !"out") }>.
-
-Example copy1 xs :=
-  <{ let "copy" := copy in reset ("copy" xs) }>.
-
-Example reverse1 xs :=
-  <{ let "reverse" := reverse in prompt ("reverse" xs) }>.
-
-Example reverse_while1 xs :=
-  <{ let "reverse_while" := reverse_while in "reverse_while" xs }>.
-
-Time Compute (list_eval_term 2010 (copy1 (term_of_list (range 0 1000)))).
-Time Compute (list_eval_term 2010 (reverse1 (term_of_list (range 0 1000)))).
-Time Compute (list_eval_term 1010 (reverse_while1 (term_of_list (range 0 1000)))).
-
 Example unhandled_exception :=
   <{ raise exception "Segfault" 139 }>.
 

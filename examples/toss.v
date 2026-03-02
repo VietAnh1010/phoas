@@ -33,13 +33,16 @@ Example run_toss x :=
 Compute (eval_term 4 (run_toss 0)).
 
 Example do_toss_n :=
-  <{ fix "go" "args" :=
+  <{ fun "args" =>
        let ("n", "x") := "args" in
-       if "n" = 0 then true
-       else
-         let "r1" := do_toss "x" in
-         let "r2" := "go" ("n" - 1, "x") in
-         "r1" && "r2" }>.
+       let fix "go" "n" :=
+         if "n" = 0 then true
+         else
+           let "r1" := do_toss "x" in
+           let "r2" := "go" ("n" - 1) in
+           "r1" && "r2"
+       in
+       "go" "n" }>.
 
 Example toss_n :=
   <{ fun "args" =>

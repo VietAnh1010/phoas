@@ -4,7 +4,17 @@ From shift_reset.core Require Import syntax syntax_notation.
 From shift_reset.interpreter Require Import interpreter error.
 Import ListNotations.
 
+Local Open Scope Z_scope.
 Local Open Scope term_scope.
+
+Definition range (s e : Z) : list Z :=
+  let fix go s l :=
+    match l with
+    | O => []
+    | S l' => s :: go (s + 1) l'
+    end
+  in
+  go s (Z.to_nat (e - s)).
 
 Fixpoint int_list_to_val_term (xs : list Z) : val_term :=
   match xs with

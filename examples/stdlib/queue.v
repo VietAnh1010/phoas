@@ -6,8 +6,10 @@ Open Scope term_scope.
 
 (** Assume that Lazy is already loaded *)
 Example Queue :=
-  <{ let "nil" := "Lazy".`"pure" (Inl ()) in
-     let "empty" := `("nil", Inl (), "nil") in
+  <{ let "empty" :=
+       let "f" := "Lazy".`"pure" (Inl ()) in
+       `("f", Inl (), "f")
+     in
      let "is_empty" "q" :=
        let `("f", _, _) := "q" in
        let "f" := "Lazy".`"get" "f" in
@@ -43,7 +45,7 @@ Example Queue :=
        let "s" := "Lazy".`"get" "s" in
        match "s" with
        | Inl _ =>
-           let "f" := "rotate" `("f", "r", "nil") in
+           let "f" := "rotate" "q" in
            `("f", Inl (), "f")
        | Inr "p" => `("f", "r", snd "p")
        end
@@ -69,8 +71,20 @@ Example Queue :=
        | Inr "p" => "exec" `(snd "p", "r", "s")
        end
      in
+     let "uncons" "q" :=
+       let `("f", "r", "s") := "q" in
+       let "f" := "Lazy".`"get" "f" in
+       match "f" with
+       | Inl _ => raise exception "Empty" ()
+       | Inr "p" =>
+           let ("x", "f") := "p" in
+           let "q" := "exec" `("f", "r", "s") in
+           ("x", "q")
+       end
+     in
      `{ "empty" := "empty"
       ; "is_empty" := "is_empty"
       ; "snoc" := "snoc"
       ; "head" := "head"
-      ; "tail" := "tail" } }>.
+      ; "tail" := "tail"
+      ; "uncons" := "uncons" } }>.

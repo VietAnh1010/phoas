@@ -1,6 +1,7 @@
 From Stdlib Require Import List String QArith Qcanon ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
+From examples.lib Require Import list.
 Import ListNotations.
 
 Open Scope string_scope.
@@ -44,15 +45,6 @@ Example ex1 :=
      "f" 10 }>.
 
 Compute (eval_term 2 ex1).
-
-Definition range (s e : Z) :=
-  let fix go s l :=
-    match l with
-    | O => []
-    | S l' => s :: go (s + 1) l'
-    end
-  in
-  go s (Z.to_nat (e - s)).
 
 Fixpoint term_of_list (xs : list Z) :=
   match xs with

@@ -1,5 +1,5 @@
 From Stdlib Require Import Bool String ZArith.
-From shift_reset.core Require Import syntax env loc record tag tuple var.
+From shift_reset.core Require Import syntax env ident loc record tuple.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require Import array builtin error iheap imonad op unwrap.
 Import ESMonadNotations.
@@ -15,7 +15,7 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
   match t with
   | TVVar x =>
       match env_lookup x e with
-      | None => throw (Name_error (var_car x))
+      | None => throw (Name_error (ident_car x))
       | Some v => pure v
       end
   | TVTt => pure VTt
@@ -51,7 +51,7 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
       let* v := interpret_val_term t' e in
       let* r := except_exn_to_ixmonad (unwrap_vrecord v) in
       match record_lookup l r with
-      | None => throw (Name_error (tag_car l))
+      | None => throw (Name_error (ident_car l))
       | Some v' => pure v'
       end
   | TVInl t' => VInl <$> interpret_val_term t' e
@@ -138,7 +138,15 @@ with interpret_tuple_term (t : tuple_term) (e : env) : ixmonad tuple :=
 with interpret_record_term (t : record_term) (e : env) : ixmonad record :=
   match t with
   | TRecordNil => pure RecordNil
-  | TRecordCons l t1 t2 =>
+  | TRecordRest t' =>
+      let* v := interpret_val_term t' e in
+      except_exn_to_ixmonad (unwrap_vrecord v)
+  | TRecordCons0 l t' =>
+      match env_lookup l e with
+      | None => throw (Name_error (ident_car l))
+      | Some v => RecordCons l v <$> interpret_record_term t' e
+      end
+  | TRecordCons1 l t1 t2 =>
       let* v := interpret_val_term t1 e in
       RecordCons l v <$> interpret_record_term t2 e
   end.
@@ -153,27 +161,27 @@ Definition with_binder (b : binder) (v : val) (e : env) : env :=
   end.
 
 Definition match_variant (p : variant_pattern) (v : variant) (e : env) : option env :=
-  let (l, v) := v in
   match p with
   | PVariantAny => Some e
-  | PVariantVar x => Some (ECons x (VVariant l v) e)
-  | PVariantTag l' b => if tag_eqb l l' then Some (with_binder b v e) else None
+  | PVariantTag l b =>
+      let (l', v) := v in
+      if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Definition match_exn (p : variant_pattern) (x : exn) (e : env) : option env :=
-  let (l, v) := x in
   match p with
   | PVariantAny => Some e
-  | PVariantVar x => Some (ECons x (VExn l v) e)
-  | PVariantTag l' b => if tag_eqb l l' then Some (with_binder b v e) else None
+  | PVariantTag l b =>
+      let (l', v) := x in
+      if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Definition match_eff (p : variant_pattern) (f : eff) (e : env) : option env :=
-  let (l, v) := f in
   match p with
   | PVariantAny => Some e
-  | PVariantVar x => Some (ECons x (VEff l v) e)
-  | PVariantTag l' b => if tag_eqb l l' then Some (with_binder b v e) else None
+  | PVariantTag l b =>
+      let (l', v) := f in
+      if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Fixpoint match_tuple (p : tuple_pattern) (t : tuple) (e : env) : option env :=
@@ -193,13 +201,19 @@ Fixpoint match_tuple (p : tuple_pattern) (t : tuple) (e : env) : option env :=
 Fixpoint match_record (p : record_pattern) (r : record) (e : env) : option env :=
   match p with
   | PRecordAny => Some e
-  | PRecordVar x => Some (ECons x (VRecord r) e)
   | PRecordNil =>
       match r with
       | RecordNil => Some e
       | RecordCons _ _ _ => None
       end
-  | PRecordCons l b p' =>
+  | PRecordRest x => Some (ECons x (VRecord r) e)
+  | PRecordCons0 l p' =>
+      let (o, r') := record_lookup_remove l r in
+      match o with
+      | Some v => match_record p' r' (ECons l v e)
+      | None => None
+      end
+  | PRecordCons1 l b p' =>
       let (o, r') := record_lookup_remove l r in
       match o with
       | Some v => match_record p' r' (with_binder b v e)
@@ -401,14 +415,14 @@ Fixpoint interpret_variant_term (self : interpreter) (t : variant_term) (e : env
       end
   end.
 
-Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env) (k : kont) (f : var) (v : val) : irmonad val :=
+Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env) (k : kont) (f : ident) (v : val) : irmonad val :=
   match t with
   | TFixMutLast f' b t' =>
-      if var_eqb f f'
+      if ident_eqb f f'
       then self t' (with_binder b v e) k
-      else throw (IRRaise (Name_error (var_car f)))
+      else throw (IRRaise (Name_error (ident_car f)))
   | TFixMutCons f' b t1 t2 =>
-      if var_eqb f f'
+      if ident_eqb f f'
       then self t1 (with_binder b v e) k
       else interpret_fix_mut_term self t2 e k f v
   end.

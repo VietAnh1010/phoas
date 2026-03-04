@@ -1,7 +1,7 @@
 From Stdlib Require Import List String ZArith.
 From shift_reset.lib Require list.
 From shift_reset.lib Require Import int.
-From shift_reset.core Require Import syntax tag.
+From shift_reset.core Require Import syntax ident.
 From shift_reset.monad Require except.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require Import array error iheap imonad unwrap.
@@ -35,17 +35,17 @@ Definition ref_free (v : val) : ixmonad val :=
 Definition int_to_string (v : val) : ixmonad val :=
   let+ z := except_exn_to_ixmonad (unwrap_vint v) in VString (Z_to_string z).
 
-Definition builtin1_registry : list (tag * (val -> ixmonad val)) :=
-  [(Tag "int_to_string", int_to_string);
-   (Tag "string_length", string_length);
-   (Tag "array_length", array_length);
-   (Tag "ref_free", ref_free);
-   (Tag "array_free", array_free)].
+Definition builtin1_registry : list (ident * (val -> ixmonad val)) :=
+  [(Ident "int_to_string", int_to_string);
+   (Ident "string_length", string_length);
+   (Ident "array_length", array_length);
+   (Ident "ref_free", ref_free);
+   (Ident "array_free", array_free)].
 
-Definition dispatch_builtin1 (l : tag) : except.t exn (val -> ixmonad val) :=
-  match list.lookup tag_eqb l builtin1_registry with
+Definition dispatch_builtin1 (l : ident) : except.t exn (val -> ixmonad val) :=
+  match list.lookup ident_eqb l builtin1_registry with
   | Some f => except.pure f
-  | None => except.throw (Name_error (tag_car l))
+  | None => except.throw (Name_error (ident_car l))
   end.
 
 Definition array_make (v1 v2 : val) : ixmonad val :=
@@ -64,12 +64,12 @@ Definition string_get (v1 v2 : val) : ixmonad val :=
     | None => throw (Invalid_argument "index out of bounds")
     end.
 
-Definition builtin2_registry : list (tag * (val -> val -> ixmonad val)) :=
-  [(Tag "array_make", array_make);
-   (Tag "string_get", string_get)].
+Definition builtin2_registry : list (ident * (val -> val -> ixmonad val)) :=
+  [(Ident "array_make", array_make);
+   (Ident "string_get", string_get)].
 
-Definition dispatch_builtin2 (l : tag) : except.t exn (val -> val -> ixmonad val) :=
-  match list.lookup tag_eqb l builtin2_registry with
+Definition dispatch_builtin2 (l : ident) : except.t exn (val -> val -> ixmonad val) :=
+  match list.lookup ident_eqb l builtin2_registry with
   | Some f => except.pure f
-  | None => except.throw (Name_error (tag_car l))
+  | None => except.throw (Name_error (ident_car l))
   end.

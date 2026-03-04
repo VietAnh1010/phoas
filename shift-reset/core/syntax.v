@@ -1,14 +1,13 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
-From shift_reset.core Require Import loc tag var.
+From shift_reset.core Require Import ident loc.
 
 Inductive binder : Type :=
 | BAny : binder
-| BVar : var -> binder.
+| BVar : ident -> binder.
 
 Inductive variant_pattern : Type :=
 | PVariantAny : variant_pattern
-| PVariantVar : var -> variant_pattern
-| PVariantTag : tag -> binder -> variant_pattern.
+| PVariantTag : ident -> binder -> variant_pattern.
 
 Inductive tuple_pattern : Type :=
 | PTupleNil : tuple_pattern
@@ -16,9 +15,10 @@ Inductive tuple_pattern : Type :=
 
 Inductive record_pattern : Type :=
 | PRecordAny : record_pattern
-| PRecordVar : var -> record_pattern
 | PRecordNil : record_pattern
-| PRecordCons : tag -> binder -> record_pattern -> record_pattern.
+| PRecordRest : ident -> record_pattern
+| PRecordCons0 : ident -> record_pattern -> record_pattern
+| PRecordCons1 : ident -> binder -> record_pattern -> record_pattern.
 
 Inductive op1 : Type :=
 | Op1Pos : op1
@@ -53,7 +53,7 @@ Inductive term : Type :=
 | TCase : val_term -> binder -> term -> binder -> term -> term
 | TWhile : val_term -> term -> term
 | TFor : binder -> val_term -> for_direction -> val_term -> term -> term
-| TLetFix : var -> binder -> term -> term -> term
+| TLetFix : ident -> binder -> term -> term -> term
 | TLetFixMut : fix_mut_term -> term -> term
 | TLetTuple : tuple_pattern -> val_term -> term -> term
 | TLetRecord : record_pattern -> val_term -> term -> term
@@ -72,7 +72,7 @@ Inductive term : Type :=
 | THandle : term -> ret_term -> eff_term -> term
 | TShallowHandle : term -> ret_term -> eff_term -> term
 with val_term : Type :=
-| TVVar : var -> val_term
+| TVVar : ident -> val_term
 | TVTt : val_term
 | TVInt : Z -> val_term
 | TVFloat : Qc -> val_term
@@ -83,19 +83,19 @@ with val_term : Type :=
 | TVAnd : val_term -> val_term -> val_term
 | TVOr : val_term -> val_term -> val_term
 | TVFun : binder -> term -> val_term
-| TVFix : var -> binder -> term -> val_term
-| TVFixMut : fix_mut_term -> var -> val_term
+| TVFix : ident -> binder -> term -> val_term
+| TVFixMut : fix_mut_term -> ident -> val_term
 | TVPair : val_term -> val_term -> val_term
 | TVFst : val_term -> val_term
 | TVSnd : val_term -> val_term
 | TVTuple : tuple_term -> val_term
 | TVRecord : record_term -> val_term
-| TVProj : val_term -> tag -> val_term
+| TVProj : val_term -> ident -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
-| TVVariant : tag -> val_term -> val_term
-| TVExn : tag -> val_term -> val_term
-| TVEff : tag -> val_term -> val_term
+| TVVariant : ident -> val_term -> val_term
+| TVExn : ident -> val_term -> val_term
+| TVEff : ident -> val_term -> val_term
 | TVRef : val_term -> val_term
 | TVArray : tuple_term -> val_term
 | TVGet : val_term -> val_term
@@ -105,8 +105,8 @@ with val_term : Type :=
 | TVAssert : val_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
-| TVBuiltin1 : tag -> val_term -> val_term
-| TVBuiltin2 : tag -> val_term -> val_term -> val_term
+| TVBuiltin1 : ident -> val_term -> val_term
+| TVBuiltin2 : ident -> val_term -> val_term -> val_term
 with ret_term : Type :=
 | TRetNone : ret_term
 | TRetSome : binder -> term -> ret_term
@@ -124,10 +124,12 @@ with tuple_term : Type :=
 | TTupleCons : val_term -> tuple_term -> tuple_term
 with record_term : Type :=
 | TRecordNil : record_term
-| TRecordCons : tag -> val_term -> record_term -> record_term
+| TRecordRest : val_term -> record_term
+| TRecordCons0 : ident -> record_term -> record_term
+| TRecordCons1 : ident -> val_term -> record_term -> record_term
 with fix_mut_term : Type :=
-| TFixMutLast : var -> binder -> term -> fix_mut_term
-| TFixMutCons : var -> binder -> term -> fix_mut_term -> fix_mut_term.
+| TFixMutLast : ident -> binder -> term -> fix_mut_term
+| TFixMutCons : ident -> binder -> term -> fix_mut_term -> fix_mut_term.
 
 Inductive val : Type :=
 | VTt : val
@@ -138,16 +140,16 @@ Inductive val : Type :=
 | VChar : ascii -> val
 | VString : string -> val
 | VFun : binder -> term -> env -> val
-| VFix : var -> binder -> term -> env -> val
-| VFixMut : fix_mut_term -> var -> env -> val
+| VFix : ident -> binder -> term -> env -> val
+| VFixMut : fix_mut_term -> ident -> env -> val
 | VPair : val -> val -> val
 | VTuple : tuple -> val
 | VRecord : record -> val
 | VInl : val -> val
 | VInr : val -> val
-| VVariant : tag -> val -> val
-| VExn : tag -> val -> val
-| VEff : tag -> val -> val
+| VVariant : ident -> val -> val
+| VExn : ident -> val -> val
+| VEff : ident -> val -> val
 | VRef : loc -> val
 | VArray : loc -> Z -> val
 | VMKPure : metakont -> val
@@ -170,31 +172,31 @@ with metakont : Type :=
 | MKShallowHandle : metakont -> ret_term -> eff_term -> env -> kont -> metakont
 with env : Type :=
 | ENil : env
-| ECons : var -> val -> env -> env
+| ECons : ident -> val -> env -> env
 with tuple : Type :=
 | TupleNil : tuple
 | TupleCons : val -> tuple -> tuple
 with record : Type :=
 | RecordNil : record
-| RecordCons : tag -> val -> record -> record.
+| RecordCons : ident -> val -> record -> record.
 
 Inductive closure : Type :=
 | CFun : binder -> term -> env -> closure
-| CFix : var -> binder -> term -> env -> closure
-| CFixMut : fix_mut_term -> var -> env -> closure
+| CFix : ident -> binder -> term -> env -> closure
+| CFixMut : fix_mut_term -> ident -> env -> closure
 | CMKPure : metakont -> closure
 | CMKReset : metakont -> closure
 | CMKReset0 : metakont -> closure
 | CMKHandle : metakont -> ret_term -> eff_term -> env -> closure.
 
 Inductive variant : Type :=
-| Variant : tag -> val -> variant.
+| Variant : ident -> val -> variant.
 
 Inductive exn : Type :=
-| Exn : tag -> val -> exn.
+| Exn : ident -> val -> exn.
 
 Inductive eff : Type :=
-| Eff : tag -> val -> eff.
+| Eff : ident -> val -> eff.
 
 Inductive array : Type :=
 | Array : loc -> Z -> array.

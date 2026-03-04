@@ -1,47 +1,47 @@
 From Stdlib Require Import String.
-From shift_reset.core Require Import syntax tag val.
+From shift_reset.core Require Import syntax ident val.
 
 Definition Failure (s : string) : exn :=
-  Exn (Tag "Failure") (VString s).
+  Exn (Ident "Failure") (VString s).
 
 Definition Type_error (s : string) : exn :=
-  Exn (Tag "Type_error") (VString s).
+  Exn (Ident "Type_error") (VString s).
 
 Definition Name_error (s : string) : exn :=
-  Exn (Tag "Name_error") (VString s).
+  Exn (Ident "Name_error") (VString s).
 
 Definition Memory_error (s : string) : exn :=
-  Exn (Tag "Memory_error") (VString s).
+  Exn (Ident "Memory_error") (VString s).
 
 Definition Assert_failure (s : string) : exn :=
-  Exn (Tag "Assert_failure") (VString s).
+  Exn (Ident "Assert_failure") (VString s).
 
 Definition Match_failure (s : string) : exn :=
-  Exn (Tag "Match_failure") (VString s).
+  Exn (Ident "Match_failure") (VString s).
 
 Definition Invalid_argument (s : string) : exn :=
-  Exn (Tag "Invalid_argument") (VString s).
+  Exn (Ident "Invalid_argument") (VString s).
 
 Definition Unhandled_exception (x : exn) : exn :=
-  Exn (Tag "Unhandled_exception") (VExn' x).
+  Exn (Ident "Unhandled_exception") (VExn' x).
 
 Definition Unhandled_effect (f : eff) : exn :=
-  Exn (Tag "Unhandled_effect") (VEff' f).
+  Exn (Ident "Unhandled_effect") (VEff' f).
 
 Definition Division_by_zero : exn :=
-  Exn (Tag "Division_by_zero") VTt.
+  Exn (Ident "Division_by_zero") VTt.
 
 Definition Undelimited_shift : exn :=
-  Exn (Tag "Undelimited_shift") VTt.
+  Exn (Ident "Undelimited_shift") VTt.
 
 Definition Undelimited_control : exn :=
-  Exn (Tag "Undelimited_control") VTt.
+  Exn (Ident "Undelimited_control") VTt.
 
 Definition Undelimited_shift0 : exn :=
-  Exn (Tag "Undelimited_shift0") VTt.
+  Exn (Ident "Undelimited_shift0") VTt.
 
 Definition Undelimited_control0 : exn :=
-  Exn (Tag "Undelimited_control0") VTt.
+  Exn (Ident "Undelimited_control0") VTt.
 
 Definition Out_of_fuel : exn :=
-  Exn (Tag "Out_of_fuel") VTt.
+  Exn (Ident "Out_of_fuel") VTt.

@@ -1,12 +1,9 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
-From shift_reset.core Require Import syntax tag var.
+From shift_reset.core Require Import syntax ident.
 
-Coercion Tag : string >-> tag.
-Coercion Var : string >-> var.
-Coercion BVar : var >-> binder.
-Coercion PVariantVar : var >-> variant_pattern.
-Coercion PRecordVar : var >-> record_pattern.
-Coercion TVVar : var >-> val_term.
+Coercion Ident : string >-> ident.
+Coercion BVar : ident >-> binder.
+Coercion TVVar : ident >-> val_term.
 Coercion TVInt : Z >-> val_term.
 Coercion TVFloat : Qc >-> val_term.
 Coercion TVChar : ascii >-> val_term.

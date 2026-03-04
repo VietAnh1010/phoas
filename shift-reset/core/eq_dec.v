@@ -1,5 +1,5 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
-From shift_reset.core Require Import syntax loc tag var.
+From shift_reset.core Require Import syntax ident loc.
 
 Create HintDb eq_dec_db discriminated.
 
@@ -7,9 +7,8 @@ Hint Resolve ascii_dec : eq_dec_db.
 Hint Resolve string_dec : eq_dec_db.
 Hint Resolve Z.eq_dec : eq_dec_db.
 Hint Resolve Qc_eq_dec : eq_dec_db.
+Hint Resolve ident_eq_dec : eq_dec_db.
 Hint Resolve loc_eq_dec : eq_dec_db.
-Hint Resolve tag_eq_dec : eq_dec_db.
-Hint Resolve var_eq_dec : eq_dec_db.
 
 Lemma binder_eq_dec : forall (b1 b2 : binder), {b1 = b2} + {b1 <> b2}.
 Proof. decide equality; auto with eq_dec_db. Defined.

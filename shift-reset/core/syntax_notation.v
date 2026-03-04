@@ -453,15 +453,27 @@ Notation "` l t" :=
 Notation "'match' tv 'with' t 'end'" :=
   (TMatchVariant tv t) (in custom term at level 69, tv custom term, t custom variant_term) : term_scope.
 
+Notation "`{ l t" :=
+  (TVRecord (TRecordCons0 l t))
+    (in custom term at level 0,
+        l constr at level 0,
+        t custom record_term at level 23) : term_scope.
+
 Notation "`{ l := t1 t2" :=
-  (TVRecord (TRecordCons l t1 t2))
+  (TVRecord (TRecordCons1 l t1 t2))
     (in custom term at level 0,
         l constr at level 0,
         t1 custom term at level 23,
         t2 custom record_term at level 23) : term_scope.
 
+Notation "; l t" :=
+  (TRecordCons0 l t)
+    (in custom record_term at level 23,
+        l constr at level 0,
+        t custom record_term at level 23) : term_scope.
+
 Notation "; l := t1 t2" :=
-  (TRecordCons l t1 t2)
+  (TRecordCons1 l t1 t2)
     (in custom record_term at level 23,
         l constr at level 0,
         t1 custom term at level 23,

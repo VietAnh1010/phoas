@@ -299,13 +299,16 @@ Example eval_ltr :=
        match "e" with
        | `"Num" "n" => "n"
        | `"Add" "p" =>
-           let "r1" := "eval" ("p".`"lhs") in
-           let "r2" := "eval" ("p".`"rhs") in
+           let `{"lhs"; "rhs"} := "p" in
+           let "r1" := "eval" "lhs" in
+           let "r2" := "eval" "rhs" in
            "r1" + "r2"
        | `"Mul" "p" =>
-           let "r1" := "eval" ("p".`"lhs") in
-           let "r2" := "eval" ("p".`"rhs") in
+           let `{"lhs"; "rhs"} := "p" in
+           let "r1" := "eval" "lhs" in
+           let "r2" := "eval" "rhs" in
            "r1" * "r2"
+       | _ => raise exception "Failure" "e"
        end }>.
 
 Example eval_ltr_input1 :=

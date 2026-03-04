@@ -34,6 +34,33 @@ Notation "` l x" :=
         l constr at level 0,
         x custom binder' at level 0) : term_scope.
 
+Notation "l" :=
+  (PRecordCons0 l PRecordNil) (in custom record_pattern at level 0, l constr at level 0) : term_scope.
+
+Notation "l ; p" :=
+  (PRecordCons0 l p)
+    (in custom record_pattern at level 0,
+        l constr at level 0,
+        p custom record_pattern at level 0) : term_scope.
+
+Notation "l := x" :=
+  (PRecordCons1 l x PRecordNil)
+    (in custom record_pattern at level 0,
+        l constr at level 0,
+        x constr at level 0) : term_scope.
+
+Notation "l := x ; p" :=
+  (PRecordCons1 l x p)
+    (in custom record_pattern at level 0,
+        l constr at level 0,
+        x constr at level 0,
+        p custom record_pattern at level 0) : term_scope.
+
+Notation "'_'" := PRecordAny (in custom record_pattern at level 0) : term_scope.
+
+Notation "'..' x" :=
+  (PRecordRest x) (in custom record_pattern at level 0, x constr at level 0) : term_scope.
+
 Notation "<{ t }>" := t (t custom term at level 99) : term_scope.
 Notation "( t )" := t (in custom term, t at level 99) : term_scope.
 Notation "{ t }" := t (in custom term, t constr) : term_scope.
@@ -382,6 +409,14 @@ Notation "'let' `( x1 , x2 , x3 , .. , xn ) := tv 'in' t" :=
         t custom term,
         right associativity) : term_scope.
 
+Notation "'let' `{ p } := tv 'in' t" :=
+  (TLetRecord p tv t)
+    (in custom term at level 69,
+        p custom record_pattern at level 0,
+        tv custom term,
+        t custom term,
+        right associativity) : term_scope.
+
 Notation "'Inl' t" :=
   (TVInl t) (in custom term at level 23, t custom term at level 0) : term_scope.
 
@@ -479,7 +514,7 @@ Notation "; l := t1 t2" :=
         t1 custom term at level 23,
         t2 custom record_term at level 23) : term_scope.
 
-Notation "'...' t }" :=
+Notation "'..' t }" :=
   (TRecordRest t) (in custom record_term at level 23, t custom term at level 23) : term_scope.
 
 Notation "}" := TRecordNil (in custom record_term at level 23) : term_scope.

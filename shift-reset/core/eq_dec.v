@@ -49,7 +49,8 @@ with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}
 with variant_term_eq_dec : forall (t1 t2 : variant_term), {t1 = t2} + {t1 <> t2}
 with tuple_term_eq_dec : forall (t1 t2 : tuple_term), {t1 = t2} + {t1 <> t2}
 with record_term_eq_dec : forall (t1 t2 : record_term), {t1 = t2} + {t1 <> t2}
-with fix_mut_term_eq_dec : forall (t1 t2 : fix_mut_term), {t1 = t2} + {t1 <> t2}.
+with fix_mut_term_eq_dec : forall (t1 t2 : fix_mut_term), {t1 = t2} + {t1 <> t2}
+with array_term_eq_dec : forall (t1 t2 : array_term), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve term_eq_dec : eq_dec_db.

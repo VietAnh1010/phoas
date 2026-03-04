@@ -1,8 +1,8 @@
-From Stdlib Require Import Bool String ZArith.
+From Stdlib Require Import Bool List String ZArith.
 From shift_reset.core Require Import syntax env ident loc record tuple.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require Import array builtin error iheap imonad op unwrap.
-Import ESMonadNotations.
+Import ESMonadNotations ListNotations.
 
 Local Open Scope Z_scope.
 Local Open Scope es_monad_scope.
@@ -63,8 +63,8 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
       let* v := interpret_val_term t' e in
       state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))
   | TVArray t' =>
-      let* t := interpret_tuple_term t' e in
-      state (fun h => (VArray (iheap_next_loc h) (Z.of_nat (tuple_length t)), array_of_tuple_alloc t h))
+      let* vs := interpret_array_term t' e in
+      state (fun h => (VArray (iheap_next_loc h) (Z.of_nat (List.length vs)), array_of_list_alloc vs h))
   | TVGet t' =>
       let* v := interpret_val_term t' e in
       let* l := except_exn_to_ixmonad (unwrap_vref v) in
@@ -91,7 +91,7 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
         throw (Invalid_argument "index out of bounds")
       else
         let* h := get in
-        match iheap_read (loc_add l (Z.to_N i)) h with
+        match iheap_read (loc_add l i) h with
         | None => throw (Memory_error "array_get_at")
         | Some v => pure v
         end
@@ -105,7 +105,7 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
         throw (Invalid_argument "index out of bounds")
       else
         let* h := get in
-        match iheap_write (loc_add l (Z.to_N i)) v3 h with
+        match iheap_write (loc_add l i) v3 h with
         | None => throw (Memory_error "array_set_at")
         | Some h' => VTt <$ put h'
         end
@@ -131,6 +131,9 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
 with interpret_tuple_term (t : tuple_term) (e : env) : ixmonad tuple :=
   match t with
   | TTupleNil => pure TupleNil
+  | TTupleRest t' =>
+      let* v := interpret_val_term t' e in
+      except_exn_to_ixmonad (unwrap_vtuple v)
   | TTupleCons t1 t2 =>
       let* v := interpret_val_term t1 e in
       TupleCons v <$> interpret_tuple_term t2 e
@@ -149,6 +152,13 @@ with interpret_record_term (t : record_term) (e : env) : ixmonad record :=
   | TRecordCons1 l t1 t2 =>
       let* v := interpret_val_term t1 e in
       RecordCons l v <$> interpret_record_term t2 e
+  end
+with interpret_array_term (t : array_term) (e : env) : ixmonad (list val) :=
+  match t with
+  | TArrayNil => pure []
+  | TArrayCons t1 t2 =>
+      let* v := interpret_val_term t1 e in
+      cons v <$> interpret_array_term t2 e
   end.
 
 Definition interpret_val_term' (t : val_term) (e : env) : irmonad val :=
@@ -163,25 +173,22 @@ Definition with_binder (b : binder) (v : val) (e : env) : env :=
 Definition match_variant (p : variant_pattern) (v : variant) (e : env) : option env :=
   let (l, v) := v in
   match p with
-  | PVariantAny => Some e
-  | PVariantVar x => Some (ECons x (VVariant l v) e)
-  | PVariantTag l' b => if ident_eqb l l' then Some (with_binder b v e) else None
+  | PVariantBind b => Some (with_binder b (VVariant l v) e)
+  | PVariantConstr l' b => if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Definition match_exn (p : variant_pattern) (x : exn) (e : env) : option env :=
   let (l, v) := x in
   match p with
-  | PVariantAny => Some e
-  | PVariantVar x => Some (ECons x (VExn l v) e)
-  | PVariantTag l' b => if ident_eqb l l' then Some (with_binder b v e) else None
+  | PVariantBind b => Some (with_binder b (VExn l v) e)
+  | PVariantConstr l' b => if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Definition match_eff (p : variant_pattern) (f : eff) (e : env) : option env :=
   let (l, v) := f in
   match p with
-  | PVariantAny => Some e
-  | PVariantVar x => Some (ECons x (VEff l v) e)
-  | PVariantTag l' b => if ident_eqb l l' then Some (with_binder b v e) else None
+  | PVariantBind b => Some (with_binder b (VEff l v) e)
+  | PVariantConstr l' b => if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Fixpoint match_tuple (p : tuple_pattern) (t : tuple) (e : env) : option env :=
@@ -191,6 +198,7 @@ Fixpoint match_tuple (p : tuple_pattern) (t : tuple) (e : env) : option env :=
       | TupleNil => Some e
       | TupleCons _ _ => None
       end
+  | PTupleRest b => Some (with_binder b (VTuple t) e)
   | PTupleCons b p' =>
       match t with
       | TupleNil => None
@@ -200,13 +208,12 @@ Fixpoint match_tuple (p : tuple_pattern) (t : tuple) (e : env) : option env :=
 
 Fixpoint match_record (p : record_pattern) (r : record) (e : env) : option env :=
   match p with
-  | PRecordAny => Some e
   | PRecordNil =>
       match r with
       | RecordNil => Some e
       | RecordCons _ _ _ => None
       end
-  | PRecordRest x => Some (ECons x (VRecord r) e)
+  | PRecordRest b => Some (with_binder b (VRecord r) e)
   | PRecordCons0 l p' =>
       let (o, r') := record_lookup_remove l r in
       match o with

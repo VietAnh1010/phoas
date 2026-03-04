@@ -17,10 +17,11 @@ Definition loc_neqb (l1 l2 : loc) : bool :=
 Definition loc_succ (l : loc) : loc :=
   Loc (Pos.succ (loc_car l)).
 
-Definition loc_add (l : loc) (n : N) : loc :=
-  match n with
-  | N0 => l
-  | Npos p => Loc (loc_car l + p)
+Definition loc_add (l : loc) (z : Z) : loc :=
+  match z with
+  | Z0 => l
+  | Zpos p => Loc (loc_car l + p)
+  | Zneg p => Loc (loc_car l - p)
   end.
 
 Definition loc_init : loc := Loc 1.

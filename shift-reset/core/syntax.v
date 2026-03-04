@@ -6,18 +6,17 @@ Inductive binder : Type :=
 | BVar : ident -> binder.
 
 Inductive variant_pattern : Type :=
-| PVariantAny : variant_pattern
-| PVariantVar : ident -> variant_pattern
-| PVariantTag : ident -> binder -> variant_pattern.
+| PVariantBind : binder -> variant_pattern
+| PVariantConstr : ident -> binder -> variant_pattern.
 
 Inductive tuple_pattern : Type :=
 | PTupleNil : tuple_pattern
+| PTupleRest : binder -> tuple_pattern
 | PTupleCons : binder -> tuple_pattern -> tuple_pattern.
 
 Inductive record_pattern : Type :=
-| PRecordAny : record_pattern
 | PRecordNil : record_pattern
-| PRecordRest : ident -> record_pattern
+| PRecordRest : binder -> record_pattern
 | PRecordCons0 : ident -> record_pattern -> record_pattern
 | PRecordCons1 : ident -> binder -> record_pattern -> record_pattern.
 
@@ -98,7 +97,7 @@ with val_term : Type :=
 | TVExn : ident -> val_term -> val_term
 | TVEff : ident -> val_term -> val_term
 | TVRef : val_term -> val_term
-| TVArray : tuple_term -> val_term
+| TVArray : array_term -> val_term
 | TVGet : val_term -> val_term
 | TVSet : val_term -> val_term -> val_term
 | TVGetAt : val_term -> val_term -> val_term
@@ -122,6 +121,7 @@ with variant_term : Type :=
 | TVariantCons : variant_pattern -> term -> variant_term -> variant_term
 with tuple_term : Type :=
 | TTupleNil : tuple_term
+| TTupleRest : val_term -> tuple_term
 | TTupleCons : val_term -> tuple_term -> tuple_term
 with record_term : Type :=
 | TRecordNil : record_term
@@ -130,7 +130,10 @@ with record_term : Type :=
 | TRecordCons1 : ident -> val_term -> record_term -> record_term
 with fix_mut_term : Type :=
 | TFixMutLast : ident -> binder -> term -> fix_mut_term
-| TFixMutCons : ident -> binder -> term -> fix_mut_term -> fix_mut_term.
+| TFixMutCons : ident -> binder -> term -> fix_mut_term -> fix_mut_term
+with array_term : Type :=
+| TArrayNil : array_term
+| TArrayCons : val_term -> array_term -> array_term.
 
 Inductive val : Type :=
 | VTt : val

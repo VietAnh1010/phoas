@@ -82,9 +82,9 @@ Example Queue :=
            ("x", "q")
        end
      in
-     `{ "empty" := "empty"
-      ; "is_empty" := "is_empty"
-      ; "snoc" := "snoc"
-      ; "head" := "head"
-      ; "tail" := "tail"
-      ; "uncons" := "uncons" } }>.
+     `{ "empty"
+      ; "is_empty"
+      ; "snoc"
+      ; "head"
+      ; "tail"
+      ; "uncons" } }>.

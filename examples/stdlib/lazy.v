@@ -27,8 +27,8 @@ Example Lazy :=
                  let "r" := "f" "r" in
                  "get" "r")
      in
-     `{ "make" := "make"
-      ; "pure" := "pure"
-      ; "get" := "get"
-      ; "map" := "map"
-      ; "bind" := "bind" } }>.
+     `{ "make"
+      ; "pure"
+      ; "get"
+      ; "map"
+      ; "bind" } }>.

@@ -479,6 +479,9 @@ Notation "; l := t1 t2" :=
         t1 custom term at level 23,
         t2 custom record_term at level 23) : term_scope.
 
+Notation "'...' t }" :=
+  (TRecordRest t) (in custom record_term at level 23, t custom term at level 23) : term_scope.
+
 Notation "}" := TRecordNil (in custom record_term at level 23) : term_scope.
 
 Notation "t .` l" :=

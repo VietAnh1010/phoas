@@ -7,6 +7,7 @@ Inductive binder : Type :=
 
 Inductive variant_pattern : Type :=
 | PVariantAny : variant_pattern
+| PVariantVar : ident -> variant_pattern
 | PVariantTag : ident -> binder -> variant_pattern.
 
 Inductive tuple_pattern : Type :=

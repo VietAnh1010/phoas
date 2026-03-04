@@ -161,27 +161,27 @@ Definition with_binder (b : binder) (v : val) (e : env) : env :=
   end.
 
 Definition match_variant (p : variant_pattern) (v : variant) (e : env) : option env :=
+  let (l, v) := v in
   match p with
   | PVariantAny => Some e
-  | PVariantTag l b =>
-      let (l', v) := v in
-      if ident_eqb l l' then Some (with_binder b v e) else None
+  | PVariantVar x => Some (ECons x (VVariant l v) e)
+  | PVariantTag l' b => if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Definition match_exn (p : variant_pattern) (x : exn) (e : env) : option env :=
+  let (l, v) := x in
   match p with
   | PVariantAny => Some e
-  | PVariantTag l b =>
-      let (l', v) := x in
-      if ident_eqb l l' then Some (with_binder b v e) else None
+  | PVariantVar x => Some (ECons x (VExn l v) e)
+  | PVariantTag l' b => if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Definition match_eff (p : variant_pattern) (f : eff) (e : env) : option env :=
+  let (l, v) := f in
   match p with
   | PVariantAny => Some e
-  | PVariantTag l b =>
-      let (l', v) := f in
-      if ident_eqb l l' then Some (with_binder b v e) else None
+  | PVariantVar x => Some (ECons x (VEff l v) e)
+  | PVariantTag l' b => if ident_eqb l l' then Some (with_binder b v e) else None
   end.
 
 Fixpoint match_tuple (p : tuple_pattern) (t : tuple) (e : env) : option env :=

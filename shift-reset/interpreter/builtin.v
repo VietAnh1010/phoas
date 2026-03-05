@@ -1,7 +1,7 @@
 From Stdlib Require Import List String ZArith.
 From shift_reset.lib Require list.
 From shift_reset.lib Require Import int.
-From shift_reset.core Require Import syntax ident.
+From shift_reset.core Require Import syntax ident tuple.
 From shift_reset.monad Require except.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require Import array error iheap imonad unwrap.
@@ -15,6 +15,9 @@ Definition string_length (v : val) : ixmonad val :=
 
 Definition array_length (v : val) : ixmonad val :=
   let+ '(Array _ z) := except_exn_to_ixmonad (unwrap_varray v) in VInt z.
+
+Definition tuple_length (v : val) : ixmonad val :=
+  let+ t := except_exn_to_ixmonad (unwrap_vtuple v) in VInt (Z.of_nat (tuple_length t)).
 
 Definition array_free (v : val) : ixmonad val :=
   let* '(Array l z) := except_exn_to_ixmonad (unwrap_varray v) in
@@ -39,6 +42,7 @@ Definition builtin1_registry : list (ident * (val -> ixmonad val)) :=
   [(Ident "int_to_string", int_to_string);
    (Ident "string_length", string_length);
    (Ident "array_length", array_length);
+   (Ident "tuple_length", tuple_length);
    (Ident "ref_free", ref_free);
    (Ident "array_free", array_free)].
 
@@ -64,9 +68,21 @@ Definition string_get (v1 v2 : val) : ixmonad val :=
     | None => throw (Invalid_argument "index out of bounds")
     end.
 
+Definition tuple_get (v1 v2 : val) : ixmonad val :=
+  let* t := except_exn_to_ixmonad (unwrap_vtuple v1) in
+  let* i := except_exn_to_ixmonad (unwrap_vint v2) in
+  if i <? 0 then
+    throw (Invalid_argument "index out of bounds")
+  else
+    match tuple_get (Z.to_nat i) t with
+    | Some v => pure v
+    | None => throw (Invalid_argument "index out of bounds")
+    end.
+
 Definition builtin2_registry : list (ident * (val -> val -> ixmonad val)) :=
   [(Ident "array_make", array_make);
-   (Ident "string_get", string_get)].
+   (Ident "string_get", string_get);
+   (Ident "tuple_get", tuple_get)].
 
 Definition dispatch_builtin2 (l : ident) : except.t exn (val -> val -> ixmonad val) :=
   match list.lookup ident_eqb l builtin2_registry with

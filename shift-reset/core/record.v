@@ -1,5 +1,11 @@
 From shift_reset.core Require Import syntax ident.
 
+Fixpoint record_length (r : record) : nat :=
+  match r with
+  | RecordNil => O
+  | RecordCons _ _ r' => S (record_length r')
+  end.
+
 Fixpoint record_lookup (l : ident) (r : record) : option val :=
   match r with
   | RecordNil => None

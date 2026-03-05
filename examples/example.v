@@ -259,21 +259,6 @@ Example basic_exn_eff :=
 
 Compute (eval_term 4 basic_exn_eff).
 
-Example variant :=
-  <{ let "v" := `"Variant1" (6, 9) in
-     match "v" with
-     | `"Variant1" "p" => let ("x", "y") := "p" in ("v", "x" + "y")
-     | `"Variant2" _ => raise exception "Failure" ()
-     end }>.
-
-Compute (eval_term 1 variant).
-
-Example record :=
-  <{ let "x" := `{"fst" := 1 ; "snd" := 2} in
-     `{"fst" := "x".`"fst"; "snd" := "x".`"fst" + "x".`"snd"} }>.
-
-Compute (eval_term 1 record).
-
 Example collatz k :=
   <{ let fix "collatz_len" "n" :=
        if "n" = 1 then 1 else
@@ -325,7 +310,7 @@ Example loop :=
      let "clock" := ref 0 in
      let "print" := print in
      let "f" _ :=
-       let _ := "print" (!"clock") in
+       let _ := "print" !"clock" in
        let _ := "clock" <- !"clock" + 1 in
        let "f" := perform effect "Foo" () in
        "f" ()
@@ -333,11 +318,6 @@ Example loop :=
      handle "f" ();;; (fun '("Foo" _), "k" => "k" "f") }>.
 
 Compute (run_term 10 loop).
-
-Example tuple1 := <{ `(1, 2, 3, 4, 5) }>.
-Example use_tuple1 := <{ let `("a", "b", "c", "d", "e") := tuple1 in "a" + "b" + "c" + "d" + "e" }>.
-
-Compute (eval_term 1 use_tuple1).
 
 Example even :=
   let odd := <{ if "x" = 0 then false else "even" ("x" - 1) }> in
@@ -551,7 +531,7 @@ Example counting_sort_lt_10 xs :=
             | Inl _ => raise exception "Exit" ()
             | Inr "p" =>
                 let ("x", "xs'") := "p" in
-                let _ := "arr_fs".["x"] <- ("arr_fs".["x"] + 1) in
+                let _ := "arr_fs".["x"] <- "arr_fs".["x"] + 1 in
                 "ref_xs" <- "xs'"
             end));;
       (fun '("Exit" _) => ()));
@@ -568,13 +548,13 @@ Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [8;
 Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [8; 7; 0; 7; 9; 1; 7]))).
 
 Example array_literal :=
-  <{ `[|0; 1; 2; 3; 4|] }>.
+  <{ `[| 0; 1; 2; 3; 4 |] }>.
 
 Compute (run_term 1 array_literal).
 
 Example use_array_literal :=
   <{ let "arr" := array_literal in
-     `(("arr".[0]), ("arr".[1]), ("arr".[2]), ("arr".[3]), ("arr".[4])) }>.
+     `("arr".[0], "arr".[1], "arr".[2], "arr".[3], "arr".[4]) }>.
 
 Compute (eval_term 1 use_array_literal).
 

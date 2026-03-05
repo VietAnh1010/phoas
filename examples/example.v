@@ -524,7 +524,7 @@ Example array_make := TVBuiltin2 "array_make".
 
 Example counting_sort_lt_10 xs :=
   <{ let "ref_xs" := ref xs in
-     let "arr_fs" := {array_make 10 0} in
+     let "arr_fs" := `[| 0; 0; 0; 0; 0; 0; 0; 0; 0; 0 |] in
      (try
         (while true do
            (match !"ref_xs" with
@@ -546,30 +546,6 @@ Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [0]
 Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [0; 9; 1]))).
 Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [8; 7; 0; 9; 1]))).
 Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [8; 7; 0; 7; 9; 1; 7]))).
-
-Example array_literal :=
-  <{ `[| 0; 1; 2; 3; 4 |] }>.
-
-Compute (run_term 1 array_literal).
-
-Example use_array_literal :=
-  <{ let "arr" := array_literal in
-     `("arr".[0], "arr".[1], "arr".[2], "arr".[3], "arr".[4]) }>.
-
-Compute (eval_term 1 use_array_literal).
-
-Example foldr :=
-  <{ fun "f" "z" "xs" =>
-       let fix "go" "xs" :=
-         match "xs" with
-         | Inl _ => "z"
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
-             let "f" := "f" "x" in
-             let "r" := "go" "xs'" in
-             "f" "r"
-         end
-       in "go" "xs" }>.
 
 Example compare_int :=
   <{ fun "p" =>

@@ -9,7 +9,7 @@ Example Array :=
   <{ let "iter" "args" :=
        let ("f", "a") := "args" in
        let "l" := {TVBuiltin1 "array_length" "a"} in
-       for "i" from 0 upto "l" - 1 do "f" ("a".["i"])
+       for "i" from 0 upto "l" - 1 do "f" "a".["i"]
      in
      let "iteri" "args" :=
        let ("f", "a") := "args" in
@@ -19,10 +19,10 @@ Example Array :=
      let "map" "args" :=
        let ("f", "a") := "args" in
        let "l" := {TVBuiltin1 "array_length" "a"} in
-       let "r" := {TVBuiltin2 "array_make" "l" 0} in
+       let "r" := {TVBuiltin2 "array_make" "l" <{ () }>} in
        let _ :=
          for "i" from 0 upto ("l" - 1) do
-           let "x" := "f" ("a".["i"]) in
+           let "x" := "f" "a".["i"] in
            "r".["i"] <- "x"
        in
        "r"
@@ -31,13 +31,13 @@ Example Array :=
        let ("f", "a") := "args" in
        let "l" := {TVBuiltin1 "array_length" "a"} in
        for "i" from 0 upto ("l" - 1) do
-         let "x" := "f" ("a".["i"]) in
+         let "x" := "f" "a".["i"] in
          "a".["i"] <- "x"
      in
      let "mapi" "args" :=
        let ("f", "a") := "args" in
        let "l" := {TVBuiltin1 "array_length" "a"} in
-       let "r" := {TVBuiltin2 "array_make" "l" 0} in
+       let "r" := {TVBuiltin2 "array_make" "l" <{ () }>} in
        let _ :=
          for "i" from 0 upto ("l" - 1) do
            let "x" := "f" ("i", "a".["i"]) in

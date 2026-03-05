@@ -8,7 +8,6 @@ Local Open Scope Z_scope.
 Local Open Scope es_monad_scope.
 Local Open Scope lazy_bool_scope.
 
-Definition val_interpreter : Type := val_term -> env -> ixmonad val.
 Definition interpreter : Type := term -> env -> kont -> irmonad val.
 
 Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
@@ -46,8 +45,15 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
       let* v := interpret_val_term t' e in
       snd <$> except_exn_to_ixmonad (unwrap_vprod v)
   | TVTuple t' => VTuple <$> interpret_tuple_term t' e
+  | TVProjTuple t' i =>
+      let* v := interpret_val_term t' e in
+      let* t := except_exn_to_ixmonad (unwrap_vtuple v) in
+      match tuple_get i t with
+      | None => throw (Invalid_argument "index out of bounds")
+      | Some v' => pure v'
+      end
   | TVRecord t' => VRecord <$> interpret_record_term t' e
-  | TVProj t' l =>
+  | TVProjRecord t' l =>
       let* v := interpret_val_term t' e in
       let* r := except_exn_to_ixmonad (unwrap_vrecord v) in
       match record_lookup l r with

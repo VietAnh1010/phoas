@@ -1,10 +1,11 @@
-From Stdlib Require Import Ascii String Qcanon ZArith.
+From Stdlib Require Import Arith Ascii String Qcanon ZArith.
 From shift_reset.core Require Import syntax ident loc.
 
 Create HintDb eq_dec_db discriminated.
 
 Hint Resolve ascii_dec : eq_dec_db.
 Hint Resolve string_dec : eq_dec_db.
+Hint Resolve Nat.eq_dec : eq_dec_db.
 Hint Resolve Z.eq_dec : eq_dec_db.
 Hint Resolve Qc_eq_dec : eq_dec_db.
 Hint Resolve ident_eq_dec : eq_dec_db.

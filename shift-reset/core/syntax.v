@@ -89,8 +89,9 @@ with val_term : Type :=
 | TVFst : val_term -> val_term
 | TVSnd : val_term -> val_term
 | TVTuple : tuple_term -> val_term
+| TVProjTuple : val_term -> nat -> val_term
 | TVRecord : record_term -> val_term
-| TVProj : val_term -> ident -> val_term
+| TVProjRecord : val_term -> ident -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
 | TVVariant : ident -> val_term -> val_term

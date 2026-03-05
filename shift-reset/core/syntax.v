@@ -23,7 +23,8 @@ Inductive record_pattern : Type :=
 Inductive op1 : Type :=
 | Op1Pos : op1
 | Op1Neg : op1
-| Op1Not : op1.
+| Op1Not : op1
+| Op1Lnot : op1.
 
 Inductive op2 : Type :=
 | Op2Add : op2
@@ -31,6 +32,12 @@ Inductive op2 : Type :=
 | Op2Mul : op2
 | Op2Div : op2
 | Op2Mod : op2
+| Op2Pow : op2
+| Op2Land : op2
+| Op2Lor : op2
+| Op2Lxor : op2
+| Op2Shl : op2
+| Op2Shr : op2
 | Op2App : op2
 | Op2Lt : op2
 | Op2Le : op2

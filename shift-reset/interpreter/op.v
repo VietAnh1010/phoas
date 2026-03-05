@@ -32,11 +32,18 @@ Definition dispatch_not (v : val) : except exn val :=
   | _ => throw (Type_error "dispatch_not")
   end.
 
+Definition dispatch_lnot (v : val) : except exn val :=
+  match v with
+  | VInt z => pure (VInt (Z.lnot z))
+  | _ => throw (Type_error "dispatch_lnot")
+  end.
+
 Definition dispatch_op1 (op : op1) : val -> except exn val :=
   match op with
   | Op1Pos => dispatch_pos
   | Op1Neg => dispatch_neg
   | Op1Not => dispatch_not
+  | Op1Lnot => dispatch_lnot
   end.
 
 Definition dispatch_add (v1 v2 : val) : except exn val :=
@@ -71,6 +78,43 @@ Definition dispatch_mod (v1 v2 : val) : except exn val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 =? 0)%Z then throw Division_by_zero else pure (VInt (z1 mod z2))
   | _, _ => throw (Type_error "dispatch_mod")
+  end.
+
+Definition dispatch_pow (v1 v2 : val) : except exn val :=
+  match v1, v2 with
+  | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_exponent else pure (VInt (z1 ^ z2))
+  | VFloat q, VInt z => if (z <? 0)%Z then throw Negative_exponent else pure (VFloat (q ^ Z.to_nat z))
+  | _, _ => throw (Type_error "dispatch_pow")
+  end.
+
+Definition dispatch_land (v1 v2 : val) : except exn val :=
+  match v1, v2 with
+  | VInt z1, VInt z2 => pure (VInt (Z.land z1 z2))
+  | _, _ => throw (Type_error "dispatch_land")
+  end.
+
+Definition dispatch_lor (v1 v2 : val) : except exn val :=
+  match v1, v2 with
+  | VInt z1, VInt z2 => pure (VInt (Z.lor z1 z2))
+  | _, _ => throw (Type_error "dispatch_lor")
+  end.
+
+Definition dispatch_lxor (v1 v2 : val) : except exn val :=
+  match v1, v2 with
+  | VInt z1, VInt z2 => pure (VInt (Z.lxor z1 z2))
+  | _, _ => throw (Type_error "dispatch_lxor")
+  end.
+
+Definition dispatch_shl (v1 v2 : val) : except exn val :=
+  match v1, v2 with
+  | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftl z1 z2))
+  | _, _ => throw (Type_error "dispatch_shl")
+  end.
+
+Definition dispatch_shr (v1 v2 : val) : except exn val :=
+  match v1, v2 with
+  | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftr z1 z2))
+  | _, _ => throw (Type_error "dispatch_shr")
   end.
 
 Definition dispatch_app (v1 v2 : val) : except exn val :=
@@ -174,6 +218,12 @@ Definition dispatch_op2 (op : op2) : val -> val -> except exn val :=
   | Op2Mul => dispatch_mul
   | Op2Div => dispatch_div
   | Op2Mod => dispatch_mod
+  | Op2Pow => dispatch_pow
+  | Op2Land => dispatch_land
+  | Op2Lor => dispatch_lor
+  | Op2Lxor => dispatch_lxor
+  | Op2Shl => dispatch_shl
+  | Op2Shr => dispatch_shr
   | Op2App => dispatch_app
   | Op2Lt => dispatch_lt
   | Op2Le => dispatch_le

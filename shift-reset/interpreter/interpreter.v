@@ -1,7 +1,8 @@
 From Stdlib Require Import Bool List String ZArith.
 From shift_reset.core Require Import syntax env ident loc record tuple.
 From shift_reset.monad Require Import es_monad.
-From shift_reset.interpreter Require Import array builtin error iheap imonad op unwrap.
+From shift_reset.interpreter Require builtin op.
+From shift_reset.interpreter Require Import array error iheap imonad unwrap.
 Import ESMonadNotations ListNotations.
 
 Local Open Scope Z_scope.
@@ -121,16 +122,16 @@ Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
       if b then pure VTt else throw (Assert_failure "")
   | TVOp1 op t' =>
       let* v := interpret_val_term t' e in
-      except_exn_to_ixmonad (dispatch_op1 op v)
+      except_exn_to_ixmonad (op.dispatch_op1 op v)
   | TVOp2 op t1 t2 =>
       let* v1 := interpret_val_term t1 e in
       let* v2 := interpret_val_term t2 e in
-      except_exn_to_ixmonad (dispatch_op2 op v1 v2)
+      except_exn_to_ixmonad (op.dispatch_op2 op v1 v2)
   | TVBuiltin1 l t' =>
-      let* f := except_exn_to_ixmonad (dispatch_builtin1 l) in
+      let* f := except_exn_to_ixmonad (builtin.dispatch_builtin1 l) in
       interpret_val_term t' e >>= f
   | TVBuiltin2 l t1 t2 =>
-      let* f := except_exn_to_ixmonad (dispatch_builtin2 l) in
+      let* f := except_exn_to_ixmonad (builtin.dispatch_builtin2 l) in
       let* v := interpret_val_term t1 e in
       interpret_val_term t2 e >>= f v
   end

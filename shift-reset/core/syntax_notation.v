@@ -291,6 +291,9 @@ Notation "- t" :=
 Notation "'not' t" :=
   (Op1Not t) (in custom term at level 23, t custom term at level 10) : term_scope.
 
+Notation "'lnot' t" :=
+  (Op1Lnot t) (in custom term at level 23, t custom term at level 10) : term_scope.
+
 Notation "'fst' t" :=
   (TVFst t) (in custom term at level 23, t custom term at level 10) : term_scope.
 
@@ -317,6 +320,24 @@ Notation "t1 / t2" :=
 
 Notation "t1 'mod' t2" :=
   (Op2Mod t1 t2) (in custom term at level 39, t1 custom term, t2 custom term, left associativity) : term_scope.
+
+Notation "t1 'land' t2" :=
+  (Op2Land t1 t2) (in custom term at level 39, t1 custom term, t2 custom term, left associativity) : term_scope.
+
+Notation "t1 'lor' t2" :=
+  (Op2Lor t1 t2) (in custom term at level 39, t1 custom term, t2 custom term, left associativity) : term_scope.
+
+Notation "t1 'lxor' t2" :=
+  (Op2Lxor t1 t2) (in custom term at level 39, t1 custom term, t2 custom term, left associativity) : term_scope.
+
+Notation "t1 ^ t2" :=
+  (Op2Pow t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
+
+Notation "t1 'shl' t2" :=
+  (Op2Shl t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
+
+Notation "t1 'shr' t2" :=
+  (Op2Shr t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 = t2" :=
   (Op2Eq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term, left associativity) : term_scope.

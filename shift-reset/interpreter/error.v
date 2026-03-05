@@ -31,6 +31,12 @@ Definition Unhandled_effect (f : eff) : exn :=
 Definition Division_by_zero : exn :=
   Exn (Ident "Division_by_zero") VTt.
 
+Definition Negative_exponent : exn :=
+  Exn (Ident "Negative_exponent") VTt.
+
+Definition Negative_arithmetic_shift : exn :=
+  Exn (Ident "Negative_arithmetic_shift") VTt.
+
 Definition Undelimited_shift : exn :=
   Exn (Ident "Undelimited_shift") VTt.
 

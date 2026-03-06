@@ -64,12 +64,12 @@ Example convolve :=
          | Inr "p" =>
              let ("x", "xs'") := "p" in
              let "p" := "go" "xs'" in
-             let ("ys", "r") := "p" in
-             match "ys" with
+             let ("ys_b", "r") := "p" in
+             match "ys_b" with
              | Inl _ => "p"
              | Inr "p" =>
-                 let ("y", "ys'") := "p" in
-                 ("ys'", Inr (("x", "y"), "r"))
+                 let ("y", "ys_b'") := "p" in
+                 ("ys_b'", Inr (("x", "y"), "r"))
              end
          end
        in

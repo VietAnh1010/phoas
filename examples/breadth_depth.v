@@ -24,7 +24,7 @@ Example level :=
   let fix go i n :=
     match n with
     | O => <{ fun _ => Inl () }>
-    | S n' => let t := go (Z.succ i) n' in <{ fun _ => Inr `(i, t, t) }>
+    | S n' => let t := go (i + 1) n' in <{ fun _ => Inr `(i, t, t) }>
     end
   in
   go 0.

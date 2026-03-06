@@ -8,13 +8,13 @@ Open Scope Z_scope.
 Open Scope string_scope.
 Open Scope term_scope.
 
-Example convolve :=
+Example convolve_cont :=
   <{ fun "args" =>
        let ("xs", "ys") := "args" in
        let fix "go" "args" :=
          let ("ys", "k") := "args" in
          match "ys" with
-         | Inl _ => "k"
+         | Inl _ => "k" "xs"
          | Inr "p" =>
              let ("y", "ys'") := "p" in
              "go" ("ys'", fun "xs" =>
@@ -27,8 +27,7 @@ Example convolve :=
                             end)
          end
        in
-       let "k" := "go" ("ys", fun _ => Inl ()) in
-       "k" "xs" }>.
+       "go" ("ys", fun _ => Inl ()) }>.
 
 Example convolve_dcont :=
   <{ fun "args" =>
@@ -39,17 +38,16 @@ Example convolve_dcont :=
          | Inr "p" =>
              let ("y", "ys'") := "p" in
              let "r" :=
-               control
-                 (fun "k" =>
-                    let "k" := "k" "ys'" in
-                    fun "xs" =>
-                      match "xs" with
-                      | Inl _ => Inl ()
-                      | Inr "p" =>
-                          let ("x", "xs'") := "p" in
-                          let "r" := "k" "xs'" in
-                          Inr (("x", "y"), "r")
-                      end)
+               control (fun "k" =>
+                          let "k" := "k" "ys'" in
+                          fun "xs" =>
+                            match "xs" with
+                            | Inl _ => Inl ()
+                            | Inr "p" =>
+                                let ("x", "xs'") := "p" in
+                                let "r" := "k" "xs'" in
+                                Inr (("x", "y"), "r")
+                            end)
              in
              "go" "r"
          end
@@ -57,7 +55,7 @@ Example convolve_dcont :=
        let "k" := prompt "go" "ys" in
        "k" "xs" }>.
 
-Example convolve' :=
+Example convolve :=
   <{ fun "args" =>
        let ("xs", "ys") := "args" in
        let fix "go" "xs" :=
@@ -87,5 +85,5 @@ Definition eval_convolve (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
     fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.
 
 Compute (eval_convolve convolve 100 [1; 2] [3; 4]).
-Compute (eval_convolve convolve' 100 [1; 2] [3; 4]).
+Compute (eval_convolve convolve_cont 100 [1; 2] [3; 4]).
 Compute (eval_convolve convolve_dcont 100 [1; 2; 3; 4] [70; 69; 68; 67; 66]).

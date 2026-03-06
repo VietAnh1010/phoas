@@ -3,7 +3,7 @@ From shift_reset.lib Require sum.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
 From examples.lib Require Import list.
-From examples.stdlib Require Import lazy list queue.
+From examples.stdlib Require Import list.
 Import ListNotations.
 
 Open Scope Z_scope.

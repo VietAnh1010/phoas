@@ -77,12 +77,7 @@ Example convolve :=
        snd "p" }>.
 
 Definition eval_convolve (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
-  eval_term_to_list
-    (fun v => match v with
-              | VPair (VInt z1) (VInt z2) => inr (z1, z2)
-              | _ => inl (Reflect_failure v)
-              end)
-    fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.
+  eval_term_to_list_prod_int_int fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.
 
 Compute (eval_convolve convolve 100 [1; 2] [3; 4]).
 Compute (eval_convolve convolve_cont 100 [1; 2] [3; 4]).

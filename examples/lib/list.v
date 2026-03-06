@@ -41,8 +41,20 @@ Fixpoint val_to_list {A} (f : val -> exn + A) (v : val) : exn + list A :=
 Definition eval_term_to_list {A} (f : val -> exn + A) (fuel : nat) (t : term) : exn + list A :=
   eval_term fuel t >>= val_to_list f.
 
+Definition val_to_int (v : val) : exn + Z :=
+  match v with
+  | VInt z => inr z
+  | _ => inl (Reflect_failure v)
+  end.
+
+Definition val_to_prod_int_int (v : val) : exn + Z * Z :=
+  match v with
+  | VPair (VInt z1) (VInt z2) => inr (z1, z2)
+  | _ => inl (Reflect_failure v)
+  end.
+
 Definition eval_term_to_list_int : nat -> term -> exn + list Z :=
-  eval_term_to_list (fun v => match v with
-                              | VInt z => inr z
-                              | _ => inl (Reflect_failure v)
-                              end).
+  eval_term_to_list val_to_int.
+
+Definition eval_term_to_list_prod_int_int : nat -> term -> exn + list (Z * Z) :=
+  eval_term_to_list val_to_prod_int_int.

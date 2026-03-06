@@ -4,7 +4,7 @@ From shift_reset.core Require Import syntax syntax_notation coerce.
 Open Scope string_scope.
 Open Scope term_scope.
 
-(** Assume that Lazy is already loaded *)
+(** Import Lazy. *)
 Example Queue :=
   <{ let "empty" :=
        let "f" := "Lazy".`"pure" (Inl ()) in

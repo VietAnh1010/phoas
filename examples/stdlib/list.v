@@ -17,5 +17,19 @@ Example List :=
        | Inr "p" => "p"
        end
      in
+     let "iter" "args" :=
+       let ("f", "xs") := "args" in
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => ()
+         | Inr "p" =>
+             let ("x", "xs'") := "p" in
+             let _ := "f" "x" in
+             "go" "xs'"
+         end
+       in
+       "go" "xs"
+     in
      `{ "ne_tail"
-      ; "ne_uncons" } }>.
+      ; "ne_uncons"
+      ; "iter" } }>.

@@ -43,11 +43,11 @@ Example append :=
        "go" "xs" }>.
 
 Definition eval_append (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
-  eval_term_to_int_list fuel <{ candidate ({int_list_to_val_term xs}, {int_list_to_val_term ys}) }>.
+  eval_term_to_list_int fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.
 
-Compute (eval_term 3 <{ append_dcont_aux {int_list_to_val_term []} }>).
-Compute (eval_term 4 <{ append_dcont_aux {int_list_to_val_term [1]} }>).
-Compute (eval_term 5 <{ append_dcont_aux {int_list_to_val_term [1; 2]} }>).
+Compute (eval_term 3 <{ append_dcont_aux {list_int_to_val_term []} }>).
+Compute (eval_term 4 <{ append_dcont_aux {list_int_to_val_term [1]} }>).
+Compute (eval_term 5 <{ append_dcont_aux {list_int_to_val_term [1; 2]} }>).
 
 Compute (eval_append append 2 [] [69]).
 Compute (eval_append append 3 [1] [69]).

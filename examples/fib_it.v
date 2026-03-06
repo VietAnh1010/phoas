@@ -41,7 +41,7 @@ Example take :=
          end }>.
 
 Example eval_fib (candidate : val_term) (fuel : nat) (n : Z) :=
-  eval_term_to_int_list fuel <{ take (n, candidate) }>.
+  eval_term_to_list_int fuel <{ take (n, candidate) }>.
 
 Compute (eval_fib fib_it 100 50).
 Compute (eval_fib fib_it_dcont 100 50).

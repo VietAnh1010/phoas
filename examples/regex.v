@@ -75,7 +75,7 @@ Fixpoint int_regex_to_val_term (r : regex Z) : val_term :=
   end.
 
 Definition eval_accept (fuel : nat) (r : regex Z) (l : list Z) :=
-  eval_term fuel <{ accept ({int_regex_to_val_term r}, {int_list_to_val_term l}) }>.
+  eval_term fuel <{ accept ({int_regex_to_val_term r}, {list_int_to_val_term l}) }>.
 
 Definition test_accept (fuel : nat) (r : regex Z) (l : list Z) (t : term) :=
   eval_accept fuel r l = eval_term 1 t.

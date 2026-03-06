@@ -21,7 +21,7 @@ Example Lazy :=
        "make" (fun _ => let "r" := "get" "t" in "f" "r")
      in
      let "bind" "args" :=
-       let ("f", "t") := "args" in
+       let ("t", "f") := "args" in
        "make" (fun _ =>
                  let "r" := "get" "t" in
                  let "r" := "f" "r" in

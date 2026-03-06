@@ -105,7 +105,7 @@ Example reverse_queue :=
        "go_uncons" ("q", Inl ()) }>.
 
 Definition eval_fun (candidate : val_term) (fuel : nat) (xs : list Z) :=
-  eval_term_to_int_list fuel <{ candidate {int_list_to_val_term xs} }>.
+  eval_term_to_list_int fuel <{ candidate {list_int_to_val_term xs} }>.
 
 Time Compute (eval_fun copy 1010 (range 0 1000)).
 Time Compute (eval_fun copy_dcont 2003 (range 0 1000)).

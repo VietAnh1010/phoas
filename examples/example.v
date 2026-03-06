@@ -84,10 +84,10 @@ Example sum xs :=
      let "answer" := !"result" in
      {ref_free "result"}; "answer" }>.
 
-Compute (eval_term 3 (sum (int_list_to_val_term []))).
-Compute (eval_term 4 (sum (int_list_to_val_term [1]))).
-Compute (eval_term 5 (sum (int_list_to_val_term [1; 2]))).
-Time Compute (eval_term 5005 (sum (int_list_to_val_term (range 0 5000)))).
+Compute (eval_term 3 (sum (list_int_to_val_term []))).
+Compute (eval_term 4 (sum (list_int_to_val_term [1]))).
+Compute (eval_term 5 (sum (list_int_to_val_term [1; 2]))).
+Time Compute (eval_term 5005 (sum (list_int_to_val_term (range 0 5000)))).
 
 Example yield :=
   <{ fun "x" => shift (fun "k" => Inr ("x", "k")) }>.
@@ -169,10 +169,10 @@ Example bfs :=
 Example bfs1 t :=
   <{ prompt (bfs t; Inl ()) }>.
 
-Compute (eval_term_to_int_list 100 (bfs1 (make_balanced_tree3 0))).
-Compute (eval_term_to_int_list 100 (bfs1 (make_balanced_tree3 1))).
-Compute (eval_term_to_int_list 100 (bfs1 (make_balanced_tree3 2))).
-Compute (eval_term_to_int_list 100 (bfs1 (make_balanced_tree3 3))).
+Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 0))).
+Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 1))).
+Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 2))).
+Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 3))).
 
 Example dfs :=
   <{ fix "dfs" "t" :=
@@ -195,10 +195,10 @@ Example dfs :=
 Example dfs1 t :=
   <{ reset (dfs t; Inl ()) }>.
 
-Compute (eval_term_to_int_list 100 (dfs1 (make_balanced_tree3 0))).
-Compute (eval_term_to_int_list 100 (dfs1 (make_balanced_tree3 1))).
-Compute (eval_term_to_int_list 100 (dfs1 (make_balanced_tree3 2))).
-Compute (eval_term_to_int_list 100 (dfs1 (make_balanced_tree3 3))).
+Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 0))).
+Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 1))).
+Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 2))).
+Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 3))).
 
 Example unhandled_exception :=
   <{ raise exception "Segfault" 139 }>.
@@ -541,11 +541,11 @@ Example counting_sort_lt_10 xs :=
            "ref_xs" <- Inr ("i", !"ref_xs")));
      !"ref_xs" }>.
 
-Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term []))).
-Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [0]))).
-Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [0; 9; 1]))).
-Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [8; 7; 0; 9; 1]))).
-Compute (eval_term_to_int_list 11 (counting_sort_lt_10 (int_list_to_val_term [8; 7; 0; 7; 9; 1; 7]))).
+Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term []))).
+Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [0]))).
+Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [0; 9; 1]))).
+Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [8; 7; 0; 9; 1]))).
+Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [8; 7; 0; 7; 9; 1; 7]))).
 
 Example compare_int :=
   <{ fun "p" =>
@@ -568,9 +568,9 @@ Example partition x xs :=
        end
      in reset0 reset0 "go" xs }>.
 
-Compute (eval_term_to_int_list 20 <{ {partition 1 (int_list_to_val_term [4; 1; 3; 5; 2; 3])} }>).
-Compute (eval_term_to_int_list 20 <{ {partition 2 (int_list_to_val_term [4; 1; 3; 5; 2; 3])} }>).
-Compute (eval_term_to_int_list 20 <{ {partition 3 (int_list_to_val_term [4; 1; 3; 5; 2; 3])} }>).
+Compute (eval_term_to_list_int 20 <{ {partition 1 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
+Compute (eval_term_to_list_int 20 <{ {partition 2 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
+Compute (eval_term_to_list_int 20 <{ {partition 3 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
 
 From Stdlib Require Import Extraction.
 From Stdlib Require Import ExtrOcamlBasic ExtrOcamlChar ExtrOcamlNativeString.

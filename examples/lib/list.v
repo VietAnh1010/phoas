@@ -1,10 +1,11 @@
 From Stdlib Require Import List String ZArith.
-From shift_reset.lib Require sum.
-From shift_reset.core Require Import syntax syntax_notation.
+From shift_reset.lib Require Import sum.
+From shift_reset.core Require Import syntax syntax_notation ident.
 From shift_reset.interpreter Require Import interpreter error.
-Import ListNotations.
+Import ListNotations SumNotations.
 
 Local Open Scope Z_scope.
+Local Open Scope sum_scope.
 Local Open Scope term_scope.
 
 Definition range (s e : Z) : list Z :=
@@ -16,18 +17,32 @@ Definition range (s e : Z) : list Z :=
   in
   go s (Z.to_nat (e - s)).
 
-Fixpoint int_list_to_val_term (xs : list Z) : val_term :=
+Fixpoint list_to_val_term {A} (f : A -> val_term) (xs : list A) : val_term :=
   match xs with
   | [] => <{ Inl () }>
-  | x :: xs' => <{ Inr ({TVInt x}, {int_list_to_val_term xs'}) }>
+  | x :: xs' => <{ Inr ({f x}, {list_to_val_term f xs'}) }>
   end.
 
-Fixpoint val_to_int_list (v : val) : exn + list Z :=
+Definition list_int_to_val_term : list Z -> val_term :=
+  list_to_val_term TVInt.
+
+Definition Reflect_failure : val -> exn :=
+  Exn (Ident "Reflect_failure").
+
+Fixpoint val_to_list {A} (f : val -> exn + A) (v : val) : exn + list A :=
   match v with
   | VInl VTt => inr []
-  | VInr (VPair (VInt x) v') => sum.map (cons x) (val_to_int_list v')
-  | _ => inl (Failure "val_to_int_list")
+  | VInr (VPair v1 v2) =>
+      let* x := f v1 in
+      cons x <$> val_to_list f v2
+  | _ => inl (Reflect_failure v)
   end.
 
-Definition eval_term_to_int_list (fuel : nat) (t : term) : exn + list Z :=
-  sum.bind (eval_term fuel t) val_to_int_list.
+Definition eval_term_to_list {A} (f : val -> exn + A) (fuel : nat) (t : term) : exn + list A :=
+  eval_term fuel t >>= val_to_list f.
+
+Definition eval_term_to_list_int : nat -> term -> exn + list Z :=
+  eval_term_to_list (fun v => match v with
+                              | VInt z => inr z
+                              | _ => inl (Reflect_failure v)
+                              end).

@@ -5,7 +5,22 @@ Open Scope string_scope.
 Open Scope term_scope.
 
 Example DelayedTree :=
-  <{ let "iter" "args" :=
+  <{ let "fold" "args" :=
+       let `("z", "f", "t") := "args" in
+       let fix "go" "t" _ :=
+         let "t" := "t" () in
+         match "t" with
+         | Inl _ => "z"
+         | Inr "t" =>
+             let `("x", "t1", "t2") := "t" in
+             let "t1" := "go" "t1" in
+             let "t2" := "go" "t2" in
+             "f" `("x", "t1", "t2")
+         end
+       in
+       "go" "t"
+     in
+     let "iter" "args" :=
        let ("f", "t") := "args" in
        let fix "go" "t" :=
          let "t" := "t" () in
@@ -20,4 +35,5 @@ Example DelayedTree :=
        in
        "go" "t"
      in
-     `{ "iter" } }>.
+     `{ "fold"
+      ; "iter" } }>.

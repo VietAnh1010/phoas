@@ -1,7 +1,5 @@
 From Stdlib Require Import List String ZArith.
-From shift_reset.lib Require sum.
 From shift_reset.core Require Import syntax syntax_notation coerce.
-From shift_reset.interpreter Require Import interpreter.
 From examples.lib Require Import list.
 From examples.stdlib Require Import delayed_list delayed_tree.
 Import ListNotations.
@@ -33,16 +31,13 @@ Example level :=
 
 Example breadth_it_dcont :=
   <{ fun "t" _ =>
-       let fix "go" "t" :=
-         let "t" := "t" () in
-         match "t" with
-         | Inl _ => ()
-         | Inr "t" =>
-             let `("x", "t1", "t2") := "t" in
-             control0 (fun "k" => Inr ("x", fun _ => prompt0 ("k" (); "go" "t1"; "go" "t2"; Inl ())))
-         end
+       let "DelayedTree" := DelayedTree in
+       let "f" "args" :=
+         let `("x", "t1", "t2") := "args" in
+         control0 (fun "k" => Inr ("x", fun _ => prompt0 ("k" (); "t1" (); "t2" (); Inl ())))
        in
-       prompt0 ("go" "t"; Inl ()) }>.
+       let "k" := "DelayedTree".`"fold" `((), "f", "t") in
+       prompt0 ("k" (); Inl ()) }>.
 
 Example depth_it_dcont :=
   <{ fun "t" _ =>

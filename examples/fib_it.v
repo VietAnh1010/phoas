@@ -1,6 +1,6 @@
 From Stdlib Require Import List String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
-From examples.lib Require Import list.
+From examples Require Import common.
 From examples.stdlib Require Import delayed_list.
 Import ListNotations.
 

@@ -1,6 +1,6 @@
 From Stdlib Require Import List String ZArith.
-From shift_reset.core Require Import syntax syntax_notation coerce.
-From examples.lib Require Import list.
+From shift_reset.core Require Import syntax syntax_notation coerce val.
+From examples Require Import common.
 From examples.stdlib Require Import delayed_list delayed_tree.
 Import ListNotations.
 
@@ -39,14 +39,35 @@ Example breadth_it_dcont :=
        let "k" := "DelayedTree".`"fold" `((), "f", "t") in
        prompt0 ("k" (); Inl ()) }>.
 
+Example breadth_it_effect :=
+  <{ fun "t" =>
+       let "DelayedTree" := DelayedTree in
+       let "f" "args" := perform effect "Yield" "args" in
+       let "k" := "DelayedTree".`"fold" `((), "f", "t") in
+       let fix "go" "k" _ :=
+         shallow handle ("k" (); Inl ());;;
+         (fun '("Yield" "args"), "k" =>
+            let `("x", "t1", "t2") := "args" in
+            let "it" := "go" (fun _ => "k" (); "t1" (); "t2" (); Inl ()) in
+            Inr ("x", "it"))
+       in
+       "go" "k" }>.
+
 Example depth_it_dcont :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
        let "f" "x" := shift0 (fun "k" => Inr ("x", "k")) in
        reset0 ("DelayedTree".`"iter" ("f", "t"); Inl ()) }>.
 
-Definition eval_it {A} (f : val -> exn + A) (candidate : val_term) (fuel : nat) (n : Z) (t : val_term) :=
-  eval_term_to_list f fuel
+Example depth_it_effect :=
+  <{ fun "t" _ =>
+       let "DelayedTree" := DelayedTree in
+       let "f" "x" := perform effect "Yield" "x" in
+       handle ("DelayedTree".`"iter" ("f", "t"); Inl ());;;
+       (fun '("Yield" "x"), "k" => Inr ("x", "k")) }>.
+
+Definition eval_it {A} (f : val -> option A) (candidate : val_term) (fuel : nat) (n : Z) (t : val_term) :=
+  deep_eval_term_to_list f fuel
   <{ let "DelayedList" := DelayedList in
      let `{"take"; "to_list"; .._} := "DelayedList" in
      let "it" := candidate t in
@@ -57,7 +78,11 @@ Definition eval_it_int := eval_it val_to_int.
 Definition eval_it_prod_int_int := eval_it val_to_prod_int_int.
 
 Time Compute (eval_it_prod_int_int breadth_it_dcont 17 10 stern_brocot).
+Time Compute (eval_it_prod_int_int breadth_it_effect 23 10 stern_brocot).
 Time Compute (eval_it_prod_int_int depth_it_dcont 17 10 stern_brocot).
+Time Compute (eval_it_prod_int_int depth_it_effect 17 10 stern_brocot).
 
 Time Compute (eval_it_int breadth_it_dcont 23 20 (level 4)).
+Time Compute (eval_it_int breadth_it_effect 23 20 (level 4)).
 Time Compute (eval_it_int depth_it_dcont 23 20 (level 4)).
+Time Compute (eval_it_int depth_it_effect 23 20 (level 4)).

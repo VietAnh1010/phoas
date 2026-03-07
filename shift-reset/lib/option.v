@@ -1,10 +1,10 @@
+Definition pure {A} : A -> option A := Some.
+
 Definition map {A B} (f : A -> B) (o : option A) : option B :=
   match o with
   | None => None
   | Some x => Some (f x)
   end.
-
-Definition pure {A} : A -> option A := Some.
 
 Definition bind {A B} (o : option A) (f : A -> option B) : option B :=
   match o with
@@ -30,3 +30,15 @@ Lemma eq_dec :
          (o1 o2 : option A),
     {o1 = o2} + {o1 <> o2}.
 Proof. decide equality. Defined.
+
+Module OptionNotations.
+  Declare Scope option_scope.
+  Delimit Scope option_scope with option.
+  Bind Scope option_scope with option.
+
+  Notation "f <$> m" := (map f m) (at level 65, right associativity) : option_scope.
+  Notation "m >>= f" := (bind m f) (at level 50, left associativity) : option_scope.
+
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : option_scope.
+  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : option_scope.
+End OptionNotations.

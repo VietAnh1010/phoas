@@ -1,7 +1,7 @@
 From Stdlib Require Import Ascii List String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
-From examples.lib Require Import list.
+From examples Require Import common.
 Import ListNotations.
 
 Open Scope Z_scope.

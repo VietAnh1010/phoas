@@ -2,12 +2,14 @@
 -Q shift-reset/core shift_reset.core
 -Q shift-reset/monad shift_reset.monad
 -Q shift-reset/interpreter shift_reset.interpreter
--Q examples/lib examples.lib
+-Q examples examples
 -Q examples/stdlib examples.stdlib
+
+-docroot shift_reset
 
 shift-reset/lib
 shift-reset/core
 shift-reset/monad
 shift-reset/interpreter
-examples/lib
+examples/common.v
 examples/stdlib

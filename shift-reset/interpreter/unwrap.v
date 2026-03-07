@@ -1,108 +1,58 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
-From shift_reset.core Require Import syntax loc.
+From shift_reset.core Require Import syntax loc val.
 From shift_reset.monad Require Import except.
 From shift_reset.interpreter Require Import error.
 
-Definition unwrap_vunit (v : val) : except exn unit :=
-  match v with
-  | VTt => pure tt
-  | _ => throw (Type_error "unwrap_vunit")
+Definition unwrap_val {A} (f : val -> option A) (s : string) (v : val) : except exn A :=
+  match f v with
+  | Some x => pure x
+  | None => throw (Type_error s)
   end.
 
-Definition unwrap_vint (v : val) : except exn Z :=
-  match v with
-  | VInt z => pure z
-  | _ => throw (Type_error "unwrap_vint")
-  end.
+Definition unwrap_vunit : val -> except exn unit :=
+  unwrap_val val_to_unit "unwrap_vunit".
 
-Definition unwrap_vfloat (v : val) : except exn Qc :=
-  match v with
-  | VFloat q => pure q
-  | _ => throw (Type_error "unwrap_vfloat")
-  end.
+Definition unwrap_vint : val -> except exn Z :=
+  unwrap_val val_to_int "unwrap_vint".
 
-Definition unwrap_vbool (v : val) : except exn bool :=
-  match v with
-  | VTrue => pure true
-  | VFalse => pure false
-  | _ => throw (Type_error "unwrap_vbool")
-  end.
+Definition unwrap_vfloat : val -> except exn Qc :=
+  unwrap_val val_to_float "unwrap_vfloat".
 
-Definition unwrap_vchar (v : val) : except exn ascii :=
-  match v with
-  | VChar a => pure a
-  | _ => throw (Type_error "unwrap_vchar")
-  end.
+Definition unwrap_vbool : val -> except exn bool :=
+  unwrap_val val_to_bool "unwrap_vbool".
 
-Definition unwrap_vstring (v : val) : except exn string :=
-  match v with
-  | VString s => pure s
-  | _ => throw (Type_error "unwrap_vstring")
-  end.
+Definition unwrap_vchar : val -> except exn ascii :=
+  unwrap_val val_to_char "unwrap_vchar".
 
-Definition unwrap_vref (v : val) : except exn loc :=
-  match v with
-  | VRef l => pure l
-  | _ => throw (Type_error "unwrap_vref")
-  end.
+Definition unwrap_vstring : val -> except exn string :=
+  unwrap_val val_to_string "unwrap_vstring".
 
-Definition unwrap_vprod (v : val) : except exn (val * val) :=
-  match v with
-  | VPair v1 v2 => pure (v1, v2)
-  | _ => throw (Type_error "unwrap_vprod")
-  end.
+Definition unwrap_vref : val -> except exn loc :=
+  unwrap_val val_to_ref "unwrap_vref".
 
-Definition unwrap_vsum (v : val) : except exn (val + val) :=
-  match v with
-  | VInl v' => pure (inl v')
-  | VInr v' => pure (inr v')
-  | _ => throw (Type_error "unwrap_vsum")
-  end.
+Definition unwrap_vprod : val -> except exn (val * val) :=
+  unwrap_val val_to_prod "unwrap_vprod".
 
-Definition unwrap_vexn (v : val) : except exn exn :=
-  match v with
-  | VExn l v' => pure (Exn l v')
-  | _ => throw (Type_error "unwrap_vexn")
-  end.
+Definition unwrap_vsum : val -> except exn (val + val) :=
+  unwrap_val val_to_sum "unwrap_vsum".
 
-Definition unwrap_veff (v : val) : except exn eff :=
-  match v with
-  | VEff l v' => pure (Eff l v')
-  | _ => throw (Type_error "unwrap_veff")
-  end.
+Definition unwrap_vexn : val -> except exn exn :=
+  unwrap_val val_to_exn "unwrap_vexn".
 
-Definition unwrap_vvariant (v : val) : except exn variant :=
-  match v with
-  | VVariant l v' => pure (Variant l v')
-  | _ => throw (Type_error "unwrap_vvariant")
-  end.
+Definition unwrap_veff : val -> except exn eff :=
+  unwrap_val val_to_eff "unwrap_veff".
 
-Definition unwrap_vtuple (v : val) : except exn tuple :=
-  match v with
-  | VTuple t => pure t
-  | _ => throw (Type_error "unwrap_vtuple")
-  end.
+Definition unwrap_vvariant : val -> except exn variant :=
+  unwrap_val val_to_variant "unwrap_vvariant".
 
-Definition unwrap_vrecord (v : val) : except exn record :=
-  match v with
-  | VRecord r => pure r
-  | _ => throw (Type_error "unwrap_vrecord")
-  end.
+Definition unwrap_vtuple : val -> except exn tuple :=
+  unwrap_val val_to_tuple "unwrap_vtuple".
 
-Definition unwrap_varray (v : val) : except exn array :=
-  match v with
-  | VArray l z => pure (Array l z)
-  | _ => throw (Type_error "unwrap_varray")
-  end.
+Definition unwrap_vrecord : val -> except exn record :=
+  unwrap_val val_to_record "unwrap_vrecord".
 
-Definition unwrap_vclosure (v : val) : except exn closure :=
-  match v with
-  | VFun b t e => pure (CFun b t e)
-  | VFix f b t e => pure (CFix f b t e)
-  | VFixMut t f e => pure (CFixMut t f e)
-  | VMKPure mk => pure (CMKPure mk)
-  | VMKReset mk => pure (CMKReset mk)
-  | VMKReset0 mk => pure (CMKReset0 mk)
-  | VMKHandle mk t1 t2 e => pure (CMKHandle mk t1 t2 e)
-  | _ => throw (Type_error "unwrap_vclosure")
-  end.
+Definition unwrap_varray : val -> except exn array :=
+  unwrap_val val_to_array "unwrap_varray".
+
+Definition unwrap_vclosure : val -> except exn closure :=
+  unwrap_val val_to_closure "unwrap_vclosure".

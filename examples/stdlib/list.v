@@ -5,7 +5,13 @@ Open Scope string_scope.
 Open Scope term_scope.
 
 Example List :=
-  <{ let "ne_tail" "xs" :=
+  <{ let "ne_head" "xs" :=
+       match "xs" with
+       | Inl _ => raise exception "Empty" ()
+       | Inr "p" => fst "p"
+       end
+     in
+     let "ne_tail" "xs" :=
        match "xs" with
        | Inl _ => raise exception "Empty" ()
        | Inr "p" => snd "p"
@@ -30,6 +36,7 @@ Example List :=
        in
        "go" "xs"
      in
-     `{ "ne_tail"
+     `{ "ne_head"
+      ; "ne_tail"
       ; "ne_uncons"
       ; "iter" } }>.

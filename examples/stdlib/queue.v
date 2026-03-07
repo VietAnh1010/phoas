@@ -4,7 +4,7 @@ From shift_reset.core Require Import syntax syntax_notation coerce.
 Open Scope string_scope.
 Open Scope term_scope.
 
-(** Import Lazy. *)
+(** Require Lazy List. *)
 Example Queue :=
   <{ let "empty" :=
        let "f" := "Lazy".`"pure" (Inl ()) in
@@ -23,21 +23,17 @@ Example Queue :=
        let "f" := "Lazy".`"get" "f" in
        match "f" with
        | Inl _ =>
-           match "r" with
-           | Inl _ => raise exception "Failure" ()
-           | Inr "p" => "Lazy".`"pure" (Inr (fst "p", "s"))
-           end
+           let "y" := "List".`"ne_head" "r" in
+           "Lazy".`"pure" (Inr ("y", "s"))
        | Inr "p" =>
            let ("x", "f") := "p" in
-           match "r" with
-           | Inl _ => raise exception "Failure" ()
-           | Inr "p" =>
-               let ("y", "r") := "p" in
-               "Lazy".`"make" (fun _ =>
-                                 let "s" := "Lazy".`"pure" (Inr ("y", "s")) in
-                                 let "s" := "rotate" `("f", "r", "s") in
-                                 Inr ("x", "s"))
-           end
+           let "p" := "List".`"ne_uncons" "r" in
+           let ("y", "r") := "p" in
+           "Lazy".`"make"
+             (fun _ =>
+                let "s" := "Lazy".`"pure" (Inr ("y", "s")) in
+                let "s" := "rotate" `("f", "r", "s") in
+                Inr ("x", "s"))
        end
      in
      let "exec" "q" :=

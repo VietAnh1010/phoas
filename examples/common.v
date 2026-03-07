@@ -36,9 +36,10 @@ Fixpoint deep_val_to_list {A} (f : val -> option A) (v : val) : option (list A) 
   end.
 
 Definition val_to_prod_int_int (v : val) : option (Z * Z) :=
-  let* '(v1, v2) := val_to_prod v in
-  let* z := val_to_int v1 in
-  pair z <$> val_to_int v2.
+  match v with
+  | VPair (VInt z1) (VInt z2) => Some (z1, z2)
+  | _ => None
+  end.
 
 Definition deep_eval_term_to_list {A} (f : val -> option A) (fuel : nat) (t : term) : exn + list A :=
   match eval_term fuel t with

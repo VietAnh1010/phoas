@@ -501,7 +501,7 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irm
               let* _ := self' t' (with_binder b (VInt i) e) (KCons0 (TFor b (TVInt i') d tv t') e k) in
               go n' i'
           end
-        in go (Z.to_nat (Z.succ z)) i1
+        in go (Z.to_nat (z + 1)) i1
     | TLetFix f b t1 t2 => self' t2 (ECons f (VFix f b t1 e) e) k
     | TLetFixMut t1 t2 => self' t2 (with_fix_mut_term t1 e) k
     | TLetTuple p tv t' =>

@@ -6,19 +6,24 @@ Open Scope string_scope.
 Open Scope term_scope.
 
 Example DelayedList :=
-  <{ let "iter" "args" :=
-       let ("f", "xs") := "args" in
-       let fix "go" "xs" :=
-         let "xs" := "xs" () in
-         match "xs" with
-         | Inl _ => ()
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
-             let _ := "f" "x" in
-             "go" "xs'"
-         end
-       in
-       "go" "xs"
+  <{ let "empty" _ := Inl () in
+     let fix "take_aux" "args" :=
+       let ("n", "xs") := "args" in
+       if "n" = 0 then "empty"
+       else
+         fun _ =>
+           let "xs" := "xs" () in
+           match "xs" with
+           | Inl _ => Inl ()
+           | Inr "p" =>
+               let ("x", "xs'") := "p" in
+               let "r" := "take_aux" ("n" - 1, "xs'") in
+               Inr ("x", "r")
+           end
+     in
+     let "take" "args" :=
+       if fst "args" < 0 then raise exception "Invalid_argument" {TVString "DelayedList.take"}
+       else "take_aux" "args"
      in
      let "map" "args" :=
        let ("f", "xs") := "args" in
@@ -35,22 +40,19 @@ Example DelayedList :=
        in
        "go" "xs"
      in
-     let fix "take_aux" "args" _ :=
-       let ("n", "xs") := "args" in
-       if "n" = 0 then Inl ()
-       else
+     let "iter" "args" :=
+       let ("f", "xs") := "args" in
+       let fix "go" "xs" :=
          let "xs" := "xs" () in
          match "xs" with
-         | Inl _ => Inl ()
+         | Inl _ => ()
          | Inr "p" =>
              let ("x", "xs'") := "p" in
-             let "r" := "take_aux" ("n" - 1, "xs'") in
-             Inr ("x", "r")
+             let _ := "f" "x" in
+             "go" "xs'"
          end
-     in
-     let "take" "args" :=
-       if fst "args" < 0 then raise exception "Invalid_argument" {TVString "DelayedList.take"}
-       else "take_aux" "args"
+       in
+       "go" "xs"
      in
      let fix "to_list" "xs" :=
        let "xs" := "xs" () in
@@ -62,7 +64,8 @@ Example DelayedList :=
            Inr ("x", "r")
        end
      in
-     `{ "iter"
-      ; "map"
+     `{ "empty"
       ; "take"
+      ; "map"
+      ; "iter"
       ; "to_list" } }>.

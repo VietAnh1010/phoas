@@ -66,16 +66,16 @@ Arguments Concat {A} _ _.
 Arguments Union {A} _ _.
 Arguments Star {A} _.
 
-Fixpoint int_regex_to_val_term (r : regex Z) : val_term :=
+Fixpoint regex_int_to_val_term (r : regex Z) : val_term :=
   match r with
   | Char c => <{ `"Char" c }>
-  | Concat r1 r2 => <{ `"Concat" ({int_regex_to_val_term r1}, {int_regex_to_val_term r2}) }>
-  | Union r1 r2 => <{ `"Union" ({int_regex_to_val_term r1}, {int_regex_to_val_term r2}) }>
-  | Star r' => <{ `"Star" {int_regex_to_val_term r'} }>
+  | Concat r1 r2 => <{ `"Concat" ({regex_int_to_val_term r1}, {regex_int_to_val_term r2}) }>
+  | Union r1 r2 => <{ `"Union" ({regex_int_to_val_term r1}, {regex_int_to_val_term r2}) }>
+  | Star r' => <{ `"Star" {regex_int_to_val_term r'} }>
   end.
 
 Definition eval_accept (fuel : nat) (r : regex Z) (l : list Z) :=
-  eval_term fuel <{ accept ({int_regex_to_val_term r}, {list_int_to_val_term l}) }>.
+  eval_term fuel <{ accept ({regex_int_to_val_term r}, {list_int_to_val_term l}) }>.
 
 Definition test_accept (fuel : nat) (r : regex Z) (l : list Z) (t : term) :=
   eval_accept fuel r l = eval_term 1 t.

@@ -412,7 +412,7 @@ Notation "'exception' l t" :=
   (TVExn l t) (in custom term at level 23, l constr at level 0, t custom term at level 10) : term_scope.
 
 Notation "'raise' t" :=
-  (TRaise t) (in custom term at level 23, t custom term at level 10) : term_scope.
+  (TRaise t) (in custom term at level 69, t custom term at level 10) : term_scope.
 
 Notation "'try' t1 ;; t2" :=
   (TTry t1 t2) (in custom term at level 69, t1 custom term, t2 custom exn_term) : term_scope.
@@ -421,7 +421,7 @@ Notation "'effect' l t" :=
   (TVEff l t) (in custom term at level 23, l constr at level 0, t custom term at level 10) : term_scope.
 
 Notation "'perform' t" :=
-  (TPerform t) (in custom term at level 23, t custom term at level 10) : term_scope.
+  (TPerform t) (in custom term at level 69, t custom term at level 10) : term_scope.
 
 Notation "'handle' t1 ;;; t2" :=
   (THandle t1 TRetNone t2) (in custom term at level 69, t1 custom term, t2 custom eff_term) : term_scope.

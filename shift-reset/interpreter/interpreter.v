@@ -172,7 +172,7 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ixmonad 
         let* f := except_exn_to_ixmonad (builtin.dispatch_builtin2 l) in
         let* v := self' t1 e in
         self' t2 e >>= f v
-    | TVVal t' => irmonad_to_ixmonad (self t' e KNil)
+    | TVBy t' => irmonad_to_ixmonad (self t' e KNil)
     end.
 
 Definition interpret_val_term' (self : interpreter) (t : val_term) (e : env) : irmonad val :=

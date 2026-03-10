@@ -441,6 +441,9 @@ Notation "'shallow' 'handle' t1 ;; t2 ;; t3" :=
         t2 custom ret_term,
         t3 custom eff_term) : term_scope.
 
+Notation "'by' t" :=
+  (TVBy t) (in custom term at level 23, t custom term) : term_scope.
+
 Notation "` l t" :=
   (TVVariant l t) (in custom term at level 23, l constr at level 0, t custom term at level 10) : term_scope.
 

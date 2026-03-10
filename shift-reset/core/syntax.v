@@ -115,6 +115,7 @@ with val_term : Type :=
 | TVOp2 : op2 -> val_term -> val_term -> val_term
 | TVBuiltin1 : ident -> val_term -> val_term
 | TVBuiltin2 : ident -> val_term -> val_term -> val_term
+| TVVal : term -> val_term
 with ret_term : Type :=
 | TRetNone : ret_term
 | TRetSome : binder -> term -> ret_term

@@ -9,167 +9,174 @@ Local Open Scope Z_scope.
 Local Open Scope es_monad_scope.
 Local Open Scope lazy_bool_scope.
 
+Definition val_interpreter : Type := val_term -> env -> ixmonad val.
 Definition interpreter : Type := term -> env -> kont -> irmonad val.
 
-Fixpoint interpret_val_term (t : val_term) (e : env) : ixmonad val :=
-  match t with
-  | TVVar x =>
-      match env_lookup x e with
-      | None => throw (Name_error (ident_car x))
-      | Some v => pure v
-      end
-  | TVTt => pure VTt
-  | TVInt z => pure (VInt z)
-  | TVFloat q => pure (VFloat q)
-  | TVTrue => pure VTrue
-  | TVFalse => pure VFalse
-  | TVChar a => pure (VChar a)
-  | TVString s => pure (VString s)
-  | TVAnd t1 t2 =>
-      let* v := interpret_val_term t1 e in
-      let* b := except_exn_to_ixmonad (unwrap_vbool v) in
-      if b then interpret_val_term t2 e else pure VFalse
-  | TVOr t1 t2 =>
-      let* v := interpret_val_term t1 e in
-      let* b := except_exn_to_ixmonad (unwrap_vbool v) in
-      if b then pure VTrue else interpret_val_term t2 e
-  | TVFun b t' => pure (VFun b t' e)
-  | TVFix f b t' => pure (VFix f b t' e)
-  | TVFixMut t' f => pure (VFixMut t' f e)
-  | TVPair t1 t2 =>
-      let* v := interpret_val_term t1 e in
-      VPair v <$> interpret_val_term t2 e
-  | TVFst t' =>
-      let* v := interpret_val_term t' e in
-      fst <$> except_exn_to_ixmonad (unwrap_vprod v)
-  | TVSnd t' =>
-      let* v := interpret_val_term t' e in
-      snd <$> except_exn_to_ixmonad (unwrap_vprod v)
-  | TVTuple t' => VTuple <$> interpret_tuple_term t' e
-  | TVProjTuple t' i =>
-      let* v := interpret_val_term t' e in
-      let* t := except_exn_to_ixmonad (unwrap_vtuple v) in
-      match tuple_get i t with
-      | None => throw (Invalid_argument "index out of bounds")
-      | Some v' => pure v'
-      end
-  | TVRecord t' => VRecord <$> interpret_record_term t' e
-  | TVProjRecord t' l =>
-      let* v := interpret_val_term t' e in
-      let* r := except_exn_to_ixmonad (unwrap_vrecord v) in
-      match record_lookup l r with
-      | None => throw (Name_error (ident_car l))
-      | Some v' => pure v'
-      end
-  | TVInl t' => VInl <$> interpret_val_term t' e
-  | TVInr t' => VInr <$> interpret_val_term t' e
-  | TVVariant l t' => VVariant l <$> interpret_val_term t' e
-  | TVExn l t' => VExn l <$> interpret_val_term t' e
-  | TVEff l t' => VEff l <$> interpret_val_term t' e
-  | TVRef t' =>
-      let* v := interpret_val_term t' e in
-      state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))
-  | TVArray t' =>
-      let* vs := interpret_array_term t' e in
-      state (fun h => (VArray (iheap_next_loc h) (Z.of_nat (List.length vs)), array_of_list_alloc vs h))
-  | TVGet t' =>
-      let* v := interpret_val_term t' e in
-      let* l := except_exn_to_ixmonad (unwrap_vref v) in
-      let* h := get in
-      match iheap_read l h with
-      | None => throw (Memory_error "ref_get")
-      | Some v' => pure v'
-      end
-  | TVSet t1 t2 =>
-      let* v1 := interpret_val_term t1 e in
-      let* v2 := interpret_val_term t2 e in
-      let* l := except_exn_to_ixmonad (unwrap_vref v1) in
-      let* h := get in
-      match iheap_write l v2 h with
-      | None => throw (Memory_error "ref_set")
-      | Some h' => VTt <$ put h'
-      end
-  | TVGetAt t1 t2 =>
-      let* v1 := interpret_val_term t1 e in
-      let* v2 := interpret_val_term t2 e in
-      let* '(Array l z) := except_exn_to_ixmonad (unwrap_varray v1) in
-      let* i := except_exn_to_ixmonad (unwrap_vint v2) in
-      if (i <? 0) ||| (z <=? i) then
-        throw (Invalid_argument "index out of bounds")
-      else
-        let* h := get in
-        match iheap_read (loc_add l i) h with
-        | None => throw (Memory_error "array_get_at")
-        | Some v => pure v
-        end
-  | TVSetAt t1 t2 t3 =>
-      let* v1 := interpret_val_term t1 e in
-      let* v2 := interpret_val_term t2 e in
-      let* v3 := interpret_val_term t3 e in
-      let* '(Array l z) := except_exn_to_ixmonad (unwrap_varray v1) in
-      let* i := except_exn_to_ixmonad (unwrap_vint v2) in
-      if (i <? 0) ||| (z <=? i) then
-        throw (Invalid_argument "index out of bounds")
-      else
-        let* h := get in
-        match iheap_write (loc_add l i) v3 h with
-        | None => throw (Memory_error "array_set_at")
-        | Some h' => VTt <$ put h'
-        end
-  | TVAssert t' =>
-      let* v := interpret_val_term t' e in
-      let* b := except_exn_to_ixmonad (unwrap_vbool v) in
-      if b then pure VTt else throw (Assert_failure "")
-  | TVOp1 op t' =>
-      let* v := interpret_val_term t' e in
-      except_exn_to_ixmonad (op.dispatch_op1 op v)
-  | TVOp2 op t1 t2 =>
-      let* v1 := interpret_val_term t1 e in
-      let* v2 := interpret_val_term t2 e in
-      except_exn_to_ixmonad (op.dispatch_op2 op v1 v2)
-  | TVBuiltin1 l t' =>
-      let* f := except_exn_to_ixmonad (builtin.dispatch_builtin1 l) in
-      interpret_val_term t' e >>= f
-  | TVBuiltin2 l t1 t2 =>
-      let* f := except_exn_to_ixmonad (builtin.dispatch_builtin2 l) in
-      let* v := interpret_val_term t1 e in
-      interpret_val_term t2 e >>= f v
-  end
-with interpret_tuple_term (t : tuple_term) (e : env) : ixmonad tuple :=
+Fixpoint interpret_tuple_term (self : val_interpreter) (t : tuple_term) (e : env) : ixmonad tuple :=
   match t with
   | TTupleNil => pure TupleNil
   | TTupleRest t' =>
-      let* v := interpret_val_term t' e in
+      let* v := self t' e in
       except_exn_to_ixmonad (unwrap_vtuple v)
   | TTupleCons t1 t2 =>
-      let* v := interpret_val_term t1 e in
-      TupleCons v <$> interpret_tuple_term t2 e
-  end
-with interpret_record_term (t : record_term) (e : env) : ixmonad record :=
+      let* v := self t1 e in
+      TupleCons v <$> interpret_tuple_term self t2 e
+  end.
+
+Fixpoint interpret_record_term (self : val_interpreter) (t : record_term) (e : env) : ixmonad record :=
   match t with
   | TRecordNil => pure RecordNil
   | TRecordRest t' =>
-      let* v := interpret_val_term t' e in
+      let* v := self t' e in
       except_exn_to_ixmonad (unwrap_vrecord v)
   | TRecordCons0 l t' =>
       match env_lookup l e with
       | None => throw (Name_error (ident_car l))
-      | Some v => RecordCons l v <$> interpret_record_term t' e
+      | Some v => RecordCons l v <$> interpret_record_term self t' e
       end
   | TRecordCons1 l t1 t2 =>
-      let* v := interpret_val_term t1 e in
-      RecordCons l v <$> interpret_record_term t2 e
-  end
-with interpret_array_term (t : array_term) (e : env) : ixmonad (list val) :=
-  match t with
-  | TArrayNil => pure []
-  | TArrayCons t1 t2 =>
-      let* v := interpret_val_term t1 e in
-      cons v <$> interpret_array_term t2 e
+      let* v := self t1 e in
+      RecordCons l v <$> interpret_record_term self t2 e
   end.
 
-Definition interpret_val_term' (t : val_term) (e : env) : irmonad val :=
-  ixmonad_to_irmonad (interpret_val_term t e).
+Fixpoint interpret_array_term (self : val_interpreter) (t : array_term) (e : env) : ixmonad (nat * list val) :=
+  match t with
+  | TArrayNil => pure (O, [])
+  | TArrayCons t1 t2 =>
+      let* v := self t1 e in
+      let+ '(n, vs) := interpret_array_term self t2 e in
+      (S n, v :: vs)
+  end.
+
+Definition interpret_val_term (self : interpreter) : val_term -> env -> ixmonad val :=
+  fix self' t e :=
+    match t with
+    | TVVar x =>
+        match env_lookup x e with
+        | None => throw (Name_error (ident_car x))
+        | Some v => pure v
+        end
+    | TVTt => pure VTt
+    | TVInt z => pure (VInt z)
+    | TVFloat q => pure (VFloat q)
+    | TVTrue => pure VTrue
+    | TVFalse => pure VFalse
+    | TVChar a => pure (VChar a)
+    | TVString s => pure (VString s)
+    | TVAnd t1 t2 =>
+        let* v := self' t1 e in
+        let* b := except_exn_to_ixmonad (unwrap_vbool v) in
+        if b then self' t2 e else pure VFalse
+    | TVOr t1 t2 =>
+        let* v := self' t1 e in
+        let* b := except_exn_to_ixmonad (unwrap_vbool v) in
+        if b then pure VTrue else self' t2 e
+    | TVFun b t' => pure (VFun b t' e)
+    | TVFix f b t' => pure (VFix f b t' e)
+    | TVFixMut t' f => pure (VFixMut t' f e)
+    | TVPair t1 t2 =>
+        let* v := self' t1 e in
+        VPair v <$> self' t2 e
+    | TVFst t' =>
+        let* v := self' t' e in
+        fst <$> except_exn_to_ixmonad (unwrap_vprod v)
+    | TVSnd t' =>
+        let* v := self' t' e in
+        snd <$> except_exn_to_ixmonad (unwrap_vprod v)
+    | TVTuple t' => VTuple <$> interpret_tuple_term self' t' e
+    | TVProjTuple t' i =>
+        let* v := self' t' e in
+        let* t := except_exn_to_ixmonad (unwrap_vtuple v) in
+        match tuple_get i t with
+        | None => throw (Invalid_argument "index out of bounds")
+        | Some v' => pure v'
+        end
+    | TVRecord t' => VRecord <$> interpret_record_term self' t' e
+    | TVProjRecord t' l =>
+        let* v := self' t' e in
+        let* r := except_exn_to_ixmonad (unwrap_vrecord v) in
+        match record_lookup l r with
+        | None => throw (Name_error (ident_car l))
+        | Some v' => pure v'
+        end
+    | TVInl t' => VInl <$> self' t' e
+    | TVInr t' => VInr <$> self' t' e
+    | TVVariant l t' => VVariant l <$> self' t' e
+    | TVExn l t' => VExn l <$> self' t' e
+    | TVEff l t' => VEff l <$> self' t' e
+    | TVRef t' =>
+        let* v := self' t' e in
+        state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))
+    | TVArray t' =>
+        let* '(n, vs) := interpret_array_term self' t' e in
+        state (fun h => (VArray (iheap_next_loc h) (Z.of_nat n), array_of_list_alloc vs h))
+    | TVGet t' =>
+        let* v := self' t' e in
+        let* l := except_exn_to_ixmonad (unwrap_vref v) in
+        let* h := get in
+        match iheap_read l h with
+        | None => throw (Memory_error "ref_get")
+        | Some v' => pure v'
+        end
+    | TVSet t1 t2 =>
+        let* v1 := self' t1 e in
+        let* v2 := self' t2 e in
+        let* l := except_exn_to_ixmonad (unwrap_vref v1) in
+        let* h := get in
+        match iheap_write l v2 h with
+        | None => throw (Memory_error "ref_set")
+        | Some h' => VTt <$ put h'
+        end
+    | TVGetAt t1 t2 =>
+        let* v1 := self' t1 e in
+        let* v2 := self' t2 e in
+        let* '(Array l z) := except_exn_to_ixmonad (unwrap_varray v1) in
+        let* i := except_exn_to_ixmonad (unwrap_vint v2) in
+        if (i <? 0) ||| (z <=? i) then
+          throw (Invalid_argument "index out of bounds")
+        else
+          let* h := get in
+          match iheap_read (loc_add l i) h with
+          | None => throw (Memory_error "array_get_at")
+          | Some v => pure v
+          end
+    | TVSetAt t1 t2 t3 =>
+        let* v1 := self' t1 e in
+        let* v2 := self' t2 e in
+        let* v3 := self' t3 e in
+        let* '(Array l z) := except_exn_to_ixmonad (unwrap_varray v1) in
+        let* i := except_exn_to_ixmonad (unwrap_vint v2) in
+        if (i <? 0) ||| (z <=? i) then
+          throw (Invalid_argument "index out of bounds")
+        else
+          let* h := get in
+          match iheap_write (loc_add l i) v3 h with
+          | None => throw (Memory_error "array_set_at")
+          | Some h' => VTt <$ put h'
+          end
+    | TVAssert t' =>
+        let* v := self' t' e in
+        let* b := except_exn_to_ixmonad (unwrap_vbool v) in
+        if b then pure VTt else throw (Assert_failure "")
+    | TVOp1 op t' =>
+        let* v := self' t' e in
+        except_exn_to_ixmonad (op.dispatch_op1 op v)
+    | TVOp2 op t1 t2 =>
+        let* v1 := self' t1 e in
+        let* v2 := self' t2 e in
+        except_exn_to_ixmonad (op.dispatch_op2 op v1 v2)
+    | TVBuiltin1 l t' =>
+        let* f := except_exn_to_ixmonad (builtin.dispatch_builtin1 l) in
+        self' t' e >>= f
+    | TVBuiltin2 l t1 t2 =>
+        let* f := except_exn_to_ixmonad (builtin.dispatch_builtin2 l) in
+        let* v := self' t1 e in
+        self' t2 e >>= f v
+    | TVVal t' => irmonad_to_ixmonad (self t' e KNil)
+    end.
+
+Definition interpret_val_term' (self : interpreter) (t : val_term) (e : env) : irmonad val :=
+  ixmonad_to_irmonad (interpret_val_term self t e).
 
 Definition with_binder (b : binder) (v : val) (e : env) : env :=
   match b with
@@ -444,10 +451,10 @@ Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env
 Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irmonad val :=
   fix self' t e k :=
     match t with
-    | TVal tv => interpret_val_term' tv e
+    | TVal tv => interpret_val_term' self' tv e
     | TApp tv1 tv2 =>
-        let* v1 := interpret_val_term' tv1 e in
-        let* v2 := interpret_val_term' tv2 e in
+        let* v1 := interpret_val_term' self' tv1 e in
+        let* v2 := interpret_val_term' self' tv2 e in
         let* c := except_exn_to_irmonad (unwrap_vclosure v1) in
         match c with
         | CFun b t' e => self t' (with_binder b v2 e) k
@@ -465,30 +472,30 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irm
         let* v := self' t1 e (KCons1 b t2 e k) in
         self' t2 (with_binder b v e) k
     | TIf tv t1 t2 =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* b := except_exn_to_irmonad (unwrap_vbool v) in
         if b then self' t1 e k else self' t2 e k
     | TSplit b1 b2 tv t' =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* '(v1, v2) := except_exn_to_irmonad (unwrap_vprod v) in
         self' t' (with_binder b2 v2 (with_binder b1 v1 e)) k
     | TCase tv b1 t1 b2 t2 =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* s := except_exn_to_irmonad (unwrap_vsum v) in
         match s with
         | inl v' => self' t1 (with_binder b1 v' e) k
         | inr v' => self' t2 (with_binder b2 v' e) k
         end
     | TWhile tv t' =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* b := except_exn_to_irmonad (unwrap_vbool v) in
         if b then
           let* _ := self' t' e (KCons0 t e k) in
           self t e k
         else pure VTt
     | TFor b tv1 d tv2 t' =>
-        let* v1 := interpret_val_term' tv1 e in
-        let* v2 := interpret_val_term' tv2 e in
+        let* v1 := interpret_val_term' self' tv1 e in
+        let* v2 := interpret_val_term' self' tv2 e in
         let* i1 := except_exn_to_irmonad (unwrap_vint v1) in
         let* i2 := except_exn_to_irmonad (unwrap_vint v2) in
         let tv := TVInt i2 in
@@ -505,21 +512,21 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irm
     | TLetFix f b t1 t2 => self' t2 (ECons f (VFix f b t1 e) e) k
     | TLetFixMut t1 t2 => self' t2 (with_fix_mut_term t1 e) k
     | TLetTuple p tv t' =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* t := except_exn_to_irmonad (unwrap_vtuple v) in
         match match_tuple p t e with
         | Some e' => self' t' e' k
         | None => throw (IRRaise (Match_failure ""))
         end
     | TLetRecord p tv t' =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* r := except_exn_to_irmonad (unwrap_vrecord v) in
         match match_record p r e with
         | Some e' => self' t' e' k
         | None => throw (IRRaise (Match_failure ""))
         end
     | TMatchVariant tv t' =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         except_exn_to_irmonad (unwrap_vvariant v) >>= interpret_variant_term self' t' e k
     | TShift b t' => throw (IRShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
     | TControl b t' => throw (IRControl (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
@@ -530,12 +537,12 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irm
     | TReset0 t' => catch (self' t' e KNil) (unwind_reset0 k)
     | TPrompt0 t' => catch (self' t' e KNil) (unwind_prompt0 k)
     | TRaise tv =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* x := except_exn_to_irmonad (unwrap_vexn v) in
         throw (IRRaise x)
     | TTry t1 t2 => catch (self' t1 e KNil) (unwind_try self' t2 e k)
     | TPerform tv =>
-        let* v := interpret_val_term' tv e in
+        let* v := interpret_val_term' self' tv e in
         let* f := except_exn_to_irmonad (unwrap_veff v) in
         throw (IRPerform (MKPure k) f)
     | THandle t1 t2 t3 => try (self' t1 e KNil) >>= unwind_handle self' t2 t3 e k

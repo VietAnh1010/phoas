@@ -285,14 +285,10 @@ Example eval_ltr :=
        | `"Num" "n" => "n"
        | `"Add" "p" =>
            let `{"lhs"; "rhs"} := "p" in
-           let "r1" := "eval" "lhs" in
-           let "r2" := "eval" "rhs" in
-           "r1" + "r2"
+           by "eval" "lhs" + by "eval" "rhs"
        | `"Mul" "p" =>
            let `{"lhs"; "rhs"} := "p" in
-           let "r1" := "eval" "lhs" in
-           let "r2" := "eval" "rhs" in
-           "r1" * "r2"
+           by "eval" "lhs" + by "eval" "rhs"
        | _ => raise exception "Failure" "e"
        end }>.
 

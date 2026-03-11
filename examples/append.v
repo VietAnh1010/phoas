@@ -23,10 +23,7 @@ Example append_dcont_aux :=
        reset "go" "xs" }>.
 
 Example append_dcont :=
-  <{ fun "args" =>
-       let ("xs", "ys") := "args" in
-       let "k" := append_dcont_aux "xs" in
-       "k" "ys" }>.
+  <{ fun "args" => let ("xs", "ys") := "args" in (by append_dcont_aux "xs") "ys" }>.
 
 Example append :=
   <{ fun "args" =>
@@ -36,8 +33,7 @@ Example append :=
          | Inl _ => "ys"
          | Inr "p" =>
              let ("x", "xs'") := "p" in
-             let "r" := "go" "xs'" in
-             Inr ("x", "r")
+             Inr ("x", by "go" "xs'")
          end
        in
        "go" "xs" }>.

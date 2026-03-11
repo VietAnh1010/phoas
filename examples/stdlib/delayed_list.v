@@ -17,8 +17,7 @@ Example DelayedList :=
            | Inl _ => Inl ()
            | Inr "p" =>
                let ("x", "xs'") := "p" in
-               let "r" := "take_aux" ("n" - 1, "xs'") in
-               Inr ("x", "r")
+               Inr ("x", by "take_aux" ("n" - 1, "xs'"))
            end
      in
      let "take" "args" :=
@@ -34,8 +33,7 @@ Example DelayedList :=
          | Inr "p" =>
              let ("x", "xs'") := "p" in
              let "y" := "f" "x" in
-             let "r" := "go" "xs'" in
-             Inr ("y", "r")
+             Inr ("y", by "go" "xs'")
          end
        in
        "go" "xs"

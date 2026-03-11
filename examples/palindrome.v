@@ -17,26 +17,17 @@ Example is_palindrome_cont :=
          match "xs" with
          | Inl _ => "k" "ys"
          | Inr "p" =>
-             let (_, "xs'") := "p" in
-             match "xs'" with
-             | Inl _ =>
-                 let "ys'" := "List".`"ne_tail" "ys" in
-                 "k" "ys'"
+             match snd "p" with
+             | Inl _ => "k" (by "List".`"ne_tail" "ys")
              | Inr "p" =>
-                 let (_, "xs''") := "p" in
-                 let "p" := "List".`"ne_uncons" "ys" in
-                 let ("y", "ys'") := "p" in
-                 let "k'" "ys_b" :=
-                   let "p" := "List".`"ne_uncons" "ys_b" in
-                   let ("y'", "ys_b'") := "p" in
-                   if "y" = "y'" then "k" "ys_b'" else false
-                 in
-                 "go" `("xs''", "ys'", "k'")
+                 let ("y", "ys'") := by "List".`"ne_uncons" "ys" in
+                 "go" `(snd "p", "ys'", fun "ys_b" =>
+                                          let ("y'", "ys_b'") := by "List".`"ne_uncons" "ys_b" in
+                                          "y" = "y'" && by "k" "ys_b'")
              end
          end
        in
-       let "k" _ := true in
-       "go" `("xs", "xs", "k") }>.
+       "go" `("xs", "xs", fun _ => true) }>.
 
 Example is_palindrome_exception :=
   <{ fun "xs" =>
@@ -46,17 +37,12 @@ Example is_palindrome_exception :=
          match "xs" with
          | Inl _ => "ys"
          | Inr "p" =>
-             let (_, "xs'") := "p" in
-             match "xs'" with
+             match snd "p" with
              | Inl _ => "List".`"ne_tail" "ys"
              | Inr "p" =>
-                 let (_, "xs''") := "p" in
-                 let "p" := "List".`"ne_uncons" "ys" in
-                 let ("y", "ys'") := "p" in
-                 let "ys_b" := "go" ("xs''", "ys'") in
-                 let "p" := "List".`"ne_uncons" "ys_b" in
-                 let ("y'", "ys_b'") := "p" in
-                 if "y" = "y'" then "ys_b'" else raise exception "False" ()
+                 let ("y", "ys'") := by "List".`"ne_uncons" "ys" in
+                 let ("y'", "ys_b") := by "List".`"ne_uncons" (by "go" (snd "p", "ys'")) in
+                 if "y" = "y'" then "ys_b" else raise exception "False" ()
              end
          end
        in

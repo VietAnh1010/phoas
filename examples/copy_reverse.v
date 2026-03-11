@@ -17,7 +17,7 @@ Example copy_dcont :=
          | Inl _ => Inl ()
          | Inr "p" =>
              let ("x", "xs'") := "p" in
-             let "r" := shift (fun "k" => let "r" := "k" "xs'" in Inr ("x", "r")) in
+             let "r" := shift (fun "k" => Inr ("x", by "k" "xs'")) in
              "go" "r"
          end
        in
@@ -29,8 +29,7 @@ Example copy :=
        | Inl _ => Inl ()
        | Inr "p" =>
            let ("x", "xs'") := "p" in
-           let "r" := "go" "xs'" in
-           Inr ("x", "r")
+           Inr ("x", by "go" "xs'")
        end }>.
 
 Example reverse_dcont :=
@@ -61,22 +60,16 @@ Example reverse :=
 
 Example reverse_while :=
   <{ fun "xs" =>
+       let "List" := List in
        let "in" := ref "xs" in
        let "out" := ref (Inl ()) in
-       try
-         (while true do
-            (match !"in" with
-             | Inl _ => raise exception "Exit" ()
-             | Inr "p" =>
-                 let ("x", "xs'") := "p" in
-                 "in" <- "xs'";
-                 "out" <- Inr ("x", !"out")
-             end));;
-       (fun '("Exit" _) =>
-          let "r" := !"out" in
-          {TVBuiltin1 "ref_free" "in"};
-          {TVBuiltin1 "ref_free" "out"};
-          "r") }>.
+       let _ :=
+         while not by "List".`"is_empty" !"in" do
+           let ("x", "xs'") := by "List".`"ne_uncons" !"in" in
+           "in" <- "xs'";
+           "out" <- Inr ("x", !"out")
+       in
+       !"out" }>.
 
 Example reverse_taba :=
   <{ fun "xs" =>
@@ -85,15 +78,12 @@ Example reverse_taba :=
          match "xs_t" with
          | Inl _ => ("xs", Inl ())
          | Inr "p" =>
-             let "p" := "go" (snd "p") in
-             let ("xs_b", "r") := "p" in
-             let "p" := "List".`"ne_uncons" "xs_b" in
-             let ("x", "xs_b'") := "p" in
+             let ("xs_b", "r") := by "go" (snd "p") in
+             let ("x", "xs_b'") := by "List".`"ne_uncons" "xs_b" in
              ("xs_b'", Inr ("x", "r"))
          end
        in
-       let "p" := "go" "xs" in
-       snd "p" }>.
+       snd (by "go" "xs") }>.
 
 Definition eval_fun (candidate : val_term) (fuel : nat) (xs : list Z) :=
   eval_term_to_list_int fuel <{ candidate {list_int_to_val_term xs} }>.

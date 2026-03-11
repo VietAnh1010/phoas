@@ -12,28 +12,19 @@ Example Queue :=
      in
      let "is_empty" "q" :=
        let `("f", _, _) := "q" in
-       let "f" := "Lazy".`"get" "f" in
-       match "f" with
+       match by "Lazy".`"get" "f" with
        | Inl _ => true
        | Inr _ => false
        end
      in
      let fix "rotate" "q" :=
        let `("f", "r", "s") := "q" in
-       let "f" := "Lazy".`"get" "f" in
-       match "f" with
-       | Inl _ =>
-           let "y" := "List".`"ne_head" "r" in
-           "Lazy".`"pure" (Inr ("y", "s"))
+       match by "Lazy".`"get" "f" with
+       | Inl _ => "Lazy".`"pure" (Inr (by "List".`"ne_head" "r", "s"))
        | Inr "p" =>
            let ("x", "f") := "p" in
-           let "p" := "List".`"ne_uncons" "r" in
-           let ("y", "r") := "p" in
-           "Lazy".`"make"
-             (fun _ =>
-                let "s" := "Lazy".`"pure" (Inr ("y", "s")) in
-                let "s" := "rotate" `("f", "r", "s") in
-                Inr ("x", "s"))
+           let ("y", "r") := by "List".`"ne_uncons" "r" in
+           "Lazy".`"make" (fun _ => Inr ("x", by "rotate" `("f", "r", by "Lazy".`"pure" (Inr ("y", "s")))))
        end
      in
      let "exec" "q" :=
@@ -53,29 +44,25 @@ Example Queue :=
      in
      let "head" "q" :=
        let `("f", _, _) := "q" in
-       let "f" := "Lazy".`"get" "f" in
-       match "f" with
+       match by "Lazy".`"get" "f" with
        | Inl _ => raise exception "Empty" ()
        | Inr "p" => fst "p"
        end
      in
      let "tail" "q" :=
        let `("f", "r", "s") := "q" in
-       let "f" := "Lazy".`"get" "f" in
-       match "f" with
+       match by "Lazy".`"get" "f" with
        | Inl _ => raise exception "Empty" ()
        | Inr "p" => "exec" `(snd "p", "r", "s")
        end
      in
      let "uncons" "q" :=
        let `("f", "r", "s") := "q" in
-       let "f" := "Lazy".`"get" "f" in
-       match "f" with
+       match by "Lazy".`"get" "f" with
        | Inl _ => raise exception "Empty" ()
        | Inr "p" =>
            let ("x", "f") := "p" in
-           let "q" := "exec" `("f", "r", "s") in
-           ("x", "q")
+           ("x", by "exec" `("f", "r", "s"))
        end
      in
      `{ "empty"

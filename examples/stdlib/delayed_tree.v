@@ -13,9 +13,7 @@ Example DelayedTree :=
          | Inl _ => "z"
          | Inr "t" =>
              let `("x", "t1", "t2") := "t" in
-             let "t1" := "go" "t1" in
-             let "t2" := "go" "t2" in
-             "f" `("x", "t1", "t2")
+             "f" `("x", by "go" "t1", by "go" "t2")
          end
        in
        "go" "t"

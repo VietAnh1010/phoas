@@ -316,30 +316,27 @@ Example loop :=
 Compute (run_term 10 loop).
 
 Example even :=
-  let odd := <{ if "x" = 0 then false else "even" ("x" - 1) }> in
-  let even := <{ if "x" = 0 then true else "odd" ("x" - 1) }> in
-  <{ fix "odd" "x" := odd with "even" "x" := even for "even" }>.
+  <{ fix "odd" "x" := if "x" = 0 then false else "even" ("x" - 1)
+     with "even" "x" := if "x" = 0 then true else "odd" ("x" - 1)
+     for "even" }>.
 
 Compute (eval_term 100 <{ even 50 }>).
 Compute (eval_term 100 <{ even 49 }>).
 Compute (eval_term 100 <{ even (-1) }>).
 
 Example send_recv_protocol :=
-  let send :=
-    <{ let ("k", "v") := "args" in
-       shallow handle
-         "k" "v";;;
-       (fun '("Send" "n"), "k" => "recv" `("n", "k", ()));
-       (fun '("Recv" _), _ => raise exception "Protocol_violation" ()) }>
-  in
-  let recv :=
-    <{ let `("n", "k", "v") := "args" in
-       shallow handle
-         "k" "v";;;
-       (fun '("Recv" _), "k" => "send" ("k", "n"));
-       (fun '("Send" _), _ => raise exception "Protocol_violation" ()) }>
-  in
-  <{ fun "k" => let fix "send" "args" := send with "recv" "args" := recv in "send" ("k", ()) }>.
+  <{ fun "k" =>
+       let fix "send" "args" :=
+         let ("k", "v") := "args" in
+         (shallow handle "k" "v";;;
+          (fun '("Send" "n"), "k" => "recv" `("n", "k", ()));
+          (fun '("Recv" _), _ => raise exception "Protocol_violation" ()))
+       with "recv" "args" :=
+         let `("n", "k", "v") := "args" in
+         (shallow handle "k" "v";;;
+          (fun '("Recv" _), "k" => "send" ("k", "n"));
+          (fun '("Send" _), _ => raise exception "Protocol_violation" ()))
+       in "send" ("k", ()) }>.
 
 Example run_send_recv1 :=
   <{ let "stdout" := ref () in

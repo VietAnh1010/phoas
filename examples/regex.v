@@ -15,22 +15,17 @@ Example flip :=
   <{ fun _ => shift0 (fun "k" => "k" true; "k" false) }>.
 
 Example ndfa :=
-  <{ fix "go" "args" :=
-       let ("r", "l") := "args" in
+  <{ fix "go" ("r", "l") :=
        match "r" with
        | `"Char" "c" =>
            match "l" with
            | Inl _ => fail ()
-           | Inr "l" =>
-               let ("h", "t") := "l" in
-               if "h" = "c" then "t" else fail ()
+           | Inr ("h", "t") => if "h" = "c" then "t" else fail ()
            end
-       | `"Concat" "p" =>
-           let ("r1", "r2") := "p" in
+       | `"Concat" ("r1", "r2") =>
            let "l" := "go" ("r1", "l") in
            "go" ("r2", "l")
-       | `"Union" "p" =>
-           let ("r1", "r2") := "p" in
+       | `"Union" ("r1", "r2") =>
            let "b" := flip () in
            if "b" then "go" ("r1", "l") else "go" ("r2", "l")
        | `"Star" "r'" =>

@@ -5,30 +5,15 @@ Open Scope string_scope.
 Open Scope term_scope.
 
 Example Complex :=
-  <{ let "neg" "c" :=
-       let `{"re"; "im"} := "c" in
-       `{"re" := -"re"; "im" := -"im"}
-     in
-     let "conj" "c" :=
-       let `{"re"; "im"} := "c" in
-       `{"re"; "im" := -"im"}
-     in
-     let "add" "args" :=
-       let ("c1", "c2") := "args" in
-       let `{"re" := "re1"; "im" := "im1"} := "c1" in
-       let `{"re" := "re2"; "im" := "im2"} := "c2" in
+  <{ let "neg" `{"re"; "im"} := `{"re" := -"re"; "im" := -"im"} in
+     let "conj" `{"re"; "im"} := `{"re"; "im" := -"im"} in
+     let "add" (`{"re" := "re1"; "im" := "im1"}, `{"re" := "re2"; "im" := "im2"}) :=
        `{"re" := "re1" + "re2"; "im" := "im1" + "im2"}
      in
-     let "sub" "args" :=
-       let ("c1", "c2") := "args" in
-       let `{"re" := "re1"; "im" := "im1"} := "c1" in
-       let `{"re" := "re2"; "im" := "im2"} := "c2" in
+     let "sub" (`{"re" := "re1"; "im" := "im1"}, `{"re" := "re2"; "im" := "im2"}) :=
        `{"re" := "re1" - "re2"; "im" := "im1" - "im2"}
      in
-     let "norm2" "c" :=
-       let `{"re"; "im"} := "c" in
-       "re" * "re" + "im" * "im"
-     in
+     let "norm2" `{"re"; "im"} := "re" * "re" + "im" * "im" in
      `{ "neg"
       ; "conj"
       ; "add"

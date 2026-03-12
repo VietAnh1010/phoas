@@ -1,11 +1,10 @@
 From Stdlib Require Import List String ZArith.
-From shift_reset.lib Require Import option.
+From shift_reset.lib Require Import option sum.
 From shift_reset.core Require Import syntax syntax_notation ident val.
 From shift_reset.interpreter Require Import interpreter error.
-Import ListNotations OptionNotations.
+Import ListNotations OptionNotations SumNotations.
 
 Local Open Scope Z_scope.
-Local Open Scope option_scope.
 Local Open Scope term_scope.
 
 Definition range (s e : Z) : list Z :=
@@ -33,7 +32,7 @@ Fixpoint deep_val_to_list {A} (f : val -> option A) (v : val) : option (list A) 
       let* x := f v1 in
       cons x <$> deep_val_to_list f v2
   | _ => None
-  end.
+  end%option.
 
 Definition val_to_prod_int_int (v : val) : option (Z * Z) :=
   match v with
@@ -41,18 +40,15 @@ Definition val_to_prod_int_int (v : val) : option (Z * Z) :=
   | _ => None
   end.
 
-Definition deep_eval_term_to_list {A} (f : val -> option A) (fuel : nat) (t : term) : exn + list A :=
-  match eval_term fuel t with
-  | inl x => inl x
-  | inr v =>
-      match deep_val_to_list f v with
-      | None => inl (Failure "eval_term_to_list")
-      | Some xs => inr xs
-      end
-  end.
+Definition deep_eval_term_to_list {A} (f : val -> option A) (fuel : nat) (t : term) : val + list A :=
+  let* v := eval_term fuel t in
+  match deep_val_to_list f v with
+  | None => inl (Failure "eval_term_to_list")
+  | Some xs => inr xs
+  end%sum.
 
-Definition eval_term_to_list_int : nat -> term -> exn + list Z :=
+Definition eval_term_to_list_int : nat -> term -> val + list Z :=
   deep_eval_term_to_list val_to_int.
 
-Definition eval_term_to_list_prod_int_int : nat -> term -> exn + list (Z * Z) :=
+Definition eval_term_to_list_prod_int_int : nat -> term -> val + list (Z * Z) :=
   deep_eval_term_to_list val_to_prod_int_int.

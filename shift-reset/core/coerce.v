@@ -3,6 +3,10 @@ From shift_reset.core Require Import syntax ident.
 
 Coercion Ident : string >-> ident.
 Coercion BVar : ident >-> binder.
+Coercion PVar : ident >-> pattern.
+Coercion PInt : Z >-> pattern.
+Coercion PFloat : Qc >-> pattern.
+Coercion PChar : ascii >-> pattern.
 Coercion TVVar : ident >-> val_term.
 Coercion TVInt : Z >-> val_term.
 Coercion TVFloat : Qc >-> val_term.

@@ -28,8 +28,7 @@ with tuple_pattern : Type :=
 | PTupleCons : pattern -> tuple_pattern -> tuple_pattern
 with record_pattern : Type :=
 | PRecordNil : record_pattern
-| PRecordAny : record_pattern
-| PRecordRest : ident -> record_pattern
+| PRecordRest : pattern -> record_pattern
 | PRecordCons0 : ident -> record_pattern -> record_pattern
 | PRecordCons1 : ident -> pattern -> record_pattern -> record_pattern.
 

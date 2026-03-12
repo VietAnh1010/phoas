@@ -9,37 +9,30 @@ Open Scope term_scope.
 Example fib_exponential :=
   <{ fix "go" "n" :=
        if "n" <= 1 then "n"
-       else
-         let "a" := "go" ("n" - 2) in
-         let "b" := "go" ("n" - 1) in
-         "a" + "b" }>.
+       else by "go" ("n" - 2) + by "go" ("n" - 1) }>.
 
 Example fib_linear :=
   <{ fun "n" =>
        let fix "go" "n" :=
          if "n" = 0 then (0, 1)
          else
-           let "p" := "go" ("n" - 1) in
-           let ("a", "b") := "p" in
+           let ("a", "b") := "go" ("n" - 1) in
            ("b", "a" + "b")
        in
-       let "p" := "go" "n" in
-       fst "p" }>.
+       fst (by "go" "n") }>.
 
 Example fib_logarithmic :=
   <{ fun "n" =>
        let fix "go" "n" :=
          if "n" = 0 then (0, 1)
          else
-           let "p" := "go" ("n" / 2) in
-           let ("a", "b") := "p" in
+           let ("a", "b") := "go" ("n" / 2) in
            let "x" := "a" * "a" in
            let "c" := 2 * "a" * "b" - "x" in
            let "d" := "x" + "b" * "b" in
            if "n" mod 2 = 0 then ("c", "d") else ("d", "c" + "d")
        in
-       let "p" := "go" "n" in
-       fst "p" }>.
+       fst (by "go" "n") }>.
 
 Example eval_fib (candidate : val_term) (fuel : nat) (n : Z) :=
   eval_term fuel <{ candidate n }>.

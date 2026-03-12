@@ -15,8 +15,7 @@ Example copy_dcont :=
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => Inl ()
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
+         | Inr ("x", "xs'") =>
              let "r" := shift (fun "k" => Inr ("x", by "k" "xs'")) in
              "go" "r"
          end
@@ -27,9 +26,7 @@ Example copy :=
   <{ fix "go" "xs" :=
        match "xs" with
        | Inl _ => Inl ()
-       | Inr "p" =>
-           let ("x", "xs'") := "p" in
-           Inr ("x", by "go" "xs'")
+       | Inr ("x", "xs'") => Inr ("x", by "go" "xs'")
        end }>.
 
 Example reverse_dcont :=
@@ -37,8 +34,7 @@ Example reverse_dcont :=
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => Inl ()
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
+         | Inr ("x", "xs'") =>
              let "r" := control (fun "k" => let "r" := "k" "xs'" in Inr ("x", "r")) in
              "go" "r"
          end
@@ -47,13 +43,10 @@ Example reverse_dcont :=
 
 Example reverse :=
   <{ fun "xs" =>
-       let fix "go" "args" :=
-         let ("xs", "acc") := "args" in
+       let fix "go" ("xs", "acc") :=
          match "xs" with
          | Inl _ => "acc"
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
-             "go" ("xs'", Inr ("x", "acc"))
+         | Inr ("x", "xs'") => "go" ("xs'", Inr ("x", "acc"))
          end
        in
        "go" ("xs", Inl ()) }>.
@@ -65,7 +58,7 @@ Example reverse_while :=
        let "out" := ref (Inl ()) in
        let _ :=
          while not by "List".`"is_empty" !"in" do
-           let ("x", "xs'") := by "List".`"ne_uncons" !"in" in
+           let ("x", "xs'") := "List".`"ne_uncons" !"in" in
            "in" <- "xs'";
            "out" <- Inr ("x", !"out")
        in
@@ -78,8 +71,8 @@ Example reverse_taba :=
          match "xs_t" with
          | Inl _ => ("xs", Inl ())
          | Inr "p" =>
-             let ("xs_b", "r") := by "go" (snd "p") in
-             let ("x", "xs_b'") := by "List".`"ne_uncons" "xs_b" in
+             let ("xs_b", "r") := "go" (snd "p") in
+             let ("x", "xs_b'") := "List".`"ne_uncons" "xs_b" in
              ("xs_b'", Inr ("x", "r"))
          end
        in

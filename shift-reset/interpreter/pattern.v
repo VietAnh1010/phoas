@@ -65,8 +65,7 @@ with dispatch_record_pattern (p : record_pattern) (r : record) (e : env) : iv_mo
       | RecordNil => pure (Some e)
       | RecordCons _ _ _ => throw (Match_failure "dispatch_record_pattern")
       end
-  | PRecordAny => pure (Some e)
-  | PRecordRest x => pure (Some (ECons x (VRecord r) e))
+  | PRecordRest p' => dispatch_pattern p' (VRecord r) e
   | PRecordCons0 l p' =>
       let (o, r') := record_lookup_remove l r in
       match o with

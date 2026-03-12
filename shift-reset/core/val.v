@@ -15,8 +15,8 @@ Definition VSum (s : val + val) : val :=
 
 Definition VClosure (c : closure) : val :=
   match c with
-  | CFun b t e => VFun b t e
-  | CFix f b t e => VFix f b t e
+  | CFun p t e => VFun p t e
+  | CFix f p t e => VFix f p t e
   | CFixMut t f e => VFixMut t f e
   | CMKPure mk => VMKPure mk
   | CMKReset mk => VMKReset mk
@@ -109,8 +109,8 @@ Definition val_to_array (v : val) : option array :=
 
 Definition val_to_closure (v : val) : option closure :=
   match v with
-  | VFun b t e => Some (CFun b t e)
-  | VFix f b t e => Some (CFix f b t e)
+  | VFun p t e => Some (CFun p t e)
+  | VFix f p t e => Some (CFix f p t e)
   | VFixMut t f e => Some (CFixMut t f e)
   | VMKPure mk => Some (CMKPure mk)
   | VMKReset mk => Some (CMKReset mk)

@@ -33,23 +33,6 @@ with record_pattern : Type :=
 | PRecordCons0 : ident -> record_pattern -> record_pattern
 | PRecordCons1 : ident -> pattern -> record_pattern -> record_pattern.
 
-(*
-Inductive variant_pattern : Type :=
-| PVariantBind : binder -> variant_pattern
-| PVariantConstr : ident -> binder -> variant_pattern.
-
-Inductive tuple_pattern : Type :=
-| PTupleNil : tuple_pattern
-| PTupleRest : binder -> tuple_pattern
-| PTupleCons : binder -> tuple_pattern -> tuple_pattern.
-
-Inductive record_pattern : Type :=
-| PRecordNil : record_pattern
-| PRecordRest : binder -> record_pattern
-| PRecordCons0 : ident -> record_pattern -> record_pattern
-| PRecordCons1 : ident -> binder -> record_pattern -> record_pattern.
- *)
-
 Inductive op1 : Type :=
 | Op1Pos : op1
 | Op1Neg : op1
@@ -140,6 +123,12 @@ with val_term : Type :=
 | TVBuiltin1 : ident -> val_term -> val_term
 | TVBuiltin2 : ident -> val_term -> val_term -> val_term
 | TVBy : term -> val_term
+with match_term : Type :=
+| TMatchNil : match_term
+| TMatchCons : pattern -> term -> match_term -> match_term
+with fix_mut_term : Type :=
+| TFixMutLast : ident -> pattern -> term -> fix_mut_term
+| TFixMutCons : ident -> pattern -> term -> fix_mut_term -> fix_mut_term
 with ret_term : Type :=
 | TRetNone : ret_term
 | TRetSome : pattern -> term -> ret_term
@@ -149,9 +138,6 @@ with exn_term : Type :=
 with eff_term : Type :=
 | TEffLast : pattern -> binder -> term -> eff_term
 | TEffCons : pattern -> binder -> term -> eff_term -> eff_term
-with match_term : Type :=
-| TMatchNil : match_term
-| TMatchCons : pattern -> term -> match_term -> match_term
 with tuple_term : Type :=
 | TTupleNil : tuple_term
 | TTupleCons : val_term -> tuple_term -> tuple_term
@@ -160,9 +146,6 @@ with record_term : Type :=
 | TRecordRest : val_term -> record_term
 | TRecordCons0 : ident -> record_term -> record_term
 | TRecordCons1 : ident -> val_term -> record_term -> record_term
-with fix_mut_term : Type :=
-| TFixMutLast : ident -> pattern -> term -> fix_mut_term
-| TFixMutCons : ident -> pattern -> term -> fix_mut_term -> fix_mut_term
 with array_term : Type :=
 | TArrayNil : array_term
 | TArrayCons : val_term -> array_term -> array_term.

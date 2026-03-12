@@ -31,7 +31,9 @@ Example Queue :=
        | Inr "p" => `("f", "r", snd "p")
        end
      in
-     let "snoc" (`("f", "r", "s"), "x") := "exec" `("f", Inr ("x", "r"), "s") in
+     let "snoc" (`("f", "r", "s"), "x") :=
+       "exec" `("f", Inr ("x", "r"), "s")
+     in
      let "head" `("f", _, _) :=
        match "Lazy".`"get" "f" with
        | Inl _ => raise `"Empty" ()

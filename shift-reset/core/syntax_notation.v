@@ -180,7 +180,7 @@ Notation "'for' b 'from' tv1 'upto' tv2 'do' t" :=
         t custom term) : term_scope.
 
 Notation "'for' b 'from' tv1 'downto' tv2 'do' t" :=
-  (TFor b tv1 Upto tv2 t) (in custom term at level 69,
+  (TFor b tv1 Downto tv2 t) (in custom term at level 69,
         b custom binder' at level 0,
         tv1 custom term,
         tv2 custom term,

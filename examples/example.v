@@ -201,16 +201,16 @@ Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 2))).
 Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 3))).
 
 Example unhandled_exception :=
-  <{ raise exception "Segfault" 139 }>.
+  <{ raise `"Segfault" 139 }>.
 
 Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
      try
-       raise exception tag 10;;
-     (fun '("Segfault" "code") =>
+       raise `tag 10;;
+     (fun `"Segfault" "code" =>
         let _ := "r" <- "code" = 10 in
         !"r");
-     (fun '("StackOverflow" _) => false);
+     (fun `"StackOverflow" _ => false);
      (fun "exn" => raise "exn") }>.
 
 Compute (eval_term 1 unhandled_exception).
@@ -220,9 +220,9 @@ Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle
-       perform effect "Effect0" ();;;
-     (fun '("Effect1" _), _ => ());
-     (fun '("Effect2" _), _ => ()) }>.
+       perform `"Effect0" ();;;
+     (fun `"Effect1" _ _ => ());
+     (fun `"Effect2" _ _ => ()) }>.
 
 Compute (eval_term 1 unhandled_effect).
 
@@ -235,26 +235,26 @@ Example basic_exn_eff :=
      (handle
         ((handle
             (try
-               (let "eff0" := effect "Effect0" 0 in
-                let "eff1" := effect "Effect1" 1 in
-                let "exn" := exception "Exception" () in
+               (let "eff0" := `"Effect0" 0 in
+                let "eff1" := `"Effect1" 1 in
+                let "exn" := `"Exception" () in
                 perform "eff0";
                 "print" "eff0";
                 perform "eff1";
                 "print" "eff1";
                 raise "exn";
                 "print" "exn");;
-             (fun '("RuntimeException" "x") => "print" "x");
-             (fun '("Exception" "x") => "print" (exception "Exception" "x")));;;
-          (fun '("Effect1" "x"), "k" => "print" "x"; "k" ());
-          (fun '("Effect2" "x"), _ => "print" (effect "Effect2" "x")));
-         let "eff2" := effect "Effect2" 2 in
+             (fun `"RuntimeException" "x" => "print" "x");
+             (fun `"Exception" "x" => "print" (`"Exception" "x")));;;
+          (fun `"Effect1" "x" "k" => "print" "x"; "k" ());
+          (fun `"Effect2" "x" _ => "print" (`"Effect2" "x")));
+         let "eff2" := `"Effect2" 2 in
          perform "eff2";
          "print" "eff2";
          let "final_msg" := 69 in
          "print" "final_msg");;;
-      (fun '("Effect0" "x"), "k" => "print" "x"; "k" ());
-      (fun '("Effect2" "x"), "k" => "print" (effect "Effect2" "x"); "k" ()));
+      (fun `"Effect0" "x" "k" => "print" "x"; "k" ());
+      (fun `"Effect2" "x" "k" => "print" (`"Effect2" "x"); "k" ()));
      !"stdout" }>.
 
 Compute (eval_term 4 basic_exn_eff).
@@ -262,8 +262,10 @@ Compute (eval_term 4 basic_exn_eff).
 Example collatz k :=
   <{ let fix "collatz_len" "n" :=
        if "n" = 1 then 1 else
-         if "n" mod 2 = 0 then let "r" := "collatz_len" ("n" / 2) in 1 + "r"
-         else let "r" := "collatz_len" (3 * "n" + 1) in 1 + "r"
+         (by
+            if "n" mod 2 = 0
+            then "collatz_len" ("n" / 2)
+            else "collatz_len" (3 * "n" + 1)) + 1
      in
      let "max_len" := ref 0 in
      let "n_of_max_len" := ref 0 in
@@ -283,13 +285,9 @@ Example eval_ltr :=
   <{ fix "eval" "e" :=
        match "e" with
        | `"Num" "n" => "n"
-       | `"Add" "p" =>
-           let `{"lhs"; "rhs"} := "p" in
-           by "eval" "lhs" + by "eval" "rhs"
-       | `"Mul" "p" =>
-           let `{"lhs"; "rhs"} := "p" in
-           by "eval" "lhs" + by "eval" "rhs"
-       | _ => raise exception "Failure" "e"
+       | `"Add" `{"lhs"; "rhs"} => by "eval" "lhs" + by "eval" "rhs"
+       | `"Mul" `{"lhs"; "rhs"} => by "eval" "lhs" * by "eval" "rhs"
+       | _ => raise `"Failure" "e"
        end }>.
 
 Example eval_ltr_input1 :=
@@ -308,10 +306,10 @@ Example loop :=
      let "f" _ :=
        let _ := "print" !"clock" in
        let _ := "clock" <- !"clock" + 1 in
-       let "f" := perform effect "Foo" () in
+       let "f" := perform `"Foo" () in
        "f" ()
      in
-     handle "f" ();;; (fun '("Foo" _), "k" => "k" "f") }>.
+     handle "f" ();;; (fun `"Foo" _ "k" => "k" "f") }>.
 
 Compute (run_term 10 loop).
 
@@ -329,13 +327,13 @@ Example send_recv_protocol :=
        let fix "send" "args" :=
          let ("k", "v") := "args" in
          (shallow handle "k" "v";;;
-          (fun '("Send" "n"), "k" => "recv" `("n", "k", ()));
-          (fun '("Recv" _), _ => raise exception "Protocol_violation" ()))
+          (fun `"Send" "n" "k" => "recv" `("n", "k", ()));
+          (fun `"Recv" _ _ => raise `"Protocol_violation" ()))
        with "recv" "args" :=
          let `("n", "k", "v") := "args" in
          (shallow handle "k" "v";;;
-          (fun '("Recv" _), "k" => "send" ("k", "n"));
-          (fun '("Send" _), _ => raise exception "Protocol_violation" ()))
+          (fun `"Recv" _ "k" => "send" ("k", "n"));
+          (fun `"Send" _ _ => raise `"Protocol_violation" ()))
        in "send" ("k", ()) }>.
 
 Example run_send_recv1 :=
@@ -343,17 +341,17 @@ Example run_send_recv1 :=
      let "print" := print in
      send_recv_protocol
        (fun _ =>
-          let "eff" := effect "Send" 42 in
+          let "eff" := `"Send" 42 in
           let _ := "print" "eff" in
           let _ := perform "eff" in
-          let "eff" := effect "Recv" () in
+          let "eff" := `"Recv" () in
           let _ := "print" "eff" in
           let "n" := perform "eff" in
           let _ := "print" "n" in
-          let "eff" := effect "Send" 43 in
+          let "eff" := `"Send" 43 in
           let _ := "print" "eff" in
           let _ := perform "eff" in
-          let "eff" := effect "Recv" () in
+          let "eff" := `"Recv" () in
           let _ := "print" "eff" in
           let "n" := perform "eff" in
           let _ := "print" "n" in
@@ -367,69 +365,16 @@ Example run_send_recv2 :=
      let "print" := print in
      send_recv_protocol
        (fun _ =>
-          let "eff" := effect "Send" 0 in
+          let "eff" := `"Send" 0 in
           let _ := "print" "eff" in
           let _ := perform "eff" in
-          let "eff" := effect "Send" 1 in
+          let "eff" := `"Send" 1 in
           let _ := "print" "eff" in
           let _ := perform "eff" in
           ());
      !"stdout" }>.
 
 Compute (eval_term 6 run_send_recv2).
-
-Example atomically :=
-  <{ fun "f" =>
-       let "comp" :=
-         handle
-           (try
-              ("f" (); fun _ => ());;
-            (fun "exn" =>
-               "print" "exn";
-               (fun "rb" => "rb" (); raise "exn")));;;
-         (fun '("Update" "p"), "k" =>
-            "print" (effect "Update" "p");
-            (fun "rb" =>
-               let ("r", "v") := "p" in
-               let "old_v" := !"r" in
-               "r" <- "v";
-               let "k" := "k" () in
-               "k" (fun _ => "r" <- "old_v"; "rb" ())))
-       in
-       "comp" (fun _ => ()) }>.
-
-Example update :=
-  <{ fun "p" => perform effect "Update" "p" }>.
-
-Definition int_to_string := TVBuiltin1 "int_to_string".
-
-Example run_transaction :=
-  <{ let "stdout" := ref () in
-     let "print" := print in
-     let "atomically" := atomically in
-     let "update" := update in
-     let "result" :=
-       "atomically"
-         (fun _ =>
-            let "r" := ref 10 in
-            "print" ({TVString "T0: "} ++ {int_to_string <{ !"r" }>});
-            try
-              ("atomically"
-                 (fun _ =>
-                    "update" ("r", 20);
-                    "update" ("r", 21);
-                    "print" ({TVString "T1, before abort: "} ++ {int_to_string <{ !"r" }>});
-                    raise (exception "Result" !"r");
-                    "print" ({TVString "T1, after abort: "} ++  {int_to_string <{ !"r" }>});
-                    "update" ("r", 30)));;
-            (fun '("Result" "v") =>
-               "print" ({TVString "T0, T1 aborted: "} ++  {int_to_string "v"});
-               "print" ({TVString "T0: "} ++ {int_to_string <{ !"r" }>})))
-     in
-     !"stdout" }>.
-
-Compute run_transaction.
-Compute (eval_term 10 run_transaction).
 
 Example nat_iterator n :=
   <{ let "seed" := ref n in
@@ -521,14 +466,12 @@ Example counting_sort_lt_10 xs :=
      (try
         (while true do
            (match !"ref_xs" with
-            | Inl _ => raise exception "Exit" ()
-            | Inr "p" =>
-                let ("x", "xs'") := "p" in
-                let _ := "arr_fs".["x"] <- "arr_fs".["x"] + 1 in
+            | Inl _ => raise `"Exit" ()
+            | Inr ("x", "xs'") =>
+                "arr_fs".["x"] <- "arr_fs".["x"] + 1;
                 "ref_xs" <- "xs'"
             end));;
-      (fun '("Exit" _) => ()));
-     "ref_xs" <- Inl ();
+      (fun `"Exit" _ => ()));
      (for "i" from 9 downto 0 do
         (for _ from ("arr_fs".["i"]) downto 1 do
            "ref_xs" <- Inr ("i", !"ref_xs")));
@@ -541,18 +484,14 @@ Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [8;
 Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [8; 7; 0; 7; 9; 1; 7]))).
 
 Example compare_int :=
-  <{ fun "p" =>
-       let ("x", "y") := "p" in
-       if "x" < "y" then `"Lt" () else if "x" = "y" then `"Eq" () else `"Gt" () }>.
+  <{ fun ("x", "y") => if "x" < "y" then `"Lt" () else if "x" = "y" then `"Eq" () else `"Gt" () }>.
 
 Example partition x xs :=
   <{ let fix "go" "xs" :=
        match "xs" with
        | Inl _ => Inl ()
-       | Inr "p" =>
-           let ("x", "xs'") := "p" in
-           let "c" := compare_int (x, "x") in
-           match "c" with
+       | Inr ("x", "xs'") =>
+           match compare_int (x, "x") with
            | `"Lt" _ => let "r" := "go" "xs'" in Inr ("x", "r")
            | `"Eq" _ => shift0 (fun "k" => let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in Inr ("x", "r"))
            | `"Gt" _ => shift0 (fun "k" => shift0 (fun "k'" => let "r" := reset0 let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in "k'" "r"

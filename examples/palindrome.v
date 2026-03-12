@@ -12,18 +12,14 @@ Open Scope term_scope.
 Example is_palindrome_cont :=
   <{ fun "xs" =>
        let "List" := List in
-       let fix "go" "args" :=
-         let `("xs", "ys", "k") := "args" in
+       let fix "go" `("xs", "ys", "k") :=
          match "xs" with
          | Inl _ => "k" "ys"
-         | Inr "p" =>
-             match snd "p" with
-             | Inl _ => "k" (by "List".`"ne_tail" "ys")
-             | Inr "p" =>
-                 let ("y", "ys'") := by "List".`"ne_uncons" "ys" in
-                 "go" `(snd "p", "ys'", fun "ys_b" =>
-                                          let ("y'", "ys_b'") := by "List".`"ne_uncons" "ys_b" in
-                                          "y" = "y'" && by "k" "ys_b'")
+         | Inr (_, "xs'") =>
+             let (Inr ("y", "ys'")) := "ys" in
+             match "xs'" with
+             | Inl _ => "k" "ys'"
+             | Inr (_, "xs''") => "go" `("xs''", "ys'", fun (Inr ("y'", "ys_b")) => "y" = "y'" && by "k" "ys_b")
              end
          end
        in
@@ -32,21 +28,20 @@ Example is_palindrome_cont :=
 Example is_palindrome_exception :=
   <{ fun "xs" =>
        let "List" := List in
-       let fix "go" "args" :=
-         let ("xs", "ys") := "args" in
+       let fix "go" ("xs", "ys") :=
          match "xs" with
          | Inl _ => "ys"
-         | Inr "p" =>
-             match snd "p" with
-             | Inl _ => "List".`"ne_tail" "ys"
-             | Inr "p" =>
-                 let ("y", "ys'") := by "List".`"ne_uncons" "ys" in
-                 let ("y'", "ys_b") := by "List".`"ne_uncons" (by "go" (snd "p", "ys'")) in
-                 if "y" = "y'" then "ys_b" else raise exception "False" ()
+         | Inr (_, "xs'") =>
+             let (Inr ("y", "ys'")) := "ys" in
+             match "xs'" with
+             | Inl _ => "ys'"
+             | Inr (_, "xs''") =>
+                 let (Inr ("y'", "ys_b")) := "go" ("xs''", "ys'") in
+                 if "y" = "y'" then "ys_b" else raise false
              end
          end
        in
-       try "go" ("xs", "xs"); true;; (fun '("False" _) => false) }>.
+       try "go" ("xs", "xs"); true;; (fun false => false) }>.
 
 Definition eval_is_palindrome (candidate : val_term) (fuel : nat) (xs : list Z) :=
   eval_term fuel <{ candidate {list_int_to_val_term xs} }>.

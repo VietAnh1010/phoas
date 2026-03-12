@@ -10,8 +10,7 @@ Open Scope term_scope.
 
 Example stern_brocot :=
   <{ fun _ =>
-       let fix "go" "args" :=
-         let `("a", "b", "x", "y") := "args" in
+       let fix "go" `("a", "b", "x", "y") :=
          let "m" := "a" + "x" in
          let "n" := "b" + "y" in
          let "t1" _ := "go" `("a", "b", "m", "n") in
@@ -32,8 +31,7 @@ Example level :=
 Example breadth_it_dcont :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
-       let "f" "args" :=
-         let `("x", "t1", "t2") := "args" in
+       let "f" `("x", "t1", "t2") :=
          control0 (fun "k" => Inr ("x", fun _ => prompt0 ("k" (); "t1" (); "t2" (); Inl ())))
        in
        let "k" := "DelayedTree".`"fold" `((), "f", "t") in
@@ -42,12 +40,11 @@ Example breadth_it_dcont :=
 Example breadth_it_effect :=
   <{ fun "t" =>
        let "DelayedTree" := DelayedTree in
-       let "f" "args" := perform effect "Yield" "args" in
+       let "f" "args" := perform `"Yield" "args" in
        let "k" := "DelayedTree".`"fold" `((), "f", "t") in
        let fix "go" "k" _ :=
          shallow handle ("k" (); Inl ());;;
-         (fun '("Yield" "args"), "k" =>
-            let `("x", "t1", "t2") := "args" in
+         (fun (`"Yield" `("x", "t1", "t2")) "k" =>
             let "it" := "go" (fun _ => "k" (); "t1" (); "t2" (); Inl ()) in
             Inr ("x", "it"))
        in
@@ -62,9 +59,9 @@ Example depth_it_dcont :=
 Example depth_it_effect :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
-       let "f" "x" := perform effect "Yield" "x" in
+       let "f" "x" := perform `"Yield" "x" in
        handle ("DelayedTree".`"iter" ("f", "t"); Inl ());;;
-       (fun '("Yield" "x"), "k" => Inr ("x", "k")) }>.
+       (fun (`"Yield" "x") "k" => Inr ("x", "k")) }>.
 
 Definition eval_it {A} (f : val -> option A) (candidate : val_term) (fuel : nat) (n : Z) (t : val_term) :=
   deep_eval_term_to_list f fuel

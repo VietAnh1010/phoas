@@ -11,30 +11,31 @@ Inductive irequest : Type :=
 | IRControl : metakont -> (val -> es_monad irequest iheap val) -> irequest
 | IRShift0 : metakont -> (val -> kont -> es_monad irequest iheap val) -> irequest
 | IRControl0 : metakont -> (val -> kont -> es_monad irequest iheap val) -> irequest
-| IRRaise : exn -> irequest
-| IRPerform : metakont -> eff -> irequest.
+| IRRaise : val -> irequest
+| IRPerform : metakont -> val -> irequest.
 
-Definition irequest_to_exn (r : irequest) : exn :=
+Definition irequest_to_val (r : irequest) : val :=
   match r with
   | IRShift _ _ => Undelimited_shift
   | IRControl _ _ => Undelimited_control
   | IRShift0 _ _ => Undelimited_shift0
   | IRControl0 _ _ => Undelimited_control0
-  | IRRaise x => x
-  | IRPerform _ f => Unhandled_effect f
+  | IRRaise v => v
+  | IRPerform _ v => Unhandled_effect v
   end.
 
-Definition ixmonad : Type -> Type := es_monad exn iheap.
-Definition irmonad : Type -> Type := es_monad irequest iheap.
+Definition iv_monad : Type -> Type := except.t val.
+Definition ivh_monad : Type -> Type := es_monad val iheap.
+Definition irh_monad : Type -> Type := es_monad irequest iheap.
 
-Definition ixmonad_to_irmonad {A} : ixmonad A -> irmonad A :=
+Definition ivh_monad_to_irh_monad {A} : ivh_monad A -> irh_monad A :=
   with_except IRRaise.
 
-Definition irmonad_to_ixmonad {A} : irmonad A -> ixmonad A :=
-  with_except irequest_to_exn.
+Definition irh_monad_to_ivh_monad {A} : irh_monad A -> ivh_monad A :=
+  with_except irequest_to_val.
 
-Definition except_exn_to_ixmonad {A} : except.t exn A -> ixmonad A :=
+Definition iv_monad_to_ivh_monad {A} : iv_monad A -> ivh_monad A :=
   except_to_es_monad.
 
-Definition except_exn_to_irmonad {A} (m : except.t exn A) : irmonad A :=
+Definition iv_monad_to_irh_monad {A} (m : except.t val A) : irh_monad A :=
   except_to_es_monad (except.with_except IRRaise m).

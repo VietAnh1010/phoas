@@ -16,17 +16,8 @@ Example Lazy :=
        | `"Evaluated" "a" => "a"
        end
      in
-     let "map" "args" :=
-       let ("f", "t") := "args" in
-       "make" (fun _ => let "r" := "get" "t" in "f" "r")
-     in
-     let "bind" "args" :=
-       let ("t", "f") := "args" in
-       "make" (fun _ =>
-                 let "r" := "get" "t" in
-                 let "r" := "f" "r" in
-                 "get" "r")
-     in
+     let "map" ("f", "t") := "make" (fun _ => let "r" := "get" "t" in "f" "r") in
+     let "bind" ("t", "f") := "make" (fun _ => let "r" := "get" "t" in let "r" := "f" "r" in "get" "r") in
      `{ "make"
       ; "pure"
       ; "get"

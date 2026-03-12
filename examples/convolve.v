@@ -9,33 +9,26 @@ Open Scope string_scope.
 Open Scope term_scope.
 
 Example convolve_cont :=
-  <{ fun "args" =>
-       let ("xs", "ys") := "args" in
-       let fix "go" "args" :=
-         let ("ys", "k") := "args" in
+  <{ fun ("xs", "ys") =>
+       let fix "go" ("ys", "k") :=
          match "ys" with
          | Inl _ => "k" "xs"
-         | Inr "p" =>
-             let ("y", "ys'") := "p" in
+         | Inr ("y", "ys'") =>
              "go" ("ys'", fun "xs" =>
                             match "xs" with
                             | Inl _ => Inl ()
-                            | Inr "p" =>
-                                let ("x", "xs'") := "p" in
-                                Inr (("x", "y"), by "k" "xs'")
+                            | Inr ("x", "xs'") => Inr (("x", "y"), by "k" "xs'")
                             end)
          end
        in
        "go" ("ys", fun _ => Inl ()) }>.
 
 Example convolve_dcont :=
-  <{ fun "args" =>
-       let ("xs", "ys") := "args" in
+  <{ fun ("xs", "ys") =>
        let fix "go" "ys" :=
          match "ys" with
          | Inl _ => fun _ => Inl ()
-         | Inr "p" =>
-             let ("y", "ys'") := "p" in
+         | Inr ("y", "ys'") =>
              let "r" :=
                control
                  (fun "k" =>
@@ -43,9 +36,7 @@ Example convolve_dcont :=
                     fun "xs" =>
                       match "xs" with
                       | Inl _ => Inl ()
-                      | Inr "p" =>
-                          let ("x", "xs'") := "p" in
-                          Inr (("x", "y"), by "k" "xs'")
+                      | Inr ("x", "xs'") => Inr (("x", "y"), by "k" "xs'")
                       end)
              in
              "go" "r"
@@ -54,19 +45,15 @@ Example convolve_dcont :=
        (by prompt "go" "ys") "xs" }>.
 
 Example convolve :=
-  <{ fun "args" =>
-       let ("xs", "ys") := "args" in
+  <{ fun ("xs", "ys") =>
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => ("ys", Inl ())
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
-             let ("ys_b", "r") := by "go" "xs'" in
+         | Inr ("x", "xs'") =>
+             let (("ys_b", "r") as "p") := "go" "xs'" in
              match "ys_b" with
              | Inl _ => "p"
-             | Inr "p" =>
-                 let ("y", "ys_b'") := "p" in
-                 ("ys_b'", Inr (("x", "y"), "r"))
+             | Inr ("y", "ys_b'") => ("ys_b'", Inr (("x", "y"), "r"))
              end
          end
        in
@@ -77,4 +64,6 @@ Definition eval_convolve (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
 
 Compute (eval_convolve convolve 100 [1; 2] [3; 4]).
 Compute (eval_convolve convolve_cont 100 [1; 2] [3; 4]).
+Compute (eval_convolve convolve 100 [1; 2; 3; 4] [70; 69; 68; 67; 66]).
+Compute (eval_convolve convolve_cont 100 [1; 2; 3; 4] [70; 69; 68; 67; 66]).
 Compute (eval_convolve convolve_dcont 100 [1; 2; 3; 4] [70; 69; 68; 67; 66]).

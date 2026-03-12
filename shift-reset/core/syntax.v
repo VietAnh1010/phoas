@@ -5,20 +5,32 @@ Inductive binder : Type :=
 | BAny : binder
 | BVar : ident -> binder.
 
-Inductive variant_pattern : Type :=
-| PVariantBind : binder -> variant_pattern
-| PVariantConstr : ident -> binder -> variant_pattern.
-
-Inductive tuple_pattern : Type :=
+Inductive pattern : Type :=
+| PAny : pattern
+| PVar : ident -> pattern
+| PAlias : pattern -> ident -> pattern
+| POr : pattern -> pattern -> pattern
+| PTt : pattern
+| PInt : Z -> pattern
+| PFloat : Qc -> pattern
+| PTrue : pattern
+| PFalse : pattern
+| PChar : ascii -> pattern
+| PString : string -> pattern
+| PPair : pattern -> pattern -> pattern
+| PTuple : tuple_pattern -> pattern
+| PRecord : record_pattern -> pattern
+| PInl : pattern -> pattern
+| PInr : pattern -> pattern
+| PVariant : ident -> pattern -> pattern
+with tuple_pattern : Type :=
 | PTupleNil : tuple_pattern
-| PTupleRest : binder -> tuple_pattern
-| PTupleCons : binder -> tuple_pattern -> tuple_pattern.
-
-Inductive record_pattern : Type :=
+| PTupleCons : pattern -> tuple_pattern -> tuple_pattern
+with record_pattern : Type :=
 | PRecordNil : record_pattern
-| PRecordRest : binder -> record_pattern
+| PRecordRest : pattern -> record_pattern
 | PRecordCons0 : ident -> record_pattern -> record_pattern
-| PRecordCons1 : ident -> binder -> record_pattern -> record_pattern.
+| PRecordCons1 : ident -> pattern -> record_pattern -> record_pattern.
 
 Inductive op1 : Type :=
 | Op1Pos : op1
@@ -54,17 +66,13 @@ Inductive term : Type :=
 | TVal : val_term -> term
 | TApp : val_term -> val_term -> term
 | TSeq : term -> term -> term
-| TLet : binder -> term -> term -> term
+| TLet : pattern -> term -> term -> term
+| TMatch : term -> match_term -> term
 | TIf : val_term -> term -> term -> term
-| TSplit : binder -> binder -> val_term -> term -> term
-| TCase : val_term -> binder -> term -> binder -> term -> term
 | TWhile : val_term -> term -> term
 | TFor : binder -> val_term -> for_direction -> val_term -> term -> term
-| TLetFix : ident -> binder -> term -> term -> term
+| TLetFix : ident -> pattern -> term -> term -> term
 | TLetFixMut : fix_mut_term -> term -> term
-| TLetTuple : tuple_pattern -> val_term -> term -> term
-| TLetRecord : record_pattern -> val_term -> term -> term
-| TMatchVariant : val_term -> variant_term -> term
 | TShift : binder -> term -> term
 | TControl : binder -> term -> term
 | TShift0 : binder -> term -> term
@@ -89,21 +97,19 @@ with val_term : Type :=
 | TVString : string -> val_term
 | TVAnd : val_term -> val_term -> val_term
 | TVOr : val_term -> val_term -> val_term
-| TVFun : binder -> term -> val_term
-| TVFix : ident -> binder -> term -> val_term
+| TVFun : pattern -> term -> val_term
+| TVFix : ident -> pattern -> term -> val_term
 | TVFixMut : fix_mut_term -> ident -> val_term
 | TVPair : val_term -> val_term -> val_term
 | TVFst : val_term -> val_term
 | TVSnd : val_term -> val_term
 | TVTuple : tuple_term -> val_term
-| TVProjTuple : val_term -> nat -> val_term
 | TVRecord : record_term -> val_term
+| TVProjTuple : val_term -> nat -> val_term
 | TVProjRecord : val_term -> ident -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
 | TVVariant : ident -> val_term -> val_term
-| TVExn : ident -> val_term -> val_term
-| TVEff : ident -> val_term -> val_term
 | TVRef : val_term -> val_term
 | TVArray : array_term -> val_term
 | TVGet : val_term -> val_term
@@ -116,30 +122,29 @@ with val_term : Type :=
 | TVBuiltin1 : ident -> val_term -> val_term
 | TVBuiltin2 : ident -> val_term -> val_term -> val_term
 | TVBy : term -> val_term
+with match_term : Type :=
+| TMatchNil : match_term
+| TMatchCons : pattern -> term -> match_term -> match_term
+with fix_mut_term : Type :=
+| TFixMutLast : ident -> pattern -> term -> fix_mut_term
+| TFixMutCons : ident -> pattern -> term -> fix_mut_term -> fix_mut_term
 with ret_term : Type :=
 | TRetNone : ret_term
-| TRetSome : binder -> term -> ret_term
+| TRetSome : pattern -> term -> ret_term
 with exn_term : Type :=
-| TExnLast : variant_pattern -> term -> exn_term
-| TExnCons : variant_pattern -> term -> exn_term -> exn_term
+| TExnLast : pattern -> term -> exn_term
+| TExnCons : pattern -> term -> exn_term -> exn_term
 with eff_term : Type :=
-| TEffLast : variant_pattern -> binder -> term -> eff_term
-| TEffCons : variant_pattern -> binder -> term -> eff_term -> eff_term
-with variant_term : Type :=
-| TVariantNil : variant_term
-| TVariantCons : variant_pattern -> term -> variant_term -> variant_term
+| TEffLast : pattern -> binder -> term -> eff_term
+| TEffCons : pattern -> binder -> term -> eff_term -> eff_term
 with tuple_term : Type :=
 | TTupleNil : tuple_term
-| TTupleRest : val_term -> tuple_term
 | TTupleCons : val_term -> tuple_term -> tuple_term
 with record_term : Type :=
 | TRecordNil : record_term
 | TRecordRest : val_term -> record_term
 | TRecordCons0 : ident -> record_term -> record_term
 | TRecordCons1 : ident -> val_term -> record_term -> record_term
-with fix_mut_term : Type :=
-| TFixMutLast : ident -> binder -> term -> fix_mut_term
-| TFixMutCons : ident -> binder -> term -> fix_mut_term -> fix_mut_term
 with array_term : Type :=
 | TArrayNil : array_term
 | TArrayCons : val_term -> array_term -> array_term.
@@ -152,8 +157,8 @@ Inductive val : Type :=
 | VFalse : val
 | VChar : ascii -> val
 | VString : string -> val
-| VFun : binder -> term -> env -> val
-| VFix : ident -> binder -> term -> env -> val
+| VFun : pattern -> term -> env -> val
+| VFix : ident -> pattern -> term -> env -> val
 | VFixMut : fix_mut_term -> ident -> env -> val
 | VPair : val -> val -> val
 | VTuple : tuple -> val
@@ -161,8 +166,6 @@ Inductive val : Type :=
 | VInl : val -> val
 | VInr : val -> val
 | VVariant : ident -> val -> val
-| VExn : ident -> val -> val
-| VEff : ident -> val -> val
 | VRef : loc -> val
 | VArray : loc -> Z -> val
 | VMKPure : metakont -> val
@@ -172,7 +175,8 @@ Inductive val : Type :=
 with kont : Type :=
 | KNil : kont
 | KCons0 : term -> env -> kont -> kont
-| KCons1 : binder -> term -> env -> kont -> kont
+| KCons1 : pattern -> term -> env -> kont -> kont
+| KCons2 : match_term -> env -> kont -> kont
 | KApp : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
@@ -194,8 +198,8 @@ with record : Type :=
 | RecordCons : ident -> val -> record -> record.
 
 Inductive closure : Type :=
-| CFun : binder -> term -> env -> closure
-| CFix : ident -> binder -> term -> env -> closure
+| CFun : pattern -> term -> env -> closure
+| CFix : ident -> pattern -> term -> env -> closure
 | CFixMut : fix_mut_term -> ident -> env -> closure
 | CMKPure : metakont -> closure
 | CMKReset : metakont -> closure
@@ -204,12 +208,6 @@ Inductive closure : Type :=
 
 Inductive variant : Type :=
 | Variant : ident -> val -> variant.
-
-Inductive exn : Type :=
-| Exn : ident -> val -> exn.
-
-Inductive eff : Type :=
-| Eff : ident -> val -> eff.
 
 Inductive array : Type :=
 | Array : loc -> Z -> array.

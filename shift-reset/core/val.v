@@ -15,8 +15,8 @@ Definition VSum (s : val + val) : val :=
 
 Definition VClosure (c : closure) : val :=
   match c with
-  | CFun b t e => VFun b t e
-  | CFix f b t e => VFix f b t e
+  | CFun p t e => VFun p t e
+  | CFix f p t e => VFix f p t e
   | CFixMut t f e => VFixMut t f e
   | CMKPure mk => VMKPure mk
   | CMKReset mk => VMKReset mk
@@ -26,12 +26,6 @@ Definition VClosure (c : closure) : val :=
 
 Definition VVariant' (v : variant) : val :=
   let (l, v) := v in VVariant l v.
-
-Definition VExn' (x : exn) : val :=
-  let (l, v) := x in VExn l v.
-
-Definition VEff' (f : eff) : val :=
-  let (l, v) := f in VEff l v.
 
 Definition val_to_unit (v : val) : option unit :=
   match v with
@@ -89,18 +83,6 @@ Definition val_to_sum (v : val) : option (val + val) :=
   | _ => None
   end.
 
-Definition val_to_exn (v : val) : option exn :=
-  match v with
-  | VExn l v' => Some (Exn l v')
-  | _ => None
-  end.
-
-Definition val_to_eff (v : val) : option eff :=
-  match v with
-  | VEff l v' => Some (Eff l v')
-  | _ => None
-  end.
-
 Definition val_to_variant (v : val) : option variant :=
   match v with
   | VVariant l v' => Some (Variant l v')
@@ -127,8 +109,8 @@ Definition val_to_array (v : val) : option array :=
 
 Definition val_to_closure (v : val) : option closure :=
   match v with
-  | VFun b t e => Some (CFun b t e)
-  | VFix f b t e => Some (CFix f b t e)
+  | VFun p t e => Some (CFun p t e)
+  | VFix f p t e => Some (CFix f p t e)
   | VFixMut t f e => Some (CFixMut t f e)
   | VMKPure mk => Some (CMKPure mk)
   | VMKReset mk => Some (CMKReset mk)

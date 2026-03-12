@@ -14,8 +14,7 @@ Example append_dcont_aux :=
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => shift (fun "k" => "k")
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
+         | Inr ("x", "xs'") =>
              let "r" := "go" "xs'" in
              Inr ("x", "r")
          end
@@ -23,17 +22,14 @@ Example append_dcont_aux :=
        reset "go" "xs" }>.
 
 Example append_dcont :=
-  <{ fun "args" => let ("xs", "ys") := "args" in (by append_dcont_aux "xs") "ys" }>.
+  <{ fun ("xs", "ys") => (by append_dcont_aux "xs") "ys" }>.
 
 Example append :=
-  <{ fun "args" =>
-       let ("xs", "ys") := "args" in
+  <{ fun ("xs", "ys") =>
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => "ys"
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
-             Inr ("x", by "go" "xs'")
+         | Inr ("x", "xs'") => Inr ("x", by "go" "xs'")
          end
        in
        "go" "xs" }>.
@@ -45,9 +41,9 @@ Compute (eval_term 3 <{ append_dcont_aux {list_int_to_val_term []} }>).
 Compute (eval_term 4 <{ append_dcont_aux {list_int_to_val_term [1]} }>).
 Compute (eval_term 5 <{ append_dcont_aux {list_int_to_val_term [1; 2]} }>).
 
-Compute (eval_append append 2 [] [69]).
-Compute (eval_append append 3 [1] [69]).
-Compute (eval_append append 4 [1; 2] [69]).
+Compute (eval_append append 3 [] [69]).
+Compute (eval_append append 4 [1] [69]).
+Compute (eval_append append 5 [1; 2] [69]).
 Compute (eval_append append_dcont 4 [] [69]).
 Compute (eval_append append_dcont 5 [1] [69]).
 Compute (eval_append append_dcont 6 [1; 2] [69]).

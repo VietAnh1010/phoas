@@ -10,35 +10,35 @@ Import ESMonadNotations ListNotations.
 Local Open Scope Z_scope.
 Local Open Scope es_monad_scope.
 
-Definition string_length (v : val) : ixmonad val :=
-  let+ s := except_exn_to_ixmonad (unwrap_vstring v) in VInt (Z.of_nat (String.length s)).
+Definition string_length (v : val) : ivh_monad val :=
+  let+ s := iv_monad_to_ivh_monad (unwrap_vstring v) in VInt (Z.of_nat (String.length s)).
 
-Definition array_length (v : val) : ixmonad val :=
-  let+ '(Array _ z) := except_exn_to_ixmonad (unwrap_varray v) in VInt z.
+Definition array_length (v : val) : ivh_monad val :=
+  let+ '(Array _ z) := iv_monad_to_ivh_monad (unwrap_varray v) in VInt z.
 
-Definition tuple_length (v : val) : ixmonad val :=
-  let+ t := except_exn_to_ixmonad (unwrap_vtuple v) in VInt (Z.of_nat (tuple_length t)).
+Definition tuple_length (v : val) : ivh_monad val :=
+  let+ t := iv_monad_to_ivh_monad (unwrap_vtuple v) in VInt (Z.of_nat (tuple_length t)).
 
-Definition array_free (v : val) : ixmonad val :=
-  let* '(Array l z) := except_exn_to_ixmonad (unwrap_varray v) in
+Definition array_free (v : val) : ivh_monad val :=
+  let* '(Array l z) := iv_monad_to_ivh_monad (unwrap_varray v) in
   let* h := get in
   match array_free_dealloc (Z.to_nat z) l h with
   | Some h' => VTt <$ put h'
   | None => throw (Memory_error "array_free")
   end.
 
-Definition ref_free (v : val) : ixmonad val :=
-  let* l := except_exn_to_ixmonad (unwrap_vref v) in
+Definition ref_free (v : val) : ivh_monad val :=
+  let* l := iv_monad_to_ivh_monad (unwrap_vref v) in
   let* h := get in
   match iheap_dealloc l h with
   | Some h' => VTt <$ put h'
   | None => throw (Memory_error "ref_free")
   end.
 
-Definition int_to_string (v : val) : ixmonad val :=
-  let+ z := except_exn_to_ixmonad (unwrap_vint v) in VString (Z_to_string z).
+Definition int_to_string (v : val) : ivh_monad val :=
+  let+ z := iv_monad_to_ivh_monad (unwrap_vint v) in VString (Z_to_string z).
 
-Definition builtin1_registry : list (ident * (val -> ixmonad val)) :=
+Definition builtin1_registry : list (ident * (val -> ivh_monad val)) :=
   [(Ident "int_to_string", int_to_string);
    (Ident "string_length", string_length);
    (Ident "array_length", array_length);
@@ -46,20 +46,20 @@ Definition builtin1_registry : list (ident * (val -> ixmonad val)) :=
    (Ident "ref_free", ref_free);
    (Ident "array_free", array_free)].
 
-Definition dispatch_builtin1 (l : ident) : except.t exn (val -> ixmonad val) :=
+Definition dispatch_builtin1 (l : ident) : iv_monad (val -> ivh_monad val) :=
   match list.lookup ident_eqb l builtin1_registry with
   | Some f => except.pure f
   | None => except.throw (Name_error (ident_car l))
   end.
 
-Definition array_make (v1 v2 : val) : ixmonad val :=
-  let* z := except_exn_to_ixmonad (unwrap_vint v1) in
+Definition array_make (v1 v2 : val) : ivh_monad val :=
+  let* z := iv_monad_to_ivh_monad (unwrap_vint v1) in
   if z <? 0 then throw (Invalid_argument "array_make")
   else state (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
 
-Definition string_get (v1 v2 : val) : ixmonad val :=
-  let* s := except_exn_to_ixmonad (unwrap_vstring v1) in
-  let* i := except_exn_to_ixmonad (unwrap_vint v2) in
+Definition string_get (v1 v2 : val) : ivh_monad val :=
+  let* s := iv_monad_to_ivh_monad (unwrap_vstring v1) in
+  let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
   if i <? 0 then
     throw (Invalid_argument "index out of bounds")
   else
@@ -68,9 +68,9 @@ Definition string_get (v1 v2 : val) : ixmonad val :=
     | None => throw (Invalid_argument "index out of bounds")
     end.
 
-Definition tuple_get (v1 v2 : val) : ixmonad val :=
-  let* t := except_exn_to_ixmonad (unwrap_vtuple v1) in
-  let* i := except_exn_to_ixmonad (unwrap_vint v2) in
+Definition tuple_get (v1 v2 : val) : ivh_monad val :=
+  let* t := iv_monad_to_ivh_monad (unwrap_vtuple v1) in
+  let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
   if i <? 0 then
     throw (Invalid_argument "index out of bounds")
   else
@@ -79,12 +79,12 @@ Definition tuple_get (v1 v2 : val) : ixmonad val :=
     | None => throw (Invalid_argument "index out of bounds")
     end.
 
-Definition builtin2_registry : list (ident * (val -> val -> ixmonad val)) :=
+Definition builtin2_registry : list (ident * (val -> val -> ivh_monad val)) :=
   [(Ident "array_make", array_make);
    (Ident "string_get", string_get);
    (Ident "tuple_get", tuple_get)].
 
-Definition dispatch_builtin2 (l : ident) : except.t exn (val -> val -> ixmonad val) :=
+Definition dispatch_builtin2 (l : ident) : iv_monad (val -> val -> ivh_monad val) :=
   match list.lookup ident_eqb l builtin2_registry with
   | Some f => except.pure f
   | None => except.throw (Name_error (ident_car l))

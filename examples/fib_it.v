@@ -10,16 +10,12 @@ Open Scope term_scope.
 
 Example fib_it :=
   <{ fun _ =>
-       let fix "go" "args" :=
-         let ("a", "b") := "args" in
-         Inr ("a", fun _ => "go" ("b", "a" + "b"))
-       in
+       let fix "go" ("a", "b") := Inr ("a", fun _ => "go" ("b", "a" + "b")) in
        "go" (0, 1) }>.
 
 Example fib_it_dcont :=
   <{ fun _ =>
-       let fix "go" "args" :=
-         let ("a", "b") := "args" in
+       let fix "go" ("a", "b") :=
          shift (fun "k" => Inr ("a", "k"));
          "go" ("b", "a" + "b")
        in

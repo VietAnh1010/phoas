@@ -10,8 +10,7 @@ Example get := <{ fun _ => shift (fun "k" => fun "s" => let "k" := "k" "s" in "k
 Example put := <{ fun "s" => shift (fun "k" => fun _ => let "k" := "k" () in "k" "s") }>.
 
 Example eval_state :=
-  <{ fun "args" =>
-       let ("m", "s") := "args" in
+  <{ fun ("m", "s") =>
        let "k" := reset (let "v" := "m" () in fun "s" => ("v", "s")) in
        "k" "s" }>.
 

@@ -13,31 +13,27 @@ Example List :=
      in
      let "ne_head" "xs" :=
        match "xs" with
-       | Inl _ => raise exception "Empty" ()
+       | Inl _ => raise `"Empty" ()
        | Inr "p" => fst "p"
        end
      in
      let "ne_tail" "xs" :=
        match "xs" with
-       | Inl _ => raise exception "Empty" ()
+       | Inl _ => raise `"Empty" ()
        | Inr "p" => snd "p"
        end
      in
      let "ne_uncons" "xs" :=
        match "xs" with
-       | Inl _ => raise exception "Empty" ()
+       | Inl _ => raise `"Empty" ()
        | Inr "p" => "p"
        end
      in
-     let "iter" "args" :=
-       let ("f", "xs") := "args" in
+     let "iter" ("f", "xs") :=
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => ()
-         | Inr "p" =>
-             let ("x", "xs'") := "p" in
-             let _ := "f" "x" in
-             "go" "xs'"
+         | Inr ("x", "xs'") => "f" "x"; "go" "xs'"
          end
        in
        "go" "xs"

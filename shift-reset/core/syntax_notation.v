@@ -18,6 +18,7 @@ Declare Custom Entry tuple_term.
 Declare Custom Entry record_term.
 Declare Custom Entry fix_mut_term.
 
+(*
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
 
@@ -509,3 +510,4 @@ From shift_reset.core Require Import coerce.
 
 Local Open Scope Z_scope.
 Local Open Scope string_scope.
+*)

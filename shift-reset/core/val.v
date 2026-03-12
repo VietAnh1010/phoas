@@ -27,12 +27,6 @@ Definition VClosure (c : closure) : val :=
 Definition VVariant' (v : variant) : val :=
   let (l, v) := v in VVariant l v.
 
-Definition VExn' (x : exn) : val :=
-  let (l, v) := x in VExn l v.
-
-Definition VEff' (f : eff) : val :=
-  let (l, v) := f in VEff l v.
-
 Definition val_to_unit (v : val) : option unit :=
   match v with
   | VTt => Some tt
@@ -86,18 +80,6 @@ Definition val_to_sum (v : val) : option (val + val) :=
   match v with
   | VInl v' => Some (inl v')
   | VInr v' => Some (inr v')
-  | _ => None
-  end.
-
-Definition val_to_exn (v : val) : option exn :=
-  match v with
-  | VExn l v' => Some (Exn l v')
-  | _ => None
-  end.
-
-Definition val_to_eff (v : val) : option eff :=
-  match v with
-  | VEff l v' => Some (Eff l v')
   | _ => None
   end.
 

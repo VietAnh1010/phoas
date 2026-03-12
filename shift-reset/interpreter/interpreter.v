@@ -263,7 +263,7 @@ Fixpoint unwind_reset (k : kont) (r : irequest) : irh_monad val :=
   | IRShift0 mk f => throw (IRShift0 (MKReset mk k) f)
   | IRControl0 mk f => throw (IRControl0 (MKReset mk k) f)
   | IRRaise _ => throw r
-  | IRPerform mk f => throw (IRPerform (MKReset mk k) f)
+  | IRPerform mk v => throw (IRPerform (MKReset mk k) v)
   end.
 
 Fixpoint unwind_prompt (k : kont) (r : irequest) : irh_monad val :=
@@ -273,7 +273,7 @@ Fixpoint unwind_prompt (k : kont) (r : irequest) : irh_monad val :=
   | IRShift0 mk f => throw (IRShift0 (MKPrompt mk k) f)
   | IRControl0 mk f => throw (IRControl0 (MKPrompt mk k) f)
   | IRRaise _ => throw r
-  | IRPerform mk f => throw (IRPerform (MKPrompt mk k) f)
+  | IRPerform mk v => throw (IRPerform (MKPrompt mk k) v)
   end.
 
 Definition unwind_reset0 (k : kont) (r : irequest) : irh_monad val :=
@@ -283,7 +283,7 @@ Definition unwind_reset0 (k : kont) (r : irequest) : irh_monad val :=
   | IRShift0 mk f => f (VMKReset0 mk) k
   | IRControl0 mk f => throw (IRControl0 (MKReset0 mk k) f)
   | IRRaise _ => throw r
-  | IRPerform mk f => throw (IRPerform (MKReset0 mk k) f)
+  | IRPerform mk v => throw (IRPerform (MKReset0 mk k) v)
   end.
 
 Definition unwind_prompt0 (k : kont) (r : irequest) : irh_monad val :=
@@ -293,7 +293,7 @@ Definition unwind_prompt0 (k : kont) (r : irequest) : irh_monad val :=
   | IRShift0 mk f => throw (IRShift0 (MKPrompt0 mk k) f)
   | IRControl0 mk f => f (VMKPure mk) k
   | IRRaise _ => throw r
-  | IRPerform mk f => throw (IRPerform (MKPrompt0 mk k) f)
+  | IRPerform mk v => throw (IRPerform (MKPrompt0 mk k) v)
   end.
 
 Definition unwind_try (self : interpreter) (t : exn_term) (e : env) (k : kont) (r : irequest) : irh_monad val :=

@@ -19,7 +19,7 @@ Declare Custom Entry tuple_term.
 Declare Custom Entry record_term.
 
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
-Notation "x" := x (in custom binder' at level 0, x constr at level 0) : term_scope.
+Notation "b" := b (in custom binder' at level 0, b constr at level 0) : term_scope.
 
 Notation "( p )" := p (in custom pattern', p at level 99) : term_scope.
 Notation "{ p }" := p (in custom pattern', p constr) : term_scope.

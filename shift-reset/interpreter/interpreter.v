@@ -45,8 +45,6 @@ Fixpoint interpret_array_term (self : val_interpreter) (t : array_term) (e : env
       (S n, v :: vs)
   end.
 
-Print val_term.
-
 Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_monad val :=
   fix self' t e :=
     match t with
@@ -70,8 +68,8 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
         let* v := self' t1 e in
         let* b := iv_monad_to_ivh_monad (unwrap_vbool v) in
         if b then pure VTrue else self' t2 e
-    | TVFun b t' => pure (VFun b t' e)
-    | TVFix f b t' => pure (VFix f b t' e)
+    | TVFun p t' => pure (VFun p t' e)
+    | TVFix f p t' => pure (VFix f p t' e)
     | TVFixMut t' f => pure (VFixMut t' f e)
     | TVPair t1 t2 =>
         let* v := self' t1 e in
@@ -193,15 +191,37 @@ Fixpoint with_fix_mut_term (t : fix_mut_term) (e : env) : env :=
   | TFixMutCons f _ _ t' => with_fix_mut_term t' (ECons f (VFixMut t f e) e)
   end.
 
+Fixpoint interpret_match_term (self : interpreter) (t : match_term) (e : env) (k : kont) (v : val) : irh_monad val :=
+  match t with
+  | TMatchNil => throw (IRRaise (Match_failure "interpret_match_term"))
+  | TMatchCons p t1 t2 =>
+      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      match o with
+      | Some e' => self t1 e' k
+      | None => interpret_match_term self t2 e k v
+      end
+  end.
+
+Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env) (k : kont) (f : ident) (v : val) : irh_monad val :=
+  match t with
+  | TFixMutLast f' p t' =>
+      if ident_eqb f f' then
+        let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+        self t' e' k
+      else throw (IRRaise (Name_error (ident_car f)))
+  | TFixMutCons f' p t1 t2 =>
+      if ident_eqb f f' then
+        let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+        self t1 e' k
+      else interpret_fix_mut_term self t2 e k f v
+  end.
+
 Definition interpret_ret_term (self : interpreter) (t : ret_term) (e : env) (k : kont) (v : val) : irh_monad val :=
   match t with
   | TRetNone => pure v
   | TRetSome p t' =>
-      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
-      match o with
-      | Some e' => self t' e' k
-      | None => throw (IRRaise (Match_failure "interpret_ret_term"))
-      end
+      let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+      self t' e' k
   end.
 
 Fixpoint interpret_exn_term (self : interpreter) (t : exn_term) (e : env) (k : kont) (v : val) : irh_monad val :=
@@ -220,20 +240,21 @@ Fixpoint interpret_exn_term (self : interpreter) (t : exn_term) (e : env) (k : k
       end
   end.
 
-Fixpoint interpret_eff_term (self : interpreter) (t : eff_term) (e : env) (k : kont) (v : val) (u : val) : option (irh_monad val) :=
+Fixpoint interpret_eff_term (self : interpreter) (t : eff_term) (e : env) (k : kont) (v : val) (u : val) (mk : metakont) : irh_monad val :=
   match t with
   | TEffLast p b t' =>
-      match match_eff p f e with
-      | Some e' => Some (self t' (with_binder b u e') k)
-      | None => None
+      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      match o with
+      | Some e' => self t' (with_binder b u e') k
+      | None => throw (IRPerform mk v)
       end
   | TEffCons p b t1 t2 =>
-      match match_eff p f e with
-      | Some e' => Some (self t1 (with_binder b u e') k)
-      | None => interpret_eff_term self t2 e k f u
+      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      match o with
+      | Some e' => self t1 (with_binder b u e') k
+      | None => interpret_eff_term self t2 e k v u mk
       end
   end.
-*)
 
 Fixpoint unwind_reset (k : kont) (r : irequest) : irh_monad val :=
   match r with
@@ -295,12 +316,7 @@ Definition unwind_handle (self : interpreter) (t1 : ret_term) (t2 : eff_term) (e
       | IRShift0 mk f => throw (IRShift0 (MKHandle mk t1 t2 e k) f)
       | IRControl0 mk f => throw (IRControl0 (MKHandle mk t1 t2 e k) f)
       | IRRaise _ => throw r
-      | IRPerform mk f => interpret_eff_term self t2 e k
-                                (*
-                            match interpret_eff_term self t2 e k f (VMKHandle mk t1 t2 e) with
-          | Some m => m
-          | None => throw (IRPerform (MKHandle mk t1 t2 e k) f)
-          end*)
+      | IRPerform mk v => interpret_eff_term self t2 e k v (VMKHandle mk t1 t2 e) (MKHandle mk t1 t2 e k)
       end
   end.
 
@@ -314,12 +330,7 @@ Definition unwind_shallow_handle (self : interpreter) (t1 : ret_term) (t2 : eff_
       | IRShift0 mk f => throw (IRShift0 (MKShallowHandle mk t1 t2 e k) f)
       | IRControl0 mk f => throw (IRControl0 (MKShallowHandle mk t1 t2 e k) f)
       | IRRaise _ => throw r
-      | IRPerform mk f => throw r
-          (*
-          match interpret_eff_term self t2 e k f (VMKPure mk) with
-          | Some m => m
-          | None => throw (IRPerform (MKShallowHandle mk t1 t2 e k) f)
-          end*)
+      | IRPerform mk v => interpret_eff_term self t2 e k v (VMKPure mk) (MKShallowHandle mk t1 t2 e k)
       end
   end.
 
@@ -328,10 +339,9 @@ Fixpoint invoke_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) 
   | KNil => pure v
   | KCons0 t e k1' => self t e (KApp k1' k2) >>= invoke_kont_app self k1' k2
   | KCons1 p t e k1' =>
-      
-      self t (with_binder p v e) (KApp k1' k2) >>= invoke_kont_app self k1' k2
-  (*| KCons2 t e k1' => self t e (KApp k1' k2) >>= invoke_kont_app self k1' k2*)
-  | KCons2 t e k1' => throw (IRRaise (Failure "todo"))
+      let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+      self t e' (KApp k1' k2) >>= invoke_kont_app self k1' k2
+  | KCons2 t e k1' => interpret_match_term self t e (KApp k1' k2) v >>= invoke_kont_app self k1' k2
   | KApp k11 k12 => invoke_kont_app self k11 (KApp k12 k2) v >>= invoke_kont_app self k12 k2
   end.
 
@@ -339,7 +349,10 @@ Fixpoint invoke_kont (self : interpreter) (k : kont) (v : val) : irh_monad val :
   match k with
   | KNil => pure v
   | KCons0 t e k' => self t e k' >>= invoke_kont self k'
-  | KCons1 b t e k' => self t (with_binder b v e) k' >>= invoke_kont self k'
+  | KCons1 p t e k' =>
+      let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+      self t e' k' >>= invoke_kont self k'
+  | KCons2 t e k' => interpret_match_term self t e k' v >>= invoke_kont self k'
   | KApp k1 k2 => invoke_kont_app self k1 k2 v >>= invoke_kont self k2
   end.
 
@@ -375,28 +388,6 @@ Definition invoke_metakont_app (self : interpreter) (mk : metakont) (k : kont) (
       unwind_shallow_handle self t1 t2 e (KApp k' k) m >>= invoke_kont_app self k' k
   end.
 
-Fixpoint interpret_variant_term (self : interpreter) (t : variant_term) (e : env) (k : kont) (v : variant) : irh_monad val :=
-  match t with
-  | TVariantNil => throw (IRRaise (Match_failure ""))
-  | TVariantCons p t1 t2 =>
-      match match_variant p v e with
-      | Some e' => self t1 e' k
-      | None => interpret_variant_term self t2 e k v
-      end
-  end.
-
-Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env) (k : kont) (f : ident) (v : val) : irh_monad val :=
-  match t with
-  | TFixMutLast f' b t' =>
-      if ident_eqb f f'
-      then self t' (with_binder b v e) k
-      else throw (IRRaise (Name_error (ident_car f)))
-  | TFixMutCons f' b t1 t2 =>
-      if ident_eqb f f'
-      then self t1 (with_binder b v e) k
-      else interpret_fix_mut_term self t2 e k f v
-  end.
-
 Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh_monad val :=
   fix self' t e k :=
     match t with
@@ -406,8 +397,12 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
         let* v2 := interpret_val_term' self' tv2 e in
         let* c := iv_monad_to_irh_monad (unwrap_vclosure v1) in
         match c with
-        | CFun b t' e => self t' (with_binder b v2 e) k
-        | CFix f b t' e => self t' (with_binder b v2 (ECons f v1 e)) k
+        | CFun p t' e =>
+            let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v2 e) in
+            self t' e' k
+        | CFix f p t' e =>
+            let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v2 (ECons f v1 e)) in
+            self t' e' k
         | CFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
         | CMKPure mk => invoke_metakont_app self mk k v2
         | CMKReset mk => catch (invoke_metakont self mk v2) (unwind_reset k)
@@ -417,24 +412,15 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
     | TSeq t1 t2 =>
         let* _ := self' t1 e (KCons0 t2 e k) in
         self' t2 e k
-    | TLet b t1 t2 =>
-        let* v := self' t1 e (KCons1 b t2 e k) in
-        self' t2 (with_binder b v e) k
+    | TLet p t1 t2 =>
+        let* v := self' t1 e (KCons1 p t2 e k) in
+        let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+        self' t2 e' k
+    | TMatch t1 t2 => self' t1 e (KCons2 t2 e k) >>= interpret_match_term self' t2 e k
     | TIf tv t1 t2 =>
         let* v := interpret_val_term' self' tv e in
         let* b := iv_monad_to_irh_monad (unwrap_vbool v) in
         if b then self' t1 e k else self' t2 e k
-    | TSplit b1 b2 tv t' =>
-        let* v := interpret_val_term' self' tv e in
-        let* '(v1, v2) := iv_monad_to_irh_monad (unwrap_vprod v) in
-        self' t' (with_binder b2 v2 (with_binder b1 v1 e)) k
-    | TCase tv b1 t1 b2 t2 =>
-        let* v := interpret_val_term' self' tv e in
-        let* s := iv_monad_to_irh_monad (unwrap_vsum v) in
-        match s with
-        | inl v' => self' t1 (with_binder b1 v' e) k
-        | inr v' => self' t2 (with_binder b2 v' e) k
-        end
     | TWhile tv t' =>
         let* v := interpret_val_term' self' tv e in
         let* b := iv_monad_to_irh_monad (unwrap_vbool v) in
@@ -458,25 +444,8 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
               go n' i'
           end
         in go (Z.to_nat (z + 1)) i1
-    | TLetFix f b t1 t2 => self' t2 (ECons f (VFix f b t1 e) e) k
+    | TLetFix f p t1 t2 => self' t2 (ECons f (VFix f p t1 e) e) k
     | TLetFixMut t1 t2 => self' t2 (with_fix_mut_term t1 e) k
-    | TLetTuple p tv t' =>
-        let* v := interpret_val_term' self' tv e in
-        let* t := iv_monad_to_irh_monad (unwrap_vtuple v) in
-        match match_tuple p t e with
-        | Some e' => self' t' e' k
-        | None => throw (IRRaise (Match_failure ""))
-        end
-    | TLetRecord p tv t' =>
-        let* v := interpret_val_term' self' tv e in
-        let* r := iv_monad_to_irh_monad (unwrap_vrecord v) in
-        match match_record p r e with
-        | Some e' => self' t' e' k
-        | None => throw (IRRaise (Match_failure ""))
-        end
-    | TMatchVariant tv t' =>
-        let* v := interpret_val_term' self' tv e in
-        iv_monad_to_irh_monad (unwrap_vvariant v) >>= interpret_variant_term self' t' e k
     | TShift b t' => throw (IRShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
     | TControl b t' => throw (IRControl (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
     | TShift0 b t' => throw (IRShift0 (MKPure k) (fun u => self' t' (with_binder b u e)))
@@ -487,13 +456,11 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
     | TPrompt0 t' => catch (self' t' e KNil) (unwind_prompt0 k)
     | TRaise tv =>
         let* v := interpret_val_term' self' tv e in
-        let* x := iv_monad_to_irh_monad (unwrap_vexn v) in
-        throw (IRRaise x)
+        throw (IRRaise v)
     | TTry t1 t2 => catch (self' t1 e KNil) (unwind_try self' t2 e k)
     | TPerform tv =>
         let* v := interpret_val_term' self' tv e in
-        let* f := iv_monad_to_irh_monad (unwrap_veff v) in
-        throw (IRPerform (MKPure k) f)
+        throw (IRPerform (MKPure k) v)
     | THandle t1 t2 t3 => try (self' t1 e KNil) >>= unwind_handle self' t2 t3 e k
     | TShallowHandle t1 t2 t3 => try (self' t1 e KNil) >>= unwind_shallow_handle self' t2 t3 e k
     end.
@@ -507,10 +474,10 @@ Fixpoint interpret_term' (fuel : nat) (t : term) (e : env) (k : kont) : irh_mona
 Definition interpret_term (fuel : nat) (t : term) (e : env) (k : kont) : ivh_monad val :=
   irh_monad_to_ivh_monad (interpret_term' fuel t e k).
 
-Definition run_term (fuel : nat) (t : term) : (exn + val) * iheap :=
+Definition run_term (fuel : nat) (t : term) : (val + val) * iheap :=
   run_es_monad (interpret_term fuel t ENil KNil) iheap_empty.
 
-Definition eval_term (fuel : nat) (t : term) : exn + val :=
+Definition eval_term (fuel : nat) (t : term) : val + val :=
   fst (run_term fuel t).
 
 Definition exec_term (fuel : nat) (t : term) : iheap :=

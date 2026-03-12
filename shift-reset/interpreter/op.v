@@ -129,9 +129,9 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
   | VInt z1, VInt z2 => pure (z1 ?= z2)%Z
   | VFloat q1, VFloat q2 => pure (q1 ?= q2)%Qc
   | VTrue, VTrue => pure Eq
+  | VFalse, VFalse => pure Eq
   | VTrue, VFalse => pure Gt
   | VFalse, VTrue => pure Lt
-  | VFalse, VFalse => pure Eq
   | VChar a1, VChar a2 => pure (a1 ?= a2)%char
   | VString s1, VString s2 => pure (s1 ?= s2)%string
   | VPair v11 v12, VPair v21 v22 =>
@@ -153,9 +153,9 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
   | VInt z1, VInt z2 => pure (z1 =? z2)%Z
   | VFloat q1, VFloat q2 => pure (q1 =? q2)%Qc
   | VTrue, VTrue => pure true
+  | VFalse, VFalse => pure true
   | VTrue, VFalse => pure false
   | VFalse, VTrue => pure false
-  | VFalse, VFalse => pure true
   | VChar a1, VChar a2 => pure (a1 =? a2)%char
   | VString s1, VString s2 => pure (s1 =? s2)%string
   | VPair v11 v12, VPair v21 v22 =>

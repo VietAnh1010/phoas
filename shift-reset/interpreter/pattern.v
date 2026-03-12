@@ -11,7 +11,12 @@ Fixpoint dispatch_pattern (p : pattern) (v : val) (e : env) : iv_monad (option e
   match p, v with
   | PAny, _ => pure (Some e)
   | PVar x, _ => pure (Some (ECons x v e))
-  | PAlias p' x, _ => dispatch_pattern p' v (ECons x v e)
+  | PAlias p' x, _ =>
+      let+ o := dispatch_pattern p' v e in
+      match o with
+      | None => None
+      | Some e' => Some (ECons x v e')
+      end
   | POr p1 p2, _ =>
       let* o := dispatch_pattern p1 v e in
       match o with
@@ -22,23 +27,23 @@ Fixpoint dispatch_pattern (p : pattern) (v : val) (e : env) : iv_monad (option e
   | PInt z1, VInt z2 => pure (if (z1 =? z2)%Z then Some e else None)
   | PFloat q1, VFloat q2 => pure (if (q1 =? q2)%Qc then Some e else None)
   | PTrue, VTrue => pure (Some e)
+  | PFalse, VFalse => pure (Some e)
   | PTrue, VFalse => pure None
   | PFalse, VTrue => pure None
-  | PFalse, VFalse => pure (Some e)
   | PChar a1, VChar a2 => pure (if (a1 =? a2)%char then Some e else None)
   | PString s1, VString s2 => pure (if (s1 =? s2)%string then Some e else None)
   | PPair p1 p2, VPair v1 v2 =>
       let* o := dispatch_pattern p1 v1 e in
       match o with
       | None => pure None
-      | Some e => dispatch_pattern p2 v2 e
+      | Some e' => dispatch_pattern p2 v2 e'
       end
   | PTuple p', VTuple t => dispatch_tuple_pattern p' t e
   | PRecord p', VRecord r => dispatch_record_pattern p' r e
   | PInl p', VInl v' => dispatch_pattern p' v' e
+  | PInr p', VInr v' => dispatch_pattern p' v' e
   | PInl _, VInr _ => pure None
   | PInr _, VInl _ => pure None
-  | PInr p', VInr v' => dispatch_pattern p' v' e
   | PVariant l1 p', VVariant l2 v' => if ident_eqb l1 l2 then dispatch_pattern p' v' e else pure None
   | _, _ => throw (Type_error "dispatch_pattern")
   end
@@ -49,7 +54,7 @@ with dispatch_tuple_pattern (p : tuple_pattern) (t : tuple) (e : env) : iv_monad
       let* o := dispatch_pattern p1 v e in
       match o with
       | None => pure None
-      | Some e => dispatch_tuple_pattern p2 t' e
+      | Some e' => dispatch_tuple_pattern p2 t' e'
       end
   | _, _ => throw (Match_failure "dispatch_tuple_pattern")
   end
@@ -76,7 +81,14 @@ with dispatch_record_pattern (p : record_pattern) (r : record) (e : env) : iv_mo
           let* o := dispatch_pattern p1 v e in
           match o with
           | None => pure None
-          | Some e => dispatch_record_pattern p2 r' e
+          | Some e' => dispatch_record_pattern p2 r' e'
           end
       end
+  end.
+
+Definition dispatch_irrefutable_pattern (p : pattern) (v : val) (e : env) : iv_monad env :=
+  let* o := dispatch_pattern p v e in
+  match o with
+  | None => throw (Match_failure "dispatch_irrefutable_pattern")
+  | Some e' => pure e'
   end.

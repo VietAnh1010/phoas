@@ -16,16 +16,12 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve binder_eq_dec : eq_dec_db.
 
-Lemma variant_pattern_eq_dec : forall (p1 p2 : variant_pattern), {p1 = p2} + {p1 <> p2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
+Lemma pattern_eq_dec : forall (p1 p2 : pattern), {p1 = p2} + {p1 <> p2}
+with tuple_pattern_eq_dec : forall (p1 p2 : tuple_pattern), {p1 = p2} + {p1 <> p2}
+with record_pattern_eq_dec : forall (p1 p2 : record_pattern), {p1 = p2} + {p1 <> p2}.
+Proof. all: decide equality; auto with eq_dec_db. Defined.
 
-Lemma tuple_pattern_eq_dec : forall (p1 p2 : tuple_pattern), {p1 = p2} + {p1 <> p2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
-Lemma record_pattern_eq_dec : forall (p1 p2 : record_pattern), {p1 = p2} + {p1 <> p2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
-Hint Resolve variant_pattern_eq_dec : eq_dec_db.
+Hint Resolve pattern_eq_dec : eq_dec_db.
 Hint Resolve tuple_pattern_eq_dec : eq_dec_db.
 Hint Resolve record_pattern_eq_dec : eq_dec_db.
 
@@ -47,7 +43,7 @@ with val_term_eq_dec : forall (t1 t2 : val_term), {t1 = t2} + {t1 <> t2}
 with ret_term_eq_dec : forall (t1 t2 : ret_term), {t1 = t2} + {t1 <> t2}
 with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}
 with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}
-with variant_term_eq_dec : forall (t1 t2 : variant_term), {t1 = t2} + {t1 <> t2}
+with match_term_eq_dec : forall (t1 t2 : match_term), {t1 = t2} + {t1 <> t2}
 with tuple_term_eq_dec : forall (t1 t2 : tuple_term), {t1 = t2} + {t1 <> t2}
 with record_term_eq_dec : forall (t1 t2 : record_term), {t1 = t2} + {t1 <> t2}
 with fix_mut_term_eq_dec : forall (t1 t2 : fix_mut_term), {t1 = t2} + {t1 <> t2}
@@ -59,7 +55,7 @@ Hint Resolve val_term_eq_dec : eq_dec_db.
 Hint Resolve ret_term_eq_dec : eq_dec_db.
 Hint Resolve exn_term_eq_dec : eq_dec_db.
 Hint Resolve eff_term_eq_dec : eq_dec_db.
-Hint Resolve variant_term_eq_dec : eq_dec_db.
+Hint Resolve match_term_eq_dec : eq_dec_db.
 Hint Resolve tuple_term_eq_dec : eq_dec_db.
 Hint Resolve record_term_eq_dec : eq_dec_db.
 Hint Resolve fix_mut_term_eq_dec : eq_dec_db.
@@ -85,17 +81,9 @@ Proof. decide equality; auto with eq_dec_db. Defined.
 Lemma variant_eq_dec : forall (v1 v2 : variant), {v1 = v2} + {v1 <> v2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Lemma exn_eq_dec : forall (x1 x2 : exn), {x1 = x2} + {x1 <> x2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
-Lemma eff_eq_dec : forall (f1 f2 : eff), {f1 = f2} + {f1 <> f2}.
-Proof. decide equality; auto with eq_dec_db. Defined.
-
 Lemma array_eq_dec : forall (a1 a2 : array), {a1 = a2} + {a1 <> a2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve closure_eq_dec : eq_dec_db.
 Hint Resolve variant_eq_dec : eq_dec_db.
-Hint Resolve exn_eq_dec : eq_dec_db.
-Hint Resolve eff_eq_dec : eq_dec_db.
 Hint Resolve array_eq_dec : eq_dec_db.

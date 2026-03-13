@@ -66,14 +66,12 @@ Example reverse_while :=
 
 Example reverse_taba :=
   <{ fun "xs" =>
-       let "List" := List in
        let fix "go" "xs_t" :=
          match "xs_t" with
          | Inl _ => ("xs", Inl ())
-         | Inr "p" =>
-             let ("xs_b", "r") := "go" (snd "p") in
-             let ("x", "xs_b'") := "List".`"ne_uncons" "xs_b" in
-             ("xs_b'", Inr ("x", "r"))
+         | Inr (_, "xs_t'") =>
+             let (Inr ("x", "xs_b"), "r") := "go" "xs_t'" in
+             ("xs_b", Inr ("x", "r"))
          end
        in
        snd (by "go" "xs") }>.

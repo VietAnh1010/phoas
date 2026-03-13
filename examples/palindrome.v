@@ -2,7 +2,6 @@ From Stdlib Require Import List String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter error.
 From examples Require Import common.
-From examples.stdlib Require Import list.
 Import ListNotations.
 
 Open Scope Z_scope.
@@ -11,7 +10,6 @@ Open Scope term_scope.
 
 Example is_palindrome_cont :=
   <{ fun "xs" =>
-       let "List" := List in
        let fix "go" `("xs", "ys", "k") :=
          match "xs" with
          | Inl _ => "k" "ys"
@@ -27,7 +25,6 @@ Example is_palindrome_cont :=
 
 Example is_palindrome_exception :=
   <{ fun "xs" =>
-       let "List" := List in
        let fix "go" ("xs", "ys") :=
          match "xs" with
          | Inl _ => "ys"

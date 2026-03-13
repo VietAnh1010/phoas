@@ -1,8 +1,8 @@
 From Stdlib Require Import Bool List String ZArith.
 From shift_reset.core Require Import syntax env ident loc record tuple.
 From shift_reset.monad Require Import es_monad.
-From shift_reset.interpreter Require builtin op pattern.
-From shift_reset.interpreter Require Import array error iheap imonad unwrap.
+From shift_reset.interpreter Require builtin op.
+From shift_reset.interpreter Require Import array error iheap imonad pattern unwrap.
 Import ESMonadNotations ListNotations.
 
 Local Open Scope Z_scope.
@@ -195,7 +195,7 @@ Fixpoint interpret_match_term (self : interpreter) (t : match_term) (e : env) (k
   match t with
   | TMatchNil => throw (IRRaise (Match_failure "interpret_match_term"))
   | TMatchCons p t1 t2 =>
-      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      let* o := iv_monad_to_irh_monad (match_pattern p v e) in
       match o with
       | Some e' => self t1 e' k
       | None => interpret_match_term self t2 e k v
@@ -206,12 +206,12 @@ Fixpoint interpret_fix_mut_term (self : interpreter) (t : fix_mut_term) (e : env
   match t with
   | TFixMutLast f' p t' =>
       if ident_eqb f f' then
-        let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+        let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
         self t' e' k
       else throw (IRRaise (Name_error (ident_car f)))
   | TFixMutCons f' p t1 t2 =>
       if ident_eqb f f' then
-        let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+        let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
         self t1 e' k
       else interpret_fix_mut_term self t2 e k f v
   end.
@@ -220,20 +220,20 @@ Definition interpret_ret_term (self : interpreter) (t : ret_term) (e : env) (k :
   match t with
   | TRetNone => pure v
   | TRetSome p t' =>
-      let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+      let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
       self t' e' k
   end.
 
 Fixpoint interpret_exn_term (self : interpreter) (t : exn_term) (e : env) (k : kont) (v : val) : irh_monad val :=
   match t with
   | TExnLast p t' =>
-      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      let* o := iv_monad_to_irh_monad (match_pattern p v e) in
       match o with
       | Some e' => self t' e' k
       | None => throw (IRRaise v)
       end
   | TExnCons p t1 t2 =>
-      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      let* o := iv_monad_to_irh_monad (match_pattern p v e) in
       match o with
       | Some e' => self t1 e' k
       | None => interpret_exn_term self t2 e k v
@@ -243,13 +243,13 @@ Fixpoint interpret_exn_term (self : interpreter) (t : exn_term) (e : env) (k : k
 Fixpoint interpret_eff_term (self : interpreter) (t : eff_term) (e : env) (k : kont) (v : val) (u : val) (mk : metakont) : irh_monad val :=
   match t with
   | TEffLast p b t' =>
-      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      let* o := iv_monad_to_irh_monad (match_pattern p v e) in
       match o with
       | Some e' => self t' (with_binder b u e') k
       | None => throw (IRPerform mk v)
       end
   | TEffCons p b t1 t2 =>
-      let* o := iv_monad_to_irh_monad (pattern.dispatch_pattern p v e) in
+      let* o := iv_monad_to_irh_monad (match_pattern p v e) in
       match o with
       | Some e' => self t1 (with_binder b u e') k
       | None => interpret_eff_term self t2 e k v u mk
@@ -339,7 +339,7 @@ Fixpoint invoke_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) 
   | KNil => pure v
   | KCons0 t e k1' => self t e (KApp k1' k2) >>= invoke_kont_app self k1' k2
   | KCons1 p t e k1' =>
-      let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+      let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
       self t e' (KApp k1' k2) >>= invoke_kont_app self k1' k2
   | KApp k11 k12 => invoke_kont_app self k11 (KApp k12 k2) v >>= invoke_kont_app self k12 k2
   end.
@@ -349,7 +349,7 @@ Fixpoint invoke_kont (self : interpreter) (k : kont) (v : val) : irh_monad val :
   | KNil => pure v
   | KCons0 t e k' => self t e k' >>= invoke_kont self k'
   | KCons1 p t e k' =>
-      let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+      let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
       self t e' k' >>= invoke_kont self k'
   | KApp k1 k2 => invoke_kont_app self k1 k2 v >>= invoke_kont self k2
   end.
@@ -396,10 +396,10 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
         let* c := iv_monad_to_irh_monad (unwrap_vclosure v1) in
         match c with
         | CFun p t' e =>
-            let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v2 e) in
+            let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v2 e) in
             self t' e' k
         | CFix f p t' e =>
-            let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v2 (ECons f v1 e)) in
+            let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v2 (ECons f v1 e)) in
             self t' e' k
         | CFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
         | CMKPure mk => invoke_metakont_app self mk k v2
@@ -412,7 +412,7 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
         self' t2 e k
     | TLet p t1 t2 =>
         let* v := self' t1 e (KCons1 p t2 e k) in
-        let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
+        let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
         self' t2 e' k
     | TMatch tv t' => interpret_val_term' self' tv e >>= interpret_match_term self' t' e k
     | TIf tv t1 t2 =>

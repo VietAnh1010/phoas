@@ -341,7 +341,6 @@ Fixpoint invoke_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) 
   | KCons1 p t e k1' =>
       let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
       self t e' (KApp k1' k2) >>= invoke_kont_app self k1' k2
-  | KCons2 t e k1' => interpret_match_term self t e (KApp k1' k2) v >>= invoke_kont_app self k1' k2
   | KApp k11 k12 => invoke_kont_app self k11 (KApp k12 k2) v >>= invoke_kont_app self k12 k2
   end.
 
@@ -352,7 +351,6 @@ Fixpoint invoke_kont (self : interpreter) (k : kont) (v : val) : irh_monad val :
   | KCons1 p t e k' =>
       let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
       self t e' k' >>= invoke_kont self k'
-  | KCons2 t e k' => interpret_match_term self t e k' v >>= invoke_kont self k'
   | KApp k1 k2 => invoke_kont_app self k1 k2 v >>= invoke_kont self k2
   end.
 
@@ -416,7 +414,7 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
         let* v := self' t1 e (KCons1 p t2 e k) in
         let* e' := iv_monad_to_irh_monad (pattern.dispatch_irrefutable_pattern p v e) in
         self' t2 e' k
-    | TMatch t1 t2 => self' t1 e (KCons2 t2 e k) >>= interpret_match_term self' t2 e k
+    | TMatch tv t' => interpret_val_term' self' tv e >>= interpret_match_term self' t' e k
     | TIf tv t1 t2 =>
         let* v := interpret_val_term' self' tv e in
         let* b := iv_monad_to_irh_monad (unwrap_vbool v) in

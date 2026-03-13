@@ -67,7 +67,7 @@ Inductive term : Type :=
 | TApp : val_term -> val_term -> term
 | TSeq : term -> term -> term
 | TLet : pattern -> term -> term -> term
-| TMatch : term -> match_term -> term
+| TMatch : val_term -> match_term -> term
 | TIf : val_term -> term -> term -> term
 | TWhile : val_term -> term -> term
 | TFor : binder -> val_term -> for_direction -> val_term -> term -> term
@@ -176,7 +176,6 @@ with kont : Type :=
 | KNil : kont
 | KCons0 : term -> env -> kont -> kont
 | KCons1 : pattern -> term -> env -> kont -> kont
-| KCons2 : match_term -> env -> kont -> kont
 | KApp : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont

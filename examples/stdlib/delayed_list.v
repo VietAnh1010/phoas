@@ -11,7 +11,8 @@ Example DelayedList :=
        if "n" = 0 then "empty"
        else
          fun _ =>
-           match "xs" () with
+           let "xs" := "xs" () in
+           match "xs" with
            | Inl _ => Inl ()
            | Inr ("x", "xs'") => Inr ("x", by "take_aux" ("n" - 1, "xs'"))
            end
@@ -22,7 +23,8 @@ Example DelayedList :=
      in
      let "map" ("f", "xs") :=
        let fix "go" "xs" _ :=
-         match "xs" () with
+         let "xs" := "xs" () in
+         match "xs" with
          | Inl _ => Inl ()
          | Inr ("x", "xs'") =>
              let "y" := "f" "x" in
@@ -33,7 +35,8 @@ Example DelayedList :=
      in
      let "iter" ("f", "xs") :=
        let fix "go" "xs" :=
-         match "xs" () with
+         let "xs" := "xs" () in
+         match "xs" with
          | Inl _ => ()
          | Inr ("x", "xs'") => "f" "x"; "go" "xs'"
          end
@@ -41,7 +44,8 @@ Example DelayedList :=
        "go" "xs"
      in
      let fix "to_list" "xs" :=
-       match "xs" () with
+       let "xs" := "xs" () in
+       match "xs" with
        | Inl _ => Inl ()
        | Inr ("x", "xs'") =>
            let "r" := "to_list" "xs'" in

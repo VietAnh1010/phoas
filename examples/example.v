@@ -491,7 +491,7 @@ Example partition x xs :=
        match "xs" with
        | Inl _ => Inl ()
        | Inr ("x", "xs'") =>
-           match compare_int (x, "x") with
+           match by compare_int (x, "x") with
            | `"Lt" _ => let "r" := "go" "xs'" in Inr ("x", "r")
            | `"Eq" _ => shift0 (fun "k" => let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in Inr ("x", "r"))
            | `"Gt" _ => shift0 (fun "k" => shift0 (fun "k'" => let "r" := reset0 let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in "k'" "r"

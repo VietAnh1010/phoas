@@ -139,8 +139,8 @@ Notation "'let' p := t1 'in' t2" :=
         t2 custom term,
         right associativity) : term_scope.
 
-Notation "'match' t1 'with' t2 'end'" :=
-  (TMatch t1 t2) (in custom term at level 69, t1 custom term, t2 custom match_term) : term_scope.
+Notation "'match' tv 'with' t 'end'" :=
+  (TMatch tv t) (in custom term at level 69, tv custom term, t custom match_term) : term_scope.
 
 Notation "'let' f p1 .. pn := t1 'in' t2" :=
   (TLet f (TVFun p1 .. (TVFun pn t1) ..) t2) (in custom term at level 69,

@@ -38,14 +38,14 @@ Example breadth_it_dcont :=
        prompt0 ("k" (); Inl ()) }>.
 
 Example breadth_it_effect :=
-  <{ fun "t" =>
+  <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
        let "f" "args" := perform `"Yield" "args" in
        let "k" := "DelayedTree".`"fold" `((), "f", "t") in
-       let fix "go" "k" _ :=
+       let fix "go" "k" :=
          shallow handle ("k" (); Inl ());;;
          (fun (`"Yield" `("x", "t1", "t2")) "k" =>
-            let "it" := "go" (fun _ => "k" (); "t1" (); "t2" (); Inl ()) in
+            let "it" _ := "go" (fun _ => "k" (); "t1" (); "t2" (); Inl ()) in
             Inr ("x", "it"))
        in
        "go" "k" }>.
@@ -79,7 +79,7 @@ Time Compute (eval_it_prod_int_int breadth_it_effect 23 10 stern_brocot).
 Time Compute (eval_it_prod_int_int depth_it_dcont 17 10 stern_brocot).
 Time Compute (eval_it_prod_int_int depth_it_effect 17 10 stern_brocot).
 
-Time Compute (eval_it_int breadth_it_dcont 23 20 (level 4)).
-Time Compute (eval_it_int breadth_it_effect 23 20 (level 4)).
-Time Compute (eval_it_int depth_it_dcont 23 20 (level 4)).
-Time Compute (eval_it_int depth_it_effect 23 20 (level 4)).
+Time Compute (eval_it_int breadth_it_dcont 40 20 (level 4)).
+Time Compute (eval_it_int breadth_it_effect 40 20 (level 4)).
+Time Compute (eval_it_int depth_it_dcont 40 20 (level 4)).
+Time Compute (eval_it_int depth_it_effect 40 20 (level 4)).

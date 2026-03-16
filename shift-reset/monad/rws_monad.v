@@ -12,6 +12,16 @@ Definition map {R W S A B} (f : A -> B) (m : rws_monad R W S A) : rws_monad R W 
 Definition mapl {R W S A B} (x : B) (m : rws_monad R W S A) : rws_monad R W S B :=
   RWSMonad (fun r s => let '(_, w, s) := run_rws_monad m r s in (x, w, s)).
 
+Module RWSMonadNotations.
+  Declare Scope rws_monad_scope.
+  Delimit Scope rws_monad_scope with rws_monad.
+  Bind Scope rws_monad_scope with rws_monad.
+
+  Notation "f <$> m" := (map f m) (at level 65, right associativity) : rws_monad_scope.
+  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : rws_monad_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : rws_monad_scope.
+End RWSMonadNotations.
+
 Module Make (M : Monoid).
   Definition w : Type := M.t.
   Definition t (R : Type) : Type -> Type -> Type := rws_monad R w.
@@ -54,6 +64,15 @@ Module Make (M : Monoid).
 
   Definition modify {R S} (f : S -> S) : rws_monad R w S unit :=
     RWSMonad (fun _ s => (tt, M.empty, f s)).
+
+  Module Notations.
+    Import RWSMonadNotations.
+    Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : rws_monad_scope.
+    Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : rws_monad_scope.
+    Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : rws_monad_scope.
+    Notation "m >>= f" := (bind m f) (at level 50, left associativity) : rws_monad_scope.
+    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : rws_monad_scope.
+  End Notations.
 End Make.
 
 Definition local {R W S A} (f : R -> R) (m : rws_monad R W S A) : rws_monad R W S A :=

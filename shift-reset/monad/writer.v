@@ -12,6 +12,16 @@ Definition map {W A B} (f : A -> B) (m : writer W A) : writer W B :=
 Definition mapl {W A B} (x : B) (m : writer W A) : writer W B :=
   Writer (let (_, w) := run_writer m in (x, w)).
 
+Module WriterNotations.
+  Declare Scope writer_scope.
+  Delimit Scope writer_scope with writer.
+  Bind Scope writer_scope with writer.
+
+  Notation "f <$> m" := (map f m) (at level 65, right associativity) : writer_scope.
+  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : writer_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : writer_scope.
+End WriterNotations.
+
 Module Make (M : Monoid).
   Definition w : Type := M.t.
   Definition t : Type -> Type := writer w.
@@ -33,6 +43,15 @@ Module Make (M : Monoid).
 
   Definition join {A} (m : writer w (writer w A)) : writer w A :=
     Writer (let (m, w1) := run_writer m in let (x, w2) := run_writer m in (x, M.append w1 w2)).
+
+  Module Notations.
+    Import WriterNotations.
+    Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : writer_scope.
+    Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : writer_scope.
+    Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : writer_scope.
+    Notation "m >>= f" := (bind m f) (at level 50, left associativity) : writer_scope.
+    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : writer_scope.
+  End Notations.
 End Make.
 
 Definition tell {W} (w : W) : writer W unit :=

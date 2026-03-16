@@ -45,7 +45,6 @@ Module Make (M : Monoid).
     Writer (let (m, w1) := run_writer m in let (x, w2) := run_writer m in (x, M.append w1 w2)).
 
   Module Notations.
-    Import WriterNotations.
     Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : writer_scope.
     Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : writer_scope.
     Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : writer_scope.

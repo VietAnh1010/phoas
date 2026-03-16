@@ -66,7 +66,6 @@ Module Make (M : Monoid).
     RWSMonad (fun _ s => (tt, M.empty, f s)).
 
   Module Notations.
-    Import RWSMonadNotations.
     Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : rws_monad_scope.
     Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : rws_monad_scope.
     Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : rws_monad_scope.

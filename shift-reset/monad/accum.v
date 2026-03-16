@@ -1,4 +1,4 @@
-From shift_reset.lib Require Import monoid_sig.
+From shift_reset.lib Require Import signatures.
 
 Record accum (W A : Type) : Type := Accum { run_accum : W -> A * W }.
 Definition t : Type -> Type -> Type := accum.

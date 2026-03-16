@@ -1,4 +1,4 @@
-From shift_reset.lib Require Import monoid_sig.
+From shift_reset.lib Require Import signatures.
 
 Record rws_monad (R W S A : Type) : Type := RWSMonad { run_rws_monad : R -> S -> A * W * S }.
 Definition t : Type -> Type -> Type -> Type -> Type := rws_monad.

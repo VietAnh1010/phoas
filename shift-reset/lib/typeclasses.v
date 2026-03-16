@@ -77,6 +77,27 @@ Class Pass (W : Type) (M : Type -> Type) : Type :=
 Class Writer (W : Type) (M : Type -> Type) : Type :=
   writer : forall {A}, A * W -> M A.
 
+(** class Monad m => MonadCont m where *)
+
+Class CallCC (M : Type -> Type) : Type :=
+  callcc : forall {A B}, ((A -> M B) -> M A) -> M A.
+
+(** class Monad m => MonadSelect r m where *)
+
+Class Select (R : Type) (M : Type -> Type) : Type :=
+  select : forall {A}, ((A -> R) -> A) -> M A.
+
+(** class (Monoid w, Monad m) => MonadAccum w m where *)
+
+Class Look (W : Type) (M : Type -> Type) : Type :=
+  look : M W.
+
+Class Add (W : Type) (M : Type -> Type) : Type :=
+  add : W -> M unit.
+
+Class Accum (W : Type) (M : Type -> Type) : Type :=
+  accum : forall {A}, (W -> A * W) -> M A.
+
 (** Derived functions, and notations *)
 
 Declare Scope monad_scope.

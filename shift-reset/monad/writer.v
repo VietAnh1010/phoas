@@ -1,4 +1,4 @@
-From shift_reset.lib Require Import monoid_sig.
+From shift_reset.lib Require Import signatures.
 
 Record writer (W A : Type) : Type := Writer { run_writer : A * W }.
 Definition t : Type -> Type -> Type := writer.

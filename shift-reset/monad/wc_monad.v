@@ -62,6 +62,9 @@ End Make.
 Definition tell {W R} (w : W) : wc_monad W R unit :=
   WCMonad (fun k => k tt w).
 
+Definition writer {W R A} (m : A * W) : wc_monad W R A :=
+  WCMonad (fun k => let (x, w) := m in k x w).
+
 Definition listen {W R A} (m : wc_monad W R A) : wc_monad W R (A * W) :=
   WCMonad (fun k => run_wc_monad m (fun x w => k (x, w) w)).
 

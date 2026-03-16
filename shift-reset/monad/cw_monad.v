@@ -49,6 +49,9 @@ Module Make (M : Monoid).
 
   Definition tell {R} (w' : w) : cw_monad R w unit :=
     CWMonad (fun k => let (x, w'') := k tt in (x, M.append w' w'')).
+
+  Definition writer {R A} (m : A * w) : cw_monad R w A :=
+    CWMonad (fun k => let (x, w1) := m in let (y, w2) := k x in (y, M.append w1 w2)).
 End Make.
 
 Definition map_cont {R W A} (f : R -> R) (m : cw_monad R W A) : cw_monad R W A :=

@@ -3,33 +3,37 @@ From shift_reset.core Require Import syntax syntax_notation coerce val.
 From examples Require Import common.
 Import ListNotations.
 
-Open Scope Z_scope.
-Open Scope string_scope.
-Open Scope term_scope.
+Local Open Scope Z_scope.
+Local Open Scope string_scope.
+Local Open Scope term_scope.
 
 Example prefixes_cont :=
   <{ fun "xs" =>
        let fix "go" ("xs", "k") :=
-         Inr (
-             by "k" (Inl ()),
-             by (match "xs" with
-                 | Inl _ => Inl ()
-                 | Inr ("x", "xs'") => "go" ("xs'", fun "t" => "k" (Inr ("x", "t")))
-                 end))
+         let "p" := "k" (Inl ()) in
+         let "ps" :=
+           match "xs" with
+           | Inl _ => Inl ()
+           | Inr ("x", "xs'") => "go" ("xs'", fun "r" => "k" (Inr ("x", "r")))
+           end
+         in
+         Inr ("p", "ps")
        in
-       "go" ("xs", fun "t" => "t") }>.
+       "go" ("xs", fun "r" => "r") }>.
 
 Example prefixes_dcont :=
   <{ fun "xs" =>
        let fix "go" "xs" :=
          control0
            (fun "k" =>
-              Inr (
-                  by "k" (Inl ()),
-                  by (match "xs" with
-                      | Inl _ => Inl ()
-                      | Inr ("x", "xs'") => prompt0 let "t" := "go" "xs'" in "k" (Inr ("x", "t"))
-                      end)))
+              let "p" := "k" (Inl ()) in
+              let "ps" :=
+                match "xs" with
+                | Inl _ => Inl ()
+                | Inr ("x", "xs'") => prompt0 let "r" := "go" "xs'" in "k" (Inr ("x", "r"))
+                end
+              in
+              Inr ("p", "ps"))
        in
        prompt0 "go" "xs" }>.
 

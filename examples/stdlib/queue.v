@@ -1,60 +1,46 @@
-From Stdlib Require Import String.
+From Stdlib Require Import String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 
-Open Scope string_scope.
-Open Scope term_scope.
+Local Open Scope Z_scope.
+Local Open Scope string_scope.
+Local Open Scope term_scope.
 
-(** Require Lazy. *)
-Example PersistentQueue :=
-  <{ let "empty" :=
-       let "f" := "Lazy".`"pure" (Inl ()) in
-       `("f", Inl (), "f")
+Example Queue :=
+  <{ let "create" _ :=
+       let "q" := `{"length" := ref 0; "head" := ref (); "tail" := ref ()} in
+       let _ := "q".`"tail" <- "q".`"head" in
+       "q"
      in
-     let "is_empty" `("f", _, _) :=
-       match by "Lazy".`"get" "f" with
-       | Inl _ => true
-       | Inr _ => false
-       end
+     let "is_empty" "q" := !"q".`"length" = 0 in
+     let "push" ("x", "q") :=
+       let "node" := `{"content" := "x"; "next" := ref ()} in
+       let _ := "q".`"length" <- !"q".`"length" + 1 in
+       let _ := !"q".`"tail" <- "node" in
+       "q".`"tail" <- "node".`"next"
      in
-     let fix "rotate" `("f", Inr ("y", "r"), "s") :=
-       let "s" := "Lazy".`"pure" (Inr ("y", "s")) in
-       match by "Lazy".`"get" "f" with
-       | Inl _ => "s"
-       | Inr ("x", "f") => "Lazy".`"make" (fun _ => Inr ("x", by "rotate" `("f", "r", "s")))
-       end
+     let "pop" "q" :=
+       if !"q".`"length" = 0 then raise `"Empty" ()
+       else
+         let "node" := !"q".`"head" in
+         "q".`"length" <- !"q".`"length" - 1;
+         "q".`"head" <- !"node".`"next";
+         if !"q".`"length" = 0 then "q".`"tail" <- "q".`"head" else ();
+         "node".`"content"
      in
-     let "exec" `("f", "r", "s") :=
-       match by "Lazy".`"get" "s" with
-       | Inl _ =>
-           let "f" := "rotate" "q" in
-           `("f", Inl (), "f")
-       | Inr "p" => `("f", "r", snd "p")
-       end
+     let "peek" "q" :=
+       if !"q".`"length" = 0 then raise `"Empty" ()
+       else !"q".`"head".`"content"
      in
-     let "snoc" (`("f", "r", "s"), "x") :=
-       "exec" `("f", Inr ("x", "r"), "s")
+     let "length" "q" := !"q".`"length" in
+     let "clear" "q" :=
+       let _ := "q".`"length" <- 0 in
+       let _ := "q".`"head" <- () in
+       "q".`"tail" <- "q".`"head"
      in
-     let "head" `("f", _, _) :=
-       match by "Lazy".`"get" "f" with
-       | Inl _ => raise `"Empty" ()
-       | Inr "p" => fst "p"
-       end
-     in
-     let "tail" `("f", "r", "s") :=
-       match by "Lazy".`"get" "f" with
-       | Inl _ => raise `"Empty" ()
-       | Inr "p" => "exec" `(snd "p", "r", "s")
-       end
-     in
-     let "uncons" `("f", "r", "s") :=
-       match by "Lazy".`"get" "f" with
-       | Inl _ => raise `"Empty" ()
-       | Inr ("x", "f") => ("x", by "exec" `("f", "r", "s"))
-       end
-     in
-     `{ "empty"
+     `{ "create"
       ; "is_empty"
-      ; "snoc"
-      ; "head"
-      ; "tail"
-      ; "uncons" } }>.
+      ; "push"
+      ; "pop"
+      ; "peek"
+      ; "length"
+      ; "clear" } }>.

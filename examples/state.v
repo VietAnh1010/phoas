@@ -2,17 +2,15 @@ From Stdlib Require Import String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
 
-Open Scope Z_scope.
-Open Scope string_scope.
-Open Scope term_scope.
+Local Open Scope Z_scope.
+Local Open Scope string_scope.
+Local Open Scope term_scope.
 
-Example get := <{ fun _ => shift (fun "k" => fun "s" => let "k" := "k" "s" in "k" "s") }>.
-Example put := <{ fun "s" => shift (fun "k" => fun _ => let "k" := "k" () in "k" "s") }>.
+Example get := <{ fun _ => shift (fun "k" => fun "s" => (by "k" "s") "s") }>.
+Example put := <{ fun "s" => shift (fun "k" => fun _ => (by "k" ()) "s") }>.
 
 Example eval_state :=
-  <{ fun ("m", "s") =>
-       let "k" := reset (let "v" := "m" () in fun "s" => ("v", "s")) in
-       "k" "s" }>.
+  <{ fun ("m", "s") => (by reset let "v" := "m" () in fun "s" => ("v", "s")) "s" }>.
 
 Example ex1 :=
   <{ fun _ =>

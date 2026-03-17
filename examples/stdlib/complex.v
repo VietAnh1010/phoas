@@ -1,8 +1,8 @@
 From Stdlib Require Import String.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 
-Open Scope string_scope.
-Open Scope term_scope.
+Local Open Scope string_scope.
+Local Open Scope term_scope.
 
 Example Complex :=
   <{ let "neg" `{"re"; "im"} := `{"re" := -"re"; "im" := -"im"} in

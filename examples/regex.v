@@ -4,9 +4,9 @@ From shift_reset.interpreter Require Import interpreter.
 From examples Require Import common.
 Import ListNotations.
 
-Open Scope Z_scope.
-Open Scope string_scope.
-Open Scope term_scope.
+Local Open Scope Z_scope.
+Local Open Scope string_scope.
+Local Open Scope term_scope.
 
 Example fail :=
   <{ fun _ => shift0 (fun _ => {TVString "no"}) }>.

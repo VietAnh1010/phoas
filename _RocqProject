@@ -4,6 +4,7 @@
 -Q shift-reset/interpreter shift_reset.interpreter
 -Q examples examples
 -Q examples/stdlib examples.stdlib
+-Q proofs proofs
 
 -docroot shift_reset
 
@@ -13,3 +14,4 @@ shift-reset/monad
 shift-reset/interpreter
 examples/common.v
 examples/stdlib
+proofs

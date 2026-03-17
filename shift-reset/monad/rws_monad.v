@@ -110,8 +110,8 @@ Definition with_state {R W S A} (f : S -> S) (m : rws_monad R W S A) : rws_monad
 Definition map_writer {R W W' S A B} (f : A * W -> B * W') (m : rws_monad R W S A) : rws_monad R W' S B :=
   RWSMonad (fun r s => let (m, w) := run_rws_monad m r s in (f m, s)).
 
-Definition map_rws {R W W' S A B} (f : A * W * S -> B * W' * S) (m : rws_monad R W S A) : rws_monad R W' S B :=
+Definition map_rws_monad {R W W' S A B} (f : A * W * S -> B * W' * S) (m : rws_monad R W S A) : rws_monad R W' S B :=
   RWSMonad (fun r s => f (run_rws_monad m r s)).
 
-Definition with_rws {R' R W S A} (f : R' -> S -> R * S) (m : rws_monad R W S A) : rws_monad R' W S A :=
+Definition with_rws_monad {R' R W S A} (f : R' -> S -> R * S) (m : rws_monad R W S A) : rws_monad R' W S A :=
   RWSMonad (fun r s => let (r, s) := f r s in run_rws_monad m r s).

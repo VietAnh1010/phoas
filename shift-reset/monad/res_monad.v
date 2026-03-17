@@ -162,10 +162,10 @@ Definition with_except {R E E' S A} (f : E -> E') (m : res_monad R E S A) : res_
        | inr x => (inr x, s)
        end).
 
-Definition map_res {R E E' S A B} (f : (E + A) * S -> (E' + B) * S) (m : res_monad R E S A) : res_monad R E' S B :=
+Definition map_res_monad {R E E' S A B} (f : (E + A) * S -> (E' + B) * S) (m : res_monad R E S A) : res_monad R E' S B :=
   RESMonad (fun r s => f (run_res_monad m r s)).
 
-Definition with_res {R' R E S A} (f : R' -> S -> R * S) (m : res_monad R E S A) : res_monad R' E S A :=
+Definition with_res_monad {R' R E S A} (f : R' -> S -> R * S) (m : res_monad R E S A) : res_monad R' E S A :=
   RESMonad (fun r s => let (r, s) := f r s in run_res_monad m r s).
 
 Module RESMonadNotations.

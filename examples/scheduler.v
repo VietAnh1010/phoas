@@ -21,7 +21,9 @@ Example run :=
          else (by "Queue".`"pop" "q") ()
        in
        let fix "go" "f" :=
-         handle try "k" ();; (fun _ => "deq" ());;;
+         handle
+           (let _ := try "f" ();; (fun _ => ()) in
+            "deq" ());;;
          (fun (`"Yield" _) "k" => "enq" "k"; "deq" ());
          (fun (`"Fork" "f") "k" => "enq" "k"; "go" "f")
        in

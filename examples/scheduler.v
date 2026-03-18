@@ -1,6 +1,7 @@
 From Stdlib Require Import List String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce val.
 From examples Require Import common.
+From examples.stdlib Require Import queue.
 Import ListNotations.
 
 Open Scope Z_scope.
@@ -12,9 +13,13 @@ Example yield := <{ fun _ => perform `"Yield" () }>.
 
 Example run :=
   <{ fun "f" =>
-       let "q" := () in
-       let "enq" "k" := () in
-       let "deq" _ := () in
+       let "Queue" := Queue in
+       let "q" := "Queue".`"create" () in
+       let "enq" "k" := "Queue".`"push" ("k", "q") in
+       let "deq" _ :=
+         if by "Queue".`"is_empty" "q" then ()
+         else (by "Queue".`"pop" "q") ()
+       in
        let fix "go" "f" :=
          handle try "k" ();; (fun _ => "deq" ());;;
          (fun (`"Yield" _) "k" => "enq" "k"; "deq" ());

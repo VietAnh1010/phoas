@@ -34,19 +34,19 @@ Example PersistentQueue :=
      let "snoc" (`("f", "r", "s"), "x") :=
        "exec" `("f", Inr ("x", "r"), "s")
      in
-     let "head" `("f", _, _) :=
+     let "ne_head" `("f", _, _) :=
        match by "Lazy".`"get" "f" with
        | Inl _ => raise `"Empty" ()
-       | Inr "p" => fst "p"
+       | Inr ("x", _) => "x"
        end
      in
-     let "tail" `("f", "r", "s") :=
+     let "ne_tail" `("f", "r", "s") :=
        match by "Lazy".`"get" "f" with
        | Inl _ => raise `"Empty" ()
-       | Inr "p" => "exec" `(snd "p", "r", "s")
+       | Inr (_, "f") => "exec" `("f", "r", "s")
        end
      in
-     let "uncons" `("f", "r", "s") :=
+     let "ne_uncons" `("f", "r", "s") :=
        match by "Lazy".`"get" "f" with
        | Inl _ => raise `"Empty" ()
        | Inr ("x", "f") => ("x", by "exec" `("f", "r", "s"))
@@ -55,6 +55,6 @@ Example PersistentQueue :=
      `{ "empty"
       ; "is_empty"
       ; "snoc"
-      ; "head"
-      ; "tail"
-      ; "uncons" } }>.
+      ; "ne_head"
+      ; "ne_tail"
+      ; "ne_uncons" } }>.

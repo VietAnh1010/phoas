@@ -14,13 +14,13 @@ Example List :=
      let "ne_head" "xs" :=
        match "xs" with
        | Inl _ => raise `"Empty" ()
-       | Inr "p" => fst "p"
+       | Inr ("x", _) => "x"
        end
      in
      let "ne_tail" "xs" :=
        match "xs" with
        | Inl _ => raise `"Empty" ()
-       | Inr "p" => snd "p"
+       | Inr (_, "xs'") => "xs'"
        end
      in
      let "ne_uncons" "xs" :=

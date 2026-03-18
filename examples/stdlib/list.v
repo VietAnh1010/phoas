@@ -38,8 +38,45 @@ Example List :=
        in
        "go" "xs"
      in
+     let "foldr" `("f", "z", "xs") :=
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => "z"
+         | Inr ("x", "xs'") =>
+             let "r" := "go" "xs'" in
+             "f" ("x", "r")
+         end
+       in
+       "go" "xs"
+     in
+     let "foldl" `("f", "z", "xs") :=
+       let fix "go" ("z", "xs") :=
+         match "xs" with
+         | Inl _ => "z"
+         | Inr ("x", "xs'") =>
+             let "z'" := "f" ("z", "x") in
+             "go" ("z'", "xs'")
+         end
+       in
+       "go" ("z", "xs")
+     in
+     let "map" ("f", "xs") :=
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => Inl ()
+         | Inr ("x", "xs'") =>
+             let "y" := "f" "x" in
+             let "r" := "go" "xs'" in
+             Inr ("y", "r")
+         end
+       in
+       "go" "xs"
+     in
      `{ "is_empty"
       ; "ne_head"
       ; "ne_tail"
       ; "ne_uncons"
-      ; "iter" } }>.
+      ; "iter"
+      ; "foldr"
+      ; "foldl"
+      ; "map" } }>.

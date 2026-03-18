@@ -42,14 +42,7 @@ Example reverse_dcont :=
        prompt "go" "xs" }>.
 
 Example reverse :=
-  <{ fun "xs" =>
-       let fix "go" ("xs", "acc") :=
-         match "xs" with
-         | Inl _ => "acc"
-         | Inr ("x", "xs'") => "go" ("xs'", Inr ("x", "acc"))
-         end
-       in
-       "go" ("xs", Inl ()) }>.
+  <{ (by List).`"reverse" }>.
 
 Example reverse_while :=
   <{ fun "xs" =>

@@ -1,7 +1,7 @@
 From Stdlib Require Import List String ZArith.
 From shift_reset.core Require Import syntax syntax_notation coerce val.
 From examples Require Import common.
-From examples.stdlib Require Import delayed_list delayed_tree.
+From examples.stdlib Require Import delayed_list delayed_tree queue stack.
 Import ListNotations.
 
 Local Open Scope Z_scope.
@@ -28,20 +28,39 @@ Example level :=
   in
   go 0.
 
+Example breadth_it_queue :=
+  <{ fun "t" _ =>
+       let "Queue" := Queue in
+       let "q" := "Queue".`"create" () in
+       let _ := "Queue".`"push" ("t", "q") in
+       let fix "go" _ :=
+         if by "Queue".`"is_empty" "q" then Inl ()
+         else
+           let "t" := (by "Queue".`"pop" "q") () in
+           match "t" with
+           | Inl _ => "go" ()
+           | Inr `("x", "t1", "t2") =>
+               let _ := "Queue".`"push" ("t1", "q") in
+               let _ := "Queue".`"push" ("t2", "q") in
+               Inr ("x", "go")
+           end
+       in
+       "go" () }>.
+
 Example breadth_it_dcont :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
        let "f" `("x", "t1", "t2") :=
          control0 (fun "k" => Inr ("x", fun _ => prompt0 ("k" (); "t1" (); "t2" (); Inl ())))
        in
-       let "k" := "DelayedTree".`"fold" `((), "f", "t") in
+       let "k" := "DelayedTree".`"fold" `("f", (), "t") in
        prompt0 ("k" (); Inl ()) }>.
 
 Example breadth_it_effect :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
        let "f" "args" := perform `"Yield" "args" in
-       let "k" := "DelayedTree".`"fold" `((), "f", "t") in
+       let "k" := "DelayedTree".`"fold" `("f", (), "t") in
        let fix "go" "k" :=
          shallow handle ("k" (); Inl ());;;
          (fun (`"Yield" `("x", "t1", "t2")) "k" =>
@@ -49,6 +68,25 @@ Example breadth_it_effect :=
             Inr ("x", "it"))
        in
        "go" "k" }>.
+
+Example depth_it_stack :=
+  <{ fun "t" _ =>
+       let "Stack" := Stack in
+       let "s" := "Stack".`"create" () in
+       let _ := "Stack".`"push" ("t", "s") in
+       let fix "go" _ :=
+         if by "Stack".`"is_empty" "s" then Inl ()
+         else
+           let "t" := (by "Stack".`"pop" "s") () in
+           match "t" with
+           | Inl _ => "go" ()
+           | Inr `("x", "t1", "t2") =>
+               let _ := "Stack".`"push" ("t2", "s") in
+               let _ := "Stack".`"push" ("t1", "s") in
+               Inr ("x", "go")
+           end
+       in
+       "go" () }>.
 
 Example depth_it_dcont :=
   <{ fun "t" _ =>
@@ -74,12 +112,16 @@ Definition eval_it {A} (f : val -> option A) (candidate : val_term) (fuel : nat)
 Definition eval_it_int := eval_it val_to_int.
 Definition eval_it_prod_int_int := eval_it val_to_prod_int_int.
 
+Time Compute (eval_it_prod_int_int breadth_it_queue 17 10 stern_brocot).
 Time Compute (eval_it_prod_int_int breadth_it_dcont 17 10 stern_brocot).
 Time Compute (eval_it_prod_int_int breadth_it_effect 23 10 stern_brocot).
+Time Compute (eval_it_prod_int_int depth_it_stack 17 10 stern_brocot).
 Time Compute (eval_it_prod_int_int depth_it_dcont 17 10 stern_brocot).
 Time Compute (eval_it_prod_int_int depth_it_effect 17 10 stern_brocot).
 
+Time Compute (eval_it_int breadth_it_queue 40 20 (level 4)).
 Time Compute (eval_it_int breadth_it_dcont 40 20 (level 4)).
 Time Compute (eval_it_int breadth_it_effect 40 20 (level 4)).
+Time Compute (eval_it_int depth_it_stack 40 20 (level 4)).
 Time Compute (eval_it_int depth_it_dcont 40 20 (level 4)).
 Time Compute (eval_it_int depth_it_effect 40 20 (level 4)).

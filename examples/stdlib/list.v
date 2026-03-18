@@ -50,12 +50,12 @@ Example List :=
        "go" "xs"
      in
      let "foldl" `("f", "z", "xs") :=
-       let fix "go" ("z", "xs") :=
+       let fix "go" ("acc", "xs") :=
          match "xs" with
          | Inl _ => "z"
          | Inr ("x", "xs'") =>
-             let "z'" := "f" ("z", "x") in
-             "go" ("z'", "xs'")
+             let "acc'" := "f" ("acc", "x") in
+             "go" ("acc'", "xs'")
          end
        in
        "go" ("z", "xs")
@@ -72,6 +72,54 @@ Example List :=
        in
        "go" "xs"
      in
+     let "filter" ("f", "xs") :=
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => Inl ()
+         | Inr ("x", "xs'") =>
+             let "b" := "f" "x" in
+             if "b" then
+               let "r" := "go" "xs'" in
+               Inr ("x", "r")
+             else "go" "xs'"
+         end
+       in
+       "go" "xs"
+     in
+     let "filter_map" ("f", "xs") :=
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => Inl ()
+         | Inr ("x", "xs'") =>
+             let "o" := "f" "x" in
+             match "o" with
+             | Inl _ => "go" "xs'"
+             | Inr "y" =>
+                 let "r" := "go" "xs'" in
+                 Inr ("y", "r")
+             end
+         end
+       in
+       "go" "xs"
+     in
+     let "append" ("xs", "ys") :=
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => "ys"
+         | Inr ("x", "xs'") => Inr ("x", by "go" "xs'")
+         end
+       in
+       "go" "xs"
+     in
+     let "reverse" "xs" :=
+       let fix "go" ("acc", "xs") :=
+         match "xs" with
+         | Inl _ => "acc"
+         | Inr ("x", "xs'") => "go" (Inr ("x", "acc"), "xs'")
+         end
+       in
+       "go" (Inl (), "xs")
+     in
      `{ "is_empty"
       ; "ne_head"
       ; "ne_tail"
@@ -79,4 +127,8 @@ Example List :=
       ; "iter"
       ; "foldr"
       ; "foldl"
-      ; "map" } }>.
+      ; "map"
+      ; "filter"
+      ; "filter_map"
+      ; "append"
+      ; "reverse" } }>.

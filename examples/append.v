@@ -3,6 +3,7 @@ From shift_reset.lib Require sum.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 From shift_reset.interpreter Require Import interpreter.
 From examples Require Import common.
+From examples.stdlib Require Import list.
 Import ListNotations.
 
 Local Open Scope Z_scope.
@@ -25,14 +26,7 @@ Example append_dcont :=
   <{ fun ("xs", "ys") => (by append_dcont_aux "xs") "ys" }>.
 
 Example append :=
-  <{ fun ("xs", "ys") =>
-       let fix "go" "xs" :=
-         match "xs" with
-         | Inl _ => "ys"
-         | Inr ("x", "xs'") => Inr ("x", by "go" "xs'")
-         end
-       in
-       "go" "xs" }>.
+  <{ (by List).`"append" }>.
 
 Definition eval_append (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
   eval_term_to_list_int fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.

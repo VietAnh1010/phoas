@@ -24,11 +24,6 @@ Example Array :=
        in
        "r"
      in
-     let "map_inplace" ("f", "a") :=
-       for "i" from 0 upto ({TVBuiltin1 "array_length" "a"} - 1) do
-         let "x" := "f" "a".["i"] in
-         "a".["i"] <- "x"
-     in
      let "mapi" ("f", "a") :=
        let "l" := {TVBuiltin1 "array_length" "a"} in
        let "r" := {TVBuiltin2 "array_make" "l" <{ () }>} in
@@ -39,8 +34,19 @@ Example Array :=
        in
        "r"
      in
+     let "map_inplace" ("f", "a") :=
+       for "i" from 0 upto ({TVBuiltin1 "array_length" "a"} - 1) do
+         let "x" := "f" "a".["i"] in
+         "a".["i"] <- "x"
+     in
+     let "mapi_inplace" ("f", "a") :=
+       for "i" from 0 upto ({TVBuiltin1 "array_length" "a"} - 1) do
+         let "x" := "f" ("i", "a".["i"]) in
+         "a".["i"] <- "x"
+     in
      `{ "iter"
       ; "iteri"
       ; "map"
+      ; "mapi"
       ; "map_inplace"
-      ; "mapi" } }>.
+      ; "mapi_inplace" } }>.

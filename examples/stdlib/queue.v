@@ -7,35 +7,60 @@ Local Open Scope term_scope.
 
 Example Queue :=
   <{ let "create" _ :=
-       let "q" := `{"length" := ref 0; "head" := ref (); "tail" := ref ()} in
-       let _ := "q".`"tail" <- "q".`"head" in
-       "q"
+       let "first" := ref (Inl ()) in
+       `{"length" := ref 0; "first"; "last" := ref "first"}
      in
      let "is_empty" "q" := !"q".`"length" = 0 in
      let "push" ("x", "q") :=
-       let "node" := `{"content" := "x"; "next" := ref ()} in
        let _ := "q".`"length" <- !"q".`"length" + 1 in
-       let _ := !"q".`"tail" <- "node" in
-       "q".`"tail" <- "node".`"next"
+       let "next" := ref (Inl ()) in
+       let _ := !"q".`"last" <- Inr `{"content" := "x"; "next"} in
+       "q".`"last" <- "next"
      in
      let "pop" "q" :=
-       if !"q".`"length" = 0 then raise `"Empty" ()
-       else
-         let "node" := !"q".`"head" in
-         "q".`"length" <- !"q".`"length" - 1;
-         "q".`"head" <- !"node".`"next";
-         if !"q".`"length" = 0 then "q".`"tail" <- "q".`"head" else ();
-         "node".`"content"
+       match !"q".`"first" with
+       | Inl _ => raise `"Empty" ()
+       | Inr `{"content"; "next"} =>
+           let _ := "q".`"length" <- !"q".`"length" - 1 in
+           let "cell" := !"next" in
+           let _ := "q".`"first" <- "cell" in
+           let _ := if "cell" = Inl () then "q".`"last" <- "q".`"first" else () in
+           "content"
+       end
      in
      let "peek" "q" :=
-       if !"q".`"length" = 0 then raise `"Empty" ()
-       else !"q".`"head".`"content"
+       match !"q".`"first" with
+       | Inl _ => raise `"Empty" ()
+       | Inr `{"content"; .._} => "content"
+       end
      in
      let "length" "q" := !"q".`"length" in
      let "clear" "q" :=
        let _ := "q".`"length" <- 0 in
-       let _ := "q".`"head" <- () in
-       "q".`"tail" <- "q".`"head"
+       let _ := "q".`"first" <- Inl () in
+       "q".`"last" <- "q".`"first"
+     in
+     let "copy" "q" :=
+       let "first" := ref (Inl ()) in
+       let fix "go" ("curr", "q_curr") :=
+         match !"q_curr" with
+         | Inl _ => `{"length" := ref !"q".`"length"; "first"; "last" := ref "curr"}
+         | Inr `{"content"; "next" := "q_next"} =>
+             let "next" := ref (Inl ()) in
+             let _ := "curr" <- Inr `{"content"; "next"} in
+             "go" ("next", "q_next")
+         end
+       in
+       "go" ("first", "q".`"first")
+     in
+     let "iter" ("f", "q") :=
+       let fix "go" "curr" :=
+         match !"curr" with
+         | Inl _ => ()
+         | Inr `{"content"; "next"} => "f" "content"; "go" "next"
+         end
+       in
+       "go" "q".`"first"
      in
      `{ "create"
       ; "is_empty"
@@ -43,4 +68,6 @@ Example Queue :=
       ; "pop"
       ; "peek"
       ; "length"
-      ; "clear" } }>.
+      ; "clear"
+      ; "copy"
+      ; "iter" } }>.

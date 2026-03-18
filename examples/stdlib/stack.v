@@ -34,6 +34,18 @@ Example Stack :=
        let _ := "s".`"length" <- 0 in
        "s".`"contents" <- Inl ()
      in
+     let "copy" "s" :=
+       `{"length" := ref !"s".`"length"; "contents" := ref !"s".`"contents"}
+     in
+     let "iter" ("f", "s") :=
+       let fix "go" "xs" :=
+         match "xs" with
+         | Inl _ => ()
+         | Inr ("x", "xs'") => "f" "x"; "go" "xs'"
+         end
+       in
+       "go" !"s".`"contents"
+     in
      `{ "create"
       ; "is_empty"
       ; "push"

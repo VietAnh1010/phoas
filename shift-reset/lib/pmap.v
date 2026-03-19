@@ -54,6 +54,12 @@ Definition ne_case {A B} (t : pmap_ne A) (f : pmap A -> option A -> pmap A -> B)
 
 Definition empty {A} : pmap A := PEmpty.
 
+Definition is_empty {A} (mt : pmap A) : bool :=
+  match mt with
+  | PEmpty => true
+  | PNodes _ => false
+  end.
+
 Fixpoint ne_find {A} (i : positive) (t : pmap_ne A) {struct t} : option A :=
   match t, i with
   | (PNode010 x | PNode011 x _ | PNode110 _ x | PNode111 _ x _), 1 => Some x
@@ -93,6 +99,20 @@ Definition ne_singleton {A} (i : positive) (x : A) : pmap_ne A :=
 
 Definition singleton {A} (i : positive) (x : A) : pmap A :=
   PNodes (ne_singleton i x).
+
+Fixpoint ne_is_singleton {A} (t : pmap_ne A) : bool :=
+  match t with
+  | PNode001 r => ne_is_singleton r
+  | PNode010 _ => true
+  | PNode100 l => ne_is_singleton l
+  | _ => false
+  end.
+
+Definition is_singleton {A} (mt : pmap A) : bool :=
+  match mt with
+  | PEmpty => false
+  | PNodes t => ne_is_singleton t
+  end.
 
 Definition ne_add {A} (i : positive) (x : A) : pmap_ne A -> pmap_ne A :=
   let fix go i t {struct t} :=
@@ -186,6 +206,25 @@ Definition map {A B} (f : A -> B) (mt : pmap A) : pmap B :=
   | PNodes t => PNodes (ne_map f t)
   end.
 
+Definition ne_mapi {A B} (f : positive -> A -> B) : pmap_ne A -> pmap_ne B :=
+  let fix go k t :=
+    match t with
+    | PNode001 r => PNode001 (go (fun i => k i~1) r)
+    | PNode010 x => PNode010 (f (k 1) x)
+    | PNode011 x r => PNode011 (f (k 1) x) (go (fun i => k i~1) r)
+    | PNode100 l => PNode100 (go (fun i => k i~0) l)
+    | PNode101 l r => PNode101 (go (fun i => k i~0) l) (go (fun i => k i~1) r)
+    | PNode110 l x => PNode110 (go (fun i => k i~0) l) (f (k 1) x)
+    | PNode111 l x r => PNode111 (go (fun i => k i~0) l) (f (k 1) x) (go (fun i => k i~1) r)
+    end
+  in go (fun i => i).
+
+Definition mapi {A B} (f : positive -> A -> B) (mt : pmap A) : pmap B :=
+  match mt with
+  | PEmpty => PEmpty
+  | PNodes t => PNodes (ne_mapi f t)
+  end.
+
 Definition filter_map_aux {A B} (go : pmap_ne A -> pmap B) (mt : pmap A) : pmap B :=
   match mt with
   | PEmpty => PEmpty
@@ -197,3 +236,31 @@ Definition ne_filter_map {A B} (f : A -> option B) : pmap_ne A -> pmap B :=
 
 Definition filter_map {A B} (f : A -> option B) : pmap A -> pmap B :=
   filter_map_aux (ne_filter_map f).
+
+Fixpoint ne_cardinal_acc {A} (t : pmap_ne A) (acc : nat) : nat :=
+  match t with
+  | PNode001 r => ne_cardinal_acc r acc
+  | PNode010 _ => S acc
+  | PNode011 _ r => S (ne_cardinal_acc r acc)
+  | PNode100 l => ne_cardinal_acc l acc
+  | PNode101 l r => ne_cardinal_acc l (ne_cardinal_acc r acc)
+  | PNode110 l _ => S (ne_cardinal_acc l acc)
+  | PNode111 l _ r => S (ne_cardinal_acc l (ne_cardinal_acc r acc))
+  end.
+
+Fixpoint ne_cardinal {A} (t : pmap_ne A) : nat :=
+  match t with
+  | PNode001 r => ne_cardinal r
+  | PNode010 _ => 1
+  | PNode011 _ r => S (ne_cardinal r)
+  | PNode100 l => ne_cardinal l
+  | PNode101 l r => ne_cardinal_acc l (ne_cardinal r)
+  | PNode110 l _ => S (ne_cardinal l)
+  | PNode111 l _ r => S (ne_cardinal_acc l (ne_cardinal r))
+  end.
+
+Definition cardinal {A} (mt : pmap A) : nat :=
+  match mt with
+  | PEmpty => 0
+  | PNodes t => ne_cardinal t
+  end.

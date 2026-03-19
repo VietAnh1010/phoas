@@ -162,24 +162,24 @@ Example Map :=
          "go" ("z", "m")
        in
        let "foldr" ("f", "z", "m") :=
-         let fix "go" ("acc", "m") :=
+         let fix "go" ("m", "acc") :=
            match "m" with
            | Inl _ => "acc"
            | Inr `("l", "k", "v", "r", _) =>
-               let "acc" := "go" ("acc", "r") in
+               let "acc" := "go" ("r", "acc") in
                let "acc" := "f" `("k", "v", "acc") in
-               "go" ("acc", "l")
+               "go" ("l", "acc")
            end
          in
-         "go" ("z", "m")
+         "go" ("m", "z")
        in
-       let fix "bindings_acc" ("acc", "m") :=
+       let fix "bindings_acc" ("m", "acc") :=
          match "m" with
          | Inl _ => "acc"
-         | Inr `("l", "k", "v", "r", _) => "bindings_acc" (Inr (("k", "v"), by "bindings_acc" ("acc", "r")), "l")
+         | Inr `("l", "k", "v", "r", _) => "bindings_acc" ("l", Inr (("k", "v"), by "bindings_acc" ("r", "acc")))
          end
        in
-       let "bindings" "m" := "bindings_acc" (Inl (), "m") in
+       let "bindings" "m" := "bindings_acc" ("m", Inl ()) in
        let fix "cardinal" "m" :=
          match "m" with
          | Inl _ => 0

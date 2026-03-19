@@ -143,6 +143,34 @@ Example Map :=
          in
          "go" "m"
        in
+       let fix "size" "m" :=
+         match "m" with
+         | Inl _ => 0
+         | Inr `("l", _, _, "r", _) => by "size" "l" + 1 + by "size" "r"
+         end
+       in
+       let "map" ("f", "m") :=
+         let fix "go" "m" :=
+           match "m" with
+           | Inl _ => Inl ()
+           | Inr `("l", "k", "v", "r", "h") =>
+               let "l'" := "go" "l" in
+               let "v'" := "f" "v" in
+               let "r'" := "go" "r" in
+               Inr `("l'", "k", "v'", "r'", "h")
+           end
+         in
+         "go" "m"
+       in
+       let "iter" ("f", "m") :=
+         let fix "go" "m" :=
+           match "m" with
+           | Inl _ => ()
+           | Inr `("l", _, "v", "r", _) => "go" "l"; "f" "v"; "go" "r"
+           end
+         in
+         "go" "m"
+       in
        `{ "empty"
         ; "is_empty"
         ; "member"
@@ -150,4 +178,7 @@ Example Map :=
         ; "singleton"
         ; "insert"
         ; "remove"
-        ; "min_binding_remove" } }>.
+        ; "min_binding_remove"
+        ; "size"
+        ; "map"
+        ; "iter" } }>.

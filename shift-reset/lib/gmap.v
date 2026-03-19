@@ -38,8 +38,8 @@ Module Make (K : IsoPositiveType).
   Definition insert {A} (k : key) (x : A) (mt : gmap key A) : gmap key A :=
     GMap (pmap.insert (K.encode k) x (gmap_car mt)).
 
-  Definition remove {A} (k : key) (mt : gmap key A) : gmap key A :=
-    GMap (pmap.remove (K.encode k) (gmap_car mt)).
+  Definition delete {A} (k : key) (mt : gmap key A) : gmap key A :=
+    GMap (pmap.delete (K.encode k) (gmap_car mt)).
 
   Definition alter {A} (f : option A -> option A) (k : key) (mt : gmap key A) : gmap key A :=
     GMap (pmap.alter f (K.encode k) (gmap_car mt)).

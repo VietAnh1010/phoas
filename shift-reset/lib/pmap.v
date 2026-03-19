@@ -148,22 +148,22 @@ Definition insert {A} (i : positive) (x : A) (mt : pmap A) : pmap A :=
   | PNodes t => PNodes (ne_insert i x t)
   end.
 
-Definition remove_aux {A} (go : positive -> pmap_ne A -> pmap A) (i : positive) (mt : pmap A) : pmap A :=
+Definition delete_aux {A} (go : positive -> pmap_ne A -> pmap A) (i : positive) (mt : pmap A) : pmap A :=
   match mt with
   | PEmpty => PEmpty
   | PNodes t => go i t
   end.
 
-Fixpoint ne_remove {A} (i : positive) (t : pmap_ne A) {struct t} : pmap A :=
+Fixpoint ne_delete {A} (i : positive) (t : pmap_ne A) {struct t} : pmap A :=
   pmap_ne_case t
     (fun ml mx mr => match i with
                      | 1 => PNode ml None mr
-                     | i~0 => PNode (remove_aux ne_remove i ml) mx mr
-                     | i~1 => PNode ml mx (remove_aux ne_remove i mr)
+                     | i~0 => PNode (delete_aux ne_delete i ml) mx mr
+                     | i~1 => PNode ml mx (delete_aux ne_delete i mr)
                      end).
 
-Definition remove {A} : positive -> pmap A -> pmap A :=
-  remove_aux ne_remove.
+Definition delete {A} : positive -> pmap A -> pmap A :=
+  delete_aux ne_delete.
 
 Definition alter_aux {A} (go : positive -> pmap_ne A -> pmap A) (f : option A -> option A) (i : positive) (mt : pmap A) : pmap A :=
   match mt with

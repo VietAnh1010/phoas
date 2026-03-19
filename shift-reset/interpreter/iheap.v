@@ -16,4 +16,4 @@ Definition iheap_write (l : loc) (v : val) (h : iheap) : option iheap :=
   let (m, l') := h in if LocMap.member l m then Some (IHeap (LocMap.insert l v m) l') else None.
 
 Definition iheap_dealloc (l : loc) (h : iheap) : option iheap :=
-  let (m, l') := h in if LocMap.member l m then Some (IHeap (LocMap.remove l m) l') else None.
+  let (m, l') := h in if LocMap.member l m then Some (IHeap (LocMap.delete l m) l') else None.

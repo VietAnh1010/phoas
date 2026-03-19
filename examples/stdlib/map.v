@@ -87,6 +87,12 @@ Example Map :=
            else "node" "args"
        in
        let "singleton" ("k", "v") := Inr `(Inl (), "k", "v", Inl (), 1) in
+       let "is_singleton" "m" :=
+         match "m" with
+         | Inr `(Inl _, _, _, Inl _, _) => true
+         | _ => false
+         end
+       in
        let "insert" `("k", "v", "m") :=
          let fix "go" "m" :=
            match "m" with
@@ -101,19 +107,19 @@ Example Map :=
          in
          "go" "m"
        in
-       let fix "min_binding_remove_aux" `("l", "k", "v", "r") :=
+       let fix "min_binding_delete_aux" `("l", "k", "v", "r") :=
          match "l" with
          | Inl _ => (("k", "v"), "r")
          | Inr `("ll", "lk", "lv", "lr", _) =>
-             let ("b", "l'") := "min_binding_remove_aux" `("ll", "lk", "lv", "lr") in
+             let ("b", "l'") := "min_binding_delete_aux" `("ll", "lk", "lv", "lr") in
              ("b", by "balance" `("l'", "k", "v", "r"))
          end
        in
-       let "min_binding_remove" "m" :=
+       let "min_binding_delete" "m" :=
          match "m" with
          | Inl _ => (Inl (), Inl ())
          | Inr `("l", "k", "v", "r", _) =>
-             let ("b", "m'") := "min_binding_remove_aux" `("l", "k", "v", "r") in
+             let ("b", "m'") := "min_binding_delete_aux" `("l", "k", "v", "r") in
              (Inr "b", "m'")
          end
        in
@@ -124,12 +130,12 @@ Example Map :=
              match "m2" with
              | Inl _ => "m1"
              | Inr `("l2", "k2", "v2", "r2", _) =>
-                 let (("k", "v"), "m2'") := "min_binding_remove_aux" `("l2", "k2", "v2", "r2") in
+                 let (("k", "v"), "m2'") := "min_binding_delete_aux" `("l2", "k2", "v2", "r2") in
                  "balance" `("m1", "k", "v", "m2'")
              end
          end
        in
-       let "remove" ("k", "m") :=
+       let "delete" ("k", "m") :=
          let fix "go" "m" :=
            match "m" with
            | Inl _ => Inl ()
@@ -143,6 +149,37 @@ Example Map :=
          in
          "go" "m"
        in
+       let "foldl" ("f", "z", "m") :=
+         let fix "go" ("acc", "m") :=
+           match "m" with
+           | Inl _ => "acc"
+           | Inr `("l", "k", "v", "r", _) =>
+               let "acc" := "go" ("acc", "l") in
+               let "acc" := "f" `("acc", "k", "v") in
+               "go" ("acc", "r")
+           end
+         in
+         "go" ("z", "m")
+       in
+       let "foldr" ("f", "z", "m") :=
+         let fix "go" ("acc", "m") :=
+           match "m" with
+           | Inl _ => "acc"
+           | Inr `("l", "k", "v", "r", _) =>
+               let "acc" := "go" ("acc", "r") in
+               let "acc" := "f" `("k", "v", "acc") in
+               "go" ("acc", "l")
+           end
+         in
+         "go" ("z", "m")
+       in
+       let fix "bindings_acc" ("acc", "m") :=
+         match "m" with
+         | Inl _ => "acc"
+         | Inr `("l", "k", "v", "r", _) => "bindings_acc" (Inr (("k", "v"), by "bindings_acc" ("acc", "r")), "l")
+         end
+       in
+       let "bindings" "m" := "bindings_acc" (Inl (), "m") in
        let fix "size" "m" :=
          match "m" with
          | Inl _ => 0
@@ -176,9 +213,14 @@ Example Map :=
         ; "member"
         ; "lookup"
         ; "singleton"
+        ; "is_singleton"
         ; "insert"
-        ; "remove"
-        ; "min_binding_remove"
+        ; "delete"
+        ; "min_binding_delete"
+        ; "foldl"
+        ; "foldr"
+        ; "bindings_acc"
+        ; "bindings"
         ; "size"
         ; "map"
         ; "iter" } }>.

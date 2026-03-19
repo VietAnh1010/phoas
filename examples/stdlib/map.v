@@ -18,7 +18,7 @@ Example Map :=
          let fix "go" "m" :=
            match "m" with
            | Inl _ => false
-           | Inr `("l", "k'", "v", "r", _) =>
+           | Inr `("l", "k'", _, "r", _) =>
                match by "K".`"compare" ("k", "k'") with
                | `"Lt" _ => "go" "l"
                | `"Eq" _ => true
@@ -48,16 +48,15 @@ Example Map :=
          | Inr `(_, _, _, _, "h") => "h"
          end
        in
-       let "create" `("l", "k", "v", "r") :=
+       let "node" `("l", "k", "v", "r") :=
          let "hl" := "height" "l" in
          let "hr" := "height" "r" in
          Inr `("l", "k", "v", "r", (by if "hl" > "hr" then "hl" else "hr") + 1)
        in
-       let "singleton" ("k", "v") := Inr `(Inl (), "k", "v", Inl (), 1) in
        let "ne_unnode" "m" :=
          match "m" with
          | Inl _ => raise `"Empty" ()
-         | Inr "n" => "n"
+         | Inr `("l", "k", "v", "r", _) => `("l", "k", "v", "r")
          end
        in
        let "balance" "args" :=
@@ -65,22 +64,29 @@ Example Map :=
          let "hl" := "height" "l" in
          let "hr" := "height" "r" in
          if "hl" > "hr" + 2 then
-           let `("ll", "lk", "lv", "lr", _) := "ne_unnode" "l" in
-           if by "height" "ll" > by "height" "lr" then
-             "create" `("ll", "lk", "lv", by "create" `("lr", "k", "v", "r"))
+           let `("ll", "lk", "lv", "lr") := "ne_unnode" "l" in
+           if by "height" "ll" >= by "height" "lr" then
+             let "lr'" := "node" `("lr", "k", "v", "r") in
+             "node" `("ll", "lk", "lv", "lr'")
            else
-             let `("lrl", "lrk", "lrv", "lrr", _) := "ne_unnode" "lr" in
-             "create" `(by "create" `("ll", "lk", "lv", "lrl"), "lrk", "lrv", by "create" `("lrr", "k", "v", "r"))
+             let `("lrl", "lrk", "lrv", "lrr") := "ne_unnode" "lr" in
+             let "lrl'" := "node" `("ll", "lk", "lv", "lrl") in
+             let "lrr'" := "node" `("lrr", "k", "v", "r") in
+             "node" `("lrl'", "lrk", "lrv", "lrr'")
          else
            if "hr" > "hl" + 2 then
-             let `("rl", "rk", "rv", "rr", _) := "ne_unnode" "r" in
-             if by "height" "rr" > by "height" "rl" then
-               "create" `(by "create" `("l", "k", "v", "rl"), "rk", "rv", "rr")
+             let `("rl", "rk", "rv", "rr") := "ne_unnode" "r" in
+             if by "height" "rr" >= by "height" "rl" then
+               let "rl'" := "node" `("l", "k", "v", "rl") in
+               "node" `("rl'", "rk", "rv", "rr")
              else
-               let `("rll", "rlk", "rlv", "rlr", _) := "ne_unnode" "rl" in
-               "create" `(by "create" `("l", "k", "v", "rll"), "rlk", "rlv", by "create" `("rlr", "rk", "rv", "rr"))
-           else "create" "args"
+               let `("rll", "rlk", "rlv", "rlr") := "ne_unnode" "rl" in
+               let "rll'" := "node" `("l", "k", "v", "rll") in
+               let "rlr'" := "node" `("rlr", "rk", "rv", "rr") in
+               "node" `("rll'", "rlk", "rlv", "rlr'")
+           else "node" "args"
        in
+       let "singleton" ("k", "v") := Inr `(Inl (), "k", "v", Inl (), 1) in
        let "insert" `("k", "v", "m") :=
          let fix "go" "m" :=
            match "m" with
@@ -95,8 +101,53 @@ Example Map :=
          in
          "go" "m"
        in
+       let fix "min_binding_remove_aux" `("l", "k", "v", "r") :=
+         match "l" with
+         | Inl _ => (("k", "v"), "r")
+         | Inr `("ll", "lk", "lv", "lr", _) =>
+             let ("b", "l'") := "min_binding_remove_aux" `("ll", "lk", "lv", "lr") in
+             ("b", by "balance" `("l'", "k", "v", "r"))
+         end
+       in
+       let "min_binding_remove" "m" :=
+         match "m" with
+         | Inl _ => (Inl (), Inl ())
+         | Inr `("l", "k", "v", "r", _) =>
+             let ("b", "m'") := "min_binding_remove_aux" `("l", "k", "v", "r") in
+             (Inr "b", "m'")
+         end
+       in
+       let "link" ("m1", "m2") :=
+         match "m1" with
+         | Inl _ => "m2"
+         | Inr _ =>
+             match "m2" with
+             | Inl _ => "m1"
+             | Inr `("l2", "k2", "v2", "r2", _) =>
+                 let (("k", "v"), "m2'") := "min_binding_remove_aux" `("l2", "k2", "v2", "r2") in
+                 "balance" `("m1", "k", "v", "m2'")
+             end
+         end
+       in
+       let "remove" ("k", "m") :=
+         let fix "go" "m" :=
+           match "m" with
+           | Inl _ => Inl ()
+           | Inr `("l", "k'", "v", "r", _) =>
+               match by "K".`"compare" ("k", "k'") with
+               | `"Lt" _ => "balance" `(by "go" "l", "k'", "v", "r")
+               | `"Eq" _ => "link" ("l", "r")
+               | `"Gt" _ => "balance" `("l", "k'", "v", by "go" "r")
+               end
+           end
+         in
+         "go" "m"
+       in
        `{ "empty"
         ; "is_empty"
         ; "member"
         ; "lookup"
-        ; "insert" } }>.
+        ; "singleton"
+        ; "insert"
+        ; "remove"
+        ; "min_binding_remove" } }>.

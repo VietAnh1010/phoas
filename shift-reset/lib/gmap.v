@@ -26,8 +26,8 @@ Module Make (K : IsoPositiveType).
   Definition key : Type := K.t.
   Definition t : Type -> Type := gmap key.
 
-  Definition lookup {A} (k : key) (mt : gmap key A) : option A :=
-    pmap.lookup (K.encode k) (gmap_car mt).
+  Definition find {A} (k : key) (mt : gmap key A) : option A :=
+    pmap.find (K.encode k) (gmap_car mt).
 
   Definition member {A} (k : key) (mt : gmap key A) : bool :=
     pmap.member (K.encode k) (gmap_car mt).
@@ -35,12 +35,12 @@ Module Make (K : IsoPositiveType).
   Definition singleton {A} (k : key) (x : A) : gmap key A :=
     GMap (pmap.singleton (K.encode k) x).
 
-  Definition insert {A} (k : key) (x : A) (mt : gmap key A) : gmap key A :=
-    GMap (pmap.insert (K.encode k) x (gmap_car mt)).
+  Definition add {A} (k : key) (x : A) (mt : gmap key A) : gmap key A :=
+    GMap (pmap.add (K.encode k) x (gmap_car mt)).
 
-  Definition delete {A} (k : key) (mt : gmap key A) : gmap key A :=
-    GMap (pmap.delete (K.encode k) (gmap_car mt)).
+  Definition remove {A} (k : key) (mt : gmap key A) : gmap key A :=
+    GMap (pmap.remove (K.encode k) (gmap_car mt)).
 
-  Definition alter {A} (f : option A -> option A) (k : key) (mt : gmap key A) : gmap key A :=
-    GMap (pmap.alter f (K.encode k) (gmap_car mt)).
+  Definition update {A} (f : option A -> option A) (k : key) (mt : gmap key A) : gmap key A :=
+    GMap (pmap.update f (K.encode k) (gmap_car mt)).
 End Make.

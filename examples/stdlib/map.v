@@ -28,7 +28,7 @@ Example Map :=
          in
          "go" "m"
        in
-       let "lookup" ("k", "m") :=
+       let "find" ("k", "m") :=
          let fix "go" "m" :=
            match "m" with
            | Inl _ => Inl ()
@@ -93,7 +93,7 @@ Example Map :=
          | _ => false
          end
        in
-       let "insert" `("k", "v", "m") :=
+       let "add" `("k", "v", "m") :=
          let fix "go" "m" :=
            match "m" with
            | Inl _ => "singleton" ("k", "v")
@@ -107,19 +107,19 @@ Example Map :=
          in
          "go" "m"
        in
-       let fix "min_binding_delete_aux" `("l", "k", "v", "r") :=
+       let fix "min_binding_remove_aux" `("l", "k", "v", "r") :=
          match "l" with
          | Inl _ => (("k", "v"), "r")
          | Inr `("ll", "lk", "lv", "lr", _) =>
-             let ("b", "l'") := "min_binding_delete_aux" `("ll", "lk", "lv", "lr") in
+             let ("b", "l'") := "min_binding_remove_aux" `("ll", "lk", "lv", "lr") in
              ("b", by "balance" `("l'", "k", "v", "r"))
          end
        in
-       let "min_binding_delete" "m" :=
+       let "min_binding_remove" "m" :=
          match "m" with
          | Inl _ => (Inl (), Inl ())
          | Inr `("l", "k", "v", "r", _) =>
-             let ("b", "m'") := "min_binding_delete_aux" `("l", "k", "v", "r") in
+             let ("b", "m'") := "min_binding_remove_aux" `("l", "k", "v", "r") in
              (Inr "b", "m'")
          end
        in
@@ -130,12 +130,12 @@ Example Map :=
              match "m2" with
              | Inl _ => "m1"
              | Inr `("l2", "k2", "v2", "r2", _) =>
-                 let (("k", "v"), "m2'") := "min_binding_delete_aux" `("l2", "k2", "v2", "r2") in
+                 let (("k", "v"), "m2'") := "min_binding_remove_aux" `("l2", "k2", "v2", "r2") in
                  "balance" `("m1", "k", "v", "m2'")
              end
          end
        in
-       let "delete" ("k", "m") :=
+       let "remove" ("k", "m") :=
          let fix "go" "m" :=
            match "m" with
            | Inl _ => Inl ()
@@ -180,10 +180,10 @@ Example Map :=
          end
        in
        let "bindings" "m" := "bindings_acc" (Inl (), "m") in
-       let fix "size" "m" :=
+       let fix "cardinal" "m" :=
          match "m" with
          | Inl _ => 0
-         | Inr `("l", _, _, "r", _) => by "size" "l" + 1 + by "size" "r"
+         | Inr `("l", _, _, "r", _) => by "cardinal" "l" + 1 + by "cardinal" "r"
          end
        in
        let "map" ("f", "m") :=
@@ -211,16 +211,16 @@ Example Map :=
        `{ "empty"
         ; "is_empty"
         ; "member"
-        ; "lookup"
+        ; "find"
         ; "singleton"
         ; "is_singleton"
-        ; "insert"
-        ; "delete"
-        ; "min_binding_delete"
+        ; "add"
+        ; "remove"
+        ; "min_binding_remove"
         ; "foldl"
         ; "foldr"
         ; "bindings_acc"
         ; "bindings"
-        ; "size"
+        ; "cardinal"
         ; "map"
         ; "iter" } }>.

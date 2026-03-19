@@ -47,7 +47,7 @@ Definition builtin1_registry : list (ident * (val -> ivh_monad val)) :=
    (Ident "array_free", array_free)].
 
 Definition dispatch_builtin1 (l : ident) : iv_monad (val -> ivh_monad val) :=
-  match list.lookup ident_eqb l builtin1_registry with
+  match list.assoc ident_eqb l builtin1_registry with
   | Some f => except.pure f
   | None => except.throw (Name_error (ident_car l))
   end.
@@ -85,7 +85,7 @@ Definition builtin2_registry : list (ident * (val -> val -> ivh_monad val)) :=
    (Ident "tuple_get", tuple_get)].
 
 Definition dispatch_builtin2 (l : ident) : iv_monad (val -> val -> ivh_monad val) :=
-  match list.lookup ident_eqb l builtin2_registry with
+  match list.assoc ident_eqb l builtin2_registry with
   | Some f => except.pure f
   | None => except.throw (Name_error (ident_car l))
   end.

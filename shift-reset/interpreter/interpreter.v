@@ -27,7 +27,7 @@ Fixpoint interpret_record_term (self : val_interpreter) (t : record_term) (e : e
       let* v := self t' e in
       iv_monad_to_ivh_monad (unwrap_vrecord v)
   | TRecordCons0 l t' =>
-      match env_lookup l e with
+      match env_find l e with
       | None => throw (Name_error (ident_car l))
       | Some v => RecordCons l v <$> interpret_record_term self t' e
       end
@@ -49,7 +49,7 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
   fix self' t e :=
     match t with
     | TVVar x =>
-        match env_lookup x e with
+        match env_find x e with
         | None => throw (Name_error (ident_car x))
         | Some v => pure v
         end
@@ -92,7 +92,7 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
     | TVProjRecord t' l =>
         let* v := self' t' e in
         let* r := iv_monad_to_ivh_monad (unwrap_vrecord v) in
-        match record_lookup l r with
+        match record_find l r with
         | None => throw (Name_error (ident_car l))
         | Some v' => pure v'
         end

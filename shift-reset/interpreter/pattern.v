@@ -67,13 +67,13 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : iv_monad
       end
   | PRecordRest p' => match_pattern p' (VRecord r) e
   | PRecordCons0 l p' =>
-      let (o, r') := record_lookup_delete l r in
+      let (o, r') := record_find_remove l r in
       match o with
       | None => throw (Match_failure "match_record_pattern")
       | Some v => match_record_pattern p' r' (ECons l v e)
       end
   | PRecordCons1 l p1 p2 =>
-      let (o, r') := record_lookup_delete l r in
+      let (o, r') := record_find_remove l r in
       match o with
       | None => throw (Match_failure "match_record_pattern")
       | Some v =>

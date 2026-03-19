@@ -1,19 +1,19 @@
 From shift_reset.core Require Import syntax.
 
-Fixpoint kont_size_acc (k : kont) (acc : nat) : nat :=
+Fixpoint kont_length_acc (k : kont) (acc : nat) : nat :=
   match k with
   | KNil => acc
   | KCons0 _ _ k'
-  | KCons1 _ _ _ k' => S (kont_size_acc k' acc)
-  | KApp k1 k2 => kont_size_acc k1 (kont_size_acc k2 acc)
+  | KCons1 _ _ _ k' => S (kont_length_acc k' acc)
+  | KApp k1 k2 => kont_length_acc k1 (kont_length_acc k2 acc)
   end.
 
-Fixpoint kont_size (k : kont) : nat :=
+Fixpoint kont_length (k : kont) : nat :=
   match k with
   | KNil => O
   | KCons0 _ _ k'
-  | KCons1 _ _ _ k' => S (kont_size k')
-  | KApp k1 k2 => kont_size_acc k1 (kont_size k2)
+  | KCons1 _ _ _ k' => S (kont_length k')
+  | KApp k1 k2 => kont_length_acc k1 (kont_length k2)
   end.
 
 Fixpoint kont_flatten_app (k1 k2 : kont) : kont :=

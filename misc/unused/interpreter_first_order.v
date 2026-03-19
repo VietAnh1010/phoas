@@ -11,7 +11,7 @@ Fixpoint interpret_val_term (t : val_term) : imonad val :=
   match t with
   | TVVar x =>
       env <- imonad_ask_env;
-      match env_lookup x env with
+      match env_find x env with
       | None => imonad_throw_error (Name_error x)
       | Some v => imonad_pure v
       end

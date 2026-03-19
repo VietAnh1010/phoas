@@ -24,7 +24,7 @@ Definition loc_add (l : loc) (z : Z) : loc :=
   | Zneg p => Loc (loc_car l - p)
   end.
 
-Definition loc_init : loc := Loc 1.
+Definition loc_one : loc := Loc 1.
 
 Module IsoPositiveLoc <: gmap.IsoPositiveType.
   Definition t := loc.

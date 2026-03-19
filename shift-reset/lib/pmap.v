@@ -41,7 +41,7 @@ Definition PNode {A} (ml : pmap A) (mx : option A) (mr : pmap A) : pmap A :=
   | PNodes l, Some x, PNodes r => PNodes (PNode111 l x r)
   end.
 
-Definition pmap_ne_case {A B} (t : pmap_ne A) (f : pmap A -> option A -> pmap A -> B) : B :=
+Definition ne_case {A B} (t : pmap_ne A) (f : pmap A -> option A -> pmap A -> B) : B :=
   match t with
   | PNode001 r => f PEmpty None (PNodes r)
   | PNode010 x => f PEmpty (Some x) PEmpty
@@ -54,18 +54,18 @@ Definition pmap_ne_case {A B} (t : pmap_ne A) (f : pmap A -> option A -> pmap A 
 
 Definition empty {A} : pmap A := PEmpty.
 
-Fixpoint ne_lookup {A} (i : positive) (t : pmap_ne A) {struct t} : option A :=
+Fixpoint ne_find {A} (i : positive) (t : pmap_ne A) {struct t} : option A :=
   match t, i with
   | (PNode010 x | PNode011 x _ | PNode110 _ x | PNode111 _ x _), 1 => Some x
-  | (PNode100 l | PNode110 l _ | PNode101 l _ | PNode111 l _ _), i~0 => ne_lookup i l
-  | (PNode001 r | PNode011 _ r | PNode101 _ r | PNode111 _ _ r), i~1 => ne_lookup i r
+  | (PNode100 l | PNode110 l _ | PNode101 l _ | PNode111 l _ _), i~0 => ne_find i l
+  | (PNode001 r | PNode011 _ r | PNode101 _ r | PNode111 _ _ r), i~1 => ne_find i r
   | _, _ => None
   end.
 
-Definition lookup {A} (i : positive) (mt : pmap A) : option A :=
+Definition find {A} (i : positive) (mt : pmap A) : option A :=
   match mt with
   | PEmpty => None
-  | PNodes t => ne_lookup i t
+  | PNodes t => ne_find i t
   end.
 
 Fixpoint ne_member {A} (i : positive) (t : pmap_ne A) {struct t} : bool :=
@@ -94,7 +94,7 @@ Definition ne_singleton {A} (i : positive) (x : A) : pmap_ne A :=
 Definition singleton {A} (i : positive) (x : A) : pmap A :=
   PNodes (ne_singleton i x).
 
-Definition ne_insert {A} (i : positive) (x : A) : pmap_ne A -> pmap_ne A :=
+Definition ne_add {A} (i : positive) (x : A) : pmap_ne A -> pmap_ne A :=
   let fix go i t {struct t} :=
     match t, i with
     | PNode001 r, 1 => PNode011 x r
@@ -121,31 +121,31 @@ Definition ne_insert {A} (i : positive) (x : A) : pmap_ne A -> pmap_ne A :=
     end
   in go i.
 
-Definition insert {A} (i : positive) (x : A) (mt : pmap A) : pmap A :=
+Definition add {A} (i : positive) (x : A) (mt : pmap A) : pmap A :=
   match mt with
   | PEmpty => singleton i x
-  | PNodes t => PNodes (ne_insert i x t)
+  | PNodes t => PNodes (ne_add i x t)
   end.
 
-Definition delete_aux {A} (go : positive -> pmap_ne A -> pmap A) (i : positive) (mt : pmap A) : pmap A :=
+Definition remove_aux {A} (go : positive -> pmap_ne A -> pmap A) (i : positive) (mt : pmap A) : pmap A :=
   match mt with
   | PEmpty => PEmpty
   | PNodes t => go i t
   end.
 
-Fixpoint ne_delete {A} (i : positive) (t : pmap_ne A) {struct t} : pmap A :=
-  pmap_ne_case t
+Fixpoint ne_remove {A} (i : positive) (t : pmap_ne A) {struct t} : pmap A :=
+  ne_case t
     (fun ml mx mr =>
        match i with
        | 1 => PNode ml None mr
-       | i~0 => PNode (delete_aux ne_delete i ml) mx mr
-       | i~1 => PNode ml mx (delete_aux ne_delete i mr)
+       | i~0 => PNode (remove_aux ne_remove i ml) mx mr
+       | i~1 => PNode ml mx (remove_aux ne_remove i mr)
        end).
 
-Definition delete {A} : positive -> pmap A -> pmap A :=
-  delete_aux ne_delete.
+Definition remove {A} : positive -> pmap A -> pmap A :=
+  remove_aux ne_remove.
 
-Definition alter_aux {A} (go : positive -> pmap_ne A -> pmap A) (f : option A -> option A) (i : positive) (mt : pmap A) : pmap A :=
+Definition update_aux {A} (go : positive -> pmap_ne A -> pmap A) (f : option A -> option A) (i : positive) (mt : pmap A) : pmap A :=
   match mt with
   | PEmpty =>
       match f None with
@@ -155,18 +155,18 @@ Definition alter_aux {A} (go : positive -> pmap_ne A -> pmap A) (f : option A ->
   | PNodes t => go i t
   end.
 
-Definition ne_alter {A} (f : option A -> option A) : positive -> pmap_ne A -> pmap A :=
+Definition ne_update {A} (f : option A -> option A) : positive -> pmap_ne A -> pmap A :=
   fix go i t {struct t} :=
-    pmap_ne_case t
+    ne_case t
       (fun ml mx mr =>
          match i with
          | 1 => PNode ml (f mx) mr
-         | i~0 => PNode (alter_aux go f i ml) mx mr
-         | i~1 => PNode ml mx (alter_aux go f i mr)
+         | i~0 => PNode (update_aux go f i ml) mx mr
+         | i~1 => PNode ml mx (update_aux go f i mr)
          end).
 
-Definition alter {A} (f : option A -> option A) : positive -> pmap A -> pmap A :=
-  alter_aux (ne_alter f) f.
+Definition update {A} (f : option A -> option A) : positive -> pmap A -> pmap A :=
+  update_aux (ne_update f) f.
 
 Definition ne_map {A B} (f : A -> B) : pmap_ne A -> pmap_ne B :=
   fix go t :=
@@ -193,7 +193,7 @@ Definition filter_map_aux {A B} (go : pmap_ne A -> pmap B) (mt : pmap A) : pmap 
   end.
 
 Definition ne_filter_map {A B} (f : A -> option B) : pmap_ne A -> pmap B :=
-  fix go t := pmap_ne_case t (fun ml mx mr => PNode (filter_map_aux go ml) (option.bind mx f) (filter_map_aux go mr)).
+  fix go t := ne_case t (fun ml mx mr => PNode (filter_map_aux go ml) (option.bind mx f) (filter_map_aux go mr)).
 
 Definition filter_map {A B} (f : A -> option B) : pmap A -> pmap B :=
   filter_map_aux (ne_filter_map f).

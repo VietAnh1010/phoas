@@ -1,6 +1,18 @@
 From Stdlib Require Import FunctionalExtensionality.
 From shift_reset.monad Require Import ces_monad.
 
+Lemma bind_pure {R E S A B} (x : A) (f : A -> ces_monad R E S B) :
+  bind (pure x) f = f x.
+Proof. cbv. destruct (f x) as [m]. reflexivity. Qed.
+
+Lemma pure_bind {R E S A} (m : ces_monad R E S A) :
+  bind m pure = m.
+Proof. cbv. destruct m as [m]. reflexivity. Qed.
+
+Lemma bind_assoc {R E S A B C} (m : ces_monad R E S A) (f : A -> ces_monad R E S B) (g : B -> ces_monad R E S C) :
+  bind (bind m f) g = bind m (fun x => bind (f x) g).
+Proof. cbv. reflexivity. Qed.
+
 Lemma reset_idemp {R R' E S} (m : ces_monad R E S R) :
   @reset R R' E S (reset m) = @reset R R' E S m.
 Proof.

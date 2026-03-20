@@ -437,6 +437,14 @@ Lemma fold_unfold_interpret_val_term_TVBy :
     irh_monad_to_ivh_monad (self t' e KNil).
 Proof. reflexivity. Qed.
 
+Lemma fold_unfold_interpret_val_term' :
+  forall (self : interpreter)
+         (t : val_term)
+         (e : env),
+    interpret_val_term' self t e =
+    ivh_monad_to_irh_monad (interpret_val_term self t e).
+Proof. reflexivity. Qed.
+
 Lemma fold_unfold_with_fix_mut_term_TFixMutLast :
   forall (f : ident)
          (p : pattern)
@@ -512,6 +520,27 @@ Lemma fold_unfold_interpret_fix_mut_term_TFixMutCons :
       let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
       self t1 e' k
     else interpret_fix_mut_term self t2 e k f v.
+Proof. reflexivity. Qed.
+
+Lemma fold_unfold_interpret_ret_term_TRetNone :
+  forall (self : interpreter)
+         (e : env)
+         (k : kont)
+         (v : val),
+    interpret_ret_term self TRetNone e k v =
+    pure v.
+Proof. reflexivity. Qed.
+
+Lemma fold_unfold_interpret_ret_term_TRetSome :
+  forall (self : interpreter)
+         (p : pattern)
+         (t' : term)
+         (e : env)
+         (k : kont)
+         (v : val),
+    interpret_ret_term self (TRetSome p t') e k v =
+    let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
+    self t' e' k.
 Proof. reflexivity. Qed.
 
 Lemma fold_unfold_interpret_exn_term_TExnLast :
@@ -1114,3 +1143,97 @@ Lemma fold_unfold_interpret_term'_S :
     interpret_term' (S fuel') t e k =
     interpret_term'_aux (interpret_term' fuel') t e k.
 Proof. reflexivity. Qed.
+
+Lemma fold_unfold_interpret_term :
+  forall (fuel : nat)
+         (t : term)
+         (e : env)
+         (k : kont),
+    interpret_term fuel t e k =
+    irh_monad_to_ivh_monad (interpret_term' fuel t e k).
+Proof. reflexivity. Qed.
+
+Create HintDb fold_unfold_interpret_db discriminated.
+
+Hint Rewrite
+  fold_unfold_interpret_tuple_term_TTupleNil
+  fold_unfold_interpret_tuple_term_TTupleCons
+  fold_unfold_interpret_record_term_TRecordNil
+  fold_unfold_interpret_record_term_TRecordRest
+  fold_unfold_interpret_record_term_TRecordCons0
+  fold_unfold_interpret_record_term_TRecordCons1
+  fold_unfold_interpret_array_term_TArrayNil
+  fold_unfold_interpret_array_term_TArrayCons
+  fold_unfold_interpret_val_term_TVVar
+  fold_unfold_interpret_val_term_TVTt
+  fold_unfold_interpret_val_term_TVInt
+  fold_unfold_interpret_val_term_TVFloat
+  fold_unfold_interpret_val_term_TVTrue
+  fold_unfold_interpret_val_term_TVFalse
+  fold_unfold_interpret_val_term_TVChar
+  fold_unfold_interpret_val_term_TVString
+  fold_unfold_interpret_val_term_TVAnd
+  fold_unfold_interpret_val_term_TVOr
+  fold_unfold_interpret_val_term_TVFun
+  fold_unfold_interpret_val_term_TVFix
+  fold_unfold_interpret_val_term_TVFixMut
+  fold_unfold_interpret_val_term_TVPair
+  fold_unfold_interpret_val_term_TVFst
+  fold_unfold_interpret_val_term_TVSnd
+  fold_unfold_interpret_val_term_TVTuple
+  fold_unfold_interpret_val_term_TVRecord
+  fold_unfold_interpret_val_term_TVProjTuple
+  fold_unfold_interpret_val_term_TVProjRecord
+  fold_unfold_interpret_val_term_TVInl
+  fold_unfold_interpret_val_term_TVInr
+  fold_unfold_interpret_val_term_TVVariant
+  fold_unfold_interpret_val_term_TVRef
+  fold_unfold_interpret_val_term_TVArray
+  fold_unfold_interpret_val_term_TVGet
+  fold_unfold_interpret_val_term_TVSet
+  fold_unfold_interpret_val_term_TVGetAt
+  fold_unfold_interpret_val_term_TVSetAt
+  fold_unfold_interpret_val_term_TVAssert
+  fold_unfold_interpret_val_term_TVOp1
+  fold_unfold_interpret_val_term_TVOp2
+  fold_unfold_interpret_val_term_TVBuiltin1
+  fold_unfold_interpret_val_term_TVBuiltin2
+  fold_unfold_interpret_val_term_TVBy
+  fold_unfold_interpret_val_term'
+  fold_unfold_interpret_match_term_TMatchNil
+  fold_unfold_interpret_match_term_TMatchCons
+  fold_unfold_interpret_fix_mut_term_TFixMutLast
+  fold_unfold_interpret_fix_mut_term_TFixMutCons
+  fold_unfold_interpret_ret_term_TRetNone
+  fold_unfold_interpret_ret_term_TRetSome
+  fold_unfold_interpret_exn_term_TExnLast
+  fold_unfold_interpret_exn_term_TExnCons
+  fold_unfold_interpret_eff_term_TEffLast
+  fold_unfold_interpret_eff_term_TEffCons
+  fold_unfold_interpret_term'_aux_TVal
+  fold_unfold_interpret_term'_aux_TApp
+  fold_unfold_interpret_term'_aux_TSeq
+  fold_unfold_interpret_term'_aux_TLet
+  fold_unfold_interpret_term'_aux_TMatch
+  fold_unfold_interpret_term'_aux_TIf
+  fold_unfold_interpret_term'_aux_TWhile
+  fold_unfold_interpret_term'_aux_TFor
+  fold_unfold_interpret_term'_aux_TLetFix
+  fold_unfold_interpret_term'_aux_TLetFixMut
+  fold_unfold_interpret_term'_aux_TShift
+  fold_unfold_interpret_term'_aux_TControl
+  fold_unfold_interpret_term'_aux_TShift0
+  fold_unfold_interpret_term'_aux_TControl0
+  fold_unfold_interpret_term'_aux_TReset
+  fold_unfold_interpret_term'_aux_TPrompt
+  fold_unfold_interpret_term'_aux_TReset0
+  fold_unfold_interpret_term'_aux_TPrompt0
+  fold_unfold_interpret_term'_aux_TRaise
+  fold_unfold_interpret_term'_aux_TTry
+  fold_unfold_interpret_term'_aux_TPerform
+  fold_unfold_interpret_term'_aux_THandle
+  fold_unfold_interpret_term'_aux_TShallowHandle
+  fold_unfold_interpret_term'_O
+  fold_unfold_interpret_term'_S
+  fold_unfold_interpret_term
+  : fold_unfold_interpret_db.

@@ -130,6 +130,24 @@ Example List :=
        in
        "go" "xs"
      in
+     let "map2" `("f", "xs", "ys") :=
+       let fix "go" "args" :=
+         match "args" with
+         | Inr ("x", "xs"), Inr ("y", "ys") =>
+             let "z" := "f" ("x", "y") in
+             let "r" := "go" ("xs", "ys") in
+             Inr ("z", "r")
+         | _ => Inl ()
+         end
+       in
+       "go" ("xs", "ys")
+     in
+     let fix "zip" "args" :=
+       match "args" with
+       | Inr ("x", "xs"), Inr ("y", "ys") => Inr (("x", "y"), by "zip" ("xs", "ys"))
+       | _ => Inl ()
+       end
+     in
      `{ "is_empty"
       ; "ne_head"
       ; "ne_tail"
@@ -142,4 +160,6 @@ Example List :=
       ; "filter_map"
       ; "append"
       ; "reverse"
-      ; "length" } }>.
+      ; "length"
+      ; "map2"
+      ; "zip" } }>.

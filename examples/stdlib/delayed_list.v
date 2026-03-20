@@ -33,6 +33,19 @@ Example DelayedList :=
        in
        "go" "xs"
      in
+     let "map2" `("f", "xs", "ys") :=
+       let fix "go" ("xs", "ys") _ :=
+         let "xs" := "xs" () in
+         let "ys" := "ys" () in
+         match "xs", "ys" with
+         | Inr ("x", "xs'"), Inr ("y", "ys'") =>
+             let "z" := "f" ("x", "y") in
+             Inr ("z", by "go" ("xs'", "ys'"))
+         | _ => Inl ()
+         end
+       in
+       "go" ("xs", "ys")
+     in
      let "iter" ("f", "xs") :=
        let fix "go" "xs" :=
          let "xs" := "xs" () in
@@ -55,5 +68,6 @@ Example DelayedList :=
      `{ "empty"
       ; "take"
       ; "map"
+      ; "map2"
       ; "iter"
       ; "to_list" } }>.

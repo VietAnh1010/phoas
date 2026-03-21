@@ -1,11 +1,11 @@
 From shift_reset.core Require Import syntax.
 
-Fixpoint kont_length_acc (k : kont) (acc : nat) : nat :=
+Fixpoint kont_length_add (k : kont) (n : nat) : nat :=
   match k with
-  | KNil => acc
+  | KNil => n
   | KCons0 _ _ k'
-  | KCons1 _ _ _ k' => S (kont_length_acc k' acc)
-  | KApp k1 k2 => kont_length_acc k1 (kont_length_acc k2 acc)
+  | KCons1 _ _ _ k' => S (kont_length_add k' n)
+  | KApp k1 k2 => kont_length_add k1 (kont_length_add k2 n)
   end.
 
 Fixpoint kont_length (k : kont) : nat :=
@@ -13,7 +13,7 @@ Fixpoint kont_length (k : kont) : nat :=
   | KNil => O
   | KCons0 _ _ k'
   | KCons1 _ _ _ k' => S (kont_length k')
-  | KApp k1 k2 => kont_length_acc k1 (kont_length k2)
+  | KApp k1 k2 => kont_length_add k1 (kont_length k2)
   end.
 
 Fixpoint kont_flatten_append (k1 k2 : kont) : kont :=

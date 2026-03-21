@@ -304,15 +304,15 @@ Definition ne_merge {A B C} : (positive -> option A -> option B -> option C) -> 
 Definition merge {A B C} (f : positive -> option A -> option B -> option C) : pmap A -> pmap B -> pmap C :=
   merge_aux (fun k => ne_merge_aux k f) (fun i => i) f.
 
-Fixpoint ne_cardinal_acc {A} (t : pmap_ne A) (acc : nat) : nat :=
+Fixpoint ne_cardinal_add {A} (t : pmap_ne A) (n : nat) : nat :=
   match t with
-  | PNode001 r => ne_cardinal_acc r acc
-  | PNode010 _ => S acc
-  | PNode011 _ r => S (ne_cardinal_acc r acc)
-  | PNode100 l => ne_cardinal_acc l acc
-  | PNode101 l r => ne_cardinal_acc l (ne_cardinal_acc r acc)
-  | PNode110 l _ => S (ne_cardinal_acc l acc)
-  | PNode111 l _ r => S (ne_cardinal_acc l (ne_cardinal_acc r acc))
+  | PNode001 r => ne_cardinal_add r n
+  | PNode010 _ => S n
+  | PNode011 _ r => S (ne_cardinal_add r n)
+  | PNode100 l => ne_cardinal_add l n
+  | PNode101 l r => ne_cardinal_add l (ne_cardinal_add r n)
+  | PNode110 l _ => S (ne_cardinal_add l n)
+  | PNode111 l _ r => S (ne_cardinal_add l (ne_cardinal_add r n))
   end.
 
 Fixpoint ne_cardinal {A} (t : pmap_ne A) : nat :=
@@ -321,9 +321,9 @@ Fixpoint ne_cardinal {A} (t : pmap_ne A) : nat :=
   | PNode010 _ => 1
   | PNode011 _ r => S (ne_cardinal r)
   | PNode100 l => ne_cardinal l
-  | PNode101 l r => ne_cardinal_acc l (ne_cardinal r)
+  | PNode101 l r => ne_cardinal_add l (ne_cardinal r)
   | PNode110 l _ => S (ne_cardinal l)
-  | PNode111 l _ r => S (ne_cardinal_acc l (ne_cardinal r))
+  | PNode111 l _ r => S (ne_cardinal_add l (ne_cardinal r))
   end.
 
 Definition cardinal {A} (mt : pmap A) : nat :=

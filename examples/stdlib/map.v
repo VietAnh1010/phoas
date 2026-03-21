@@ -173,13 +173,18 @@ Example Map :=
          in
          "go" ("m", "z")
        in
-       let fix "bindings_acc" ("m", "acc") :=
+       let fix "bindings_append" ("m", "bs") :=
          match "m" with
-         | Inl _ => "acc"
-         | Inr `("l", "k", "v", "r", _) => "bindings_acc" ("l", Inr (("k", "v"), by "bindings_acc" ("r", "acc")))
+         | Inl _ => "bs"
+         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by "bindings_append" ("r", "bs")))
          end
        in
-       let "bindings" "m" := "bindings_acc" ("m", Inl ()) in
+       let fix "bindings" "m" :=
+         match "m" with
+         | Inl _ => Inl ()
+         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by "bindings" "r"))
+         end
+       in
        let fix "cardinal" "m" :=
          match "m" with
          | Inl _ => 0
@@ -219,7 +224,7 @@ Example Map :=
         ; "min_binding_remove"
         ; "foldl"
         ; "foldr"
-        ; "bindings_acc"
+        ; "bindings_append"
         ; "bindings"
         ; "cardinal"
         ; "map"

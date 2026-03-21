@@ -21,8 +21,8 @@ Proof.
   reflexivity.
 Qed.
 
-Module Type MakeSig (M : Monoid).
-  Include Make M.
+Module Type MakeSig (W : Monoid).
+  Include Make W.
 End MakeSig.
 
 Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).

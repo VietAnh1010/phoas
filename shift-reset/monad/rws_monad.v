@@ -22,48 +22,45 @@ Module RWSMonadNotations.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : rws_monad_scope.
 End RWSMonadNotations.
 
-Module Make (M : Monoid).
-  Definition w : Type := M.t.
-  Definition t (R : Type) : Type -> Type -> Type := rws_monad R w.
+Module Make (W : Monoid).
+  Definition pure {R S A} (x : A) : rws_monad R W.t S A :=
+    RWSMonad (fun _ s => (x, W.empty, s)).
 
-  Definition pure {R S A} (x : A) : rws_monad R w S A :=
-    RWSMonad (fun _ s => (x, M.empty, s)).
+  Definition app {R S A B} (m1 : rws_monad R W.t S (A -> B)) (m2 : rws_monad R W.t S A) : rws_monad R W.t S B :=
+    RWSMonad (fun r s => let '(f, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (f x, W.append w1 w2, s)).
 
-  Definition app {R S A B} (m1 : rws_monad R w S (A -> B)) (m2 : rws_monad R w S A) : rws_monad R w S B :=
-    RWSMonad (fun r s => let '(f, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (f x, M.append w1 w2, s)).
+  Definition appl {R S A B} (m1 : rws_monad R W.t S A) (m2 : rws_monad R W.t S B) : rws_monad R W.t S A :=
+    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m1 r s in let '(_, w2, s) := run_rws_monad m2 r s in (x, W.append w1 w2, s)).
 
-  Definition appl {R S A B} (m1 : rws_monad R w S A) (m2 : rws_monad R w S B) : rws_monad R w S A :=
-    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m1 r s in let '(_, w2, s) := run_rws_monad m2 r s in (x, M.append w1 w2, s)).
+  Definition appr {R S A B} (m1 : rws_monad R W.t S A) (m2 : rws_monad R W.t S B) : rws_monad R W.t S B :=
+    RWSMonad (fun r s => let '(_, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (x, W.append w1 w2, s)).
 
-  Definition appr {R S A B} (m1 : rws_monad R w S A) (m2 : rws_monad R w S B) : rws_monad R w S B :=
-    RWSMonad (fun r s => let '(_, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (x, M.append w1 w2, s)).
+  Definition bind {R S A B} (m : rws_monad R W.t S A) (f : A -> rws_monad R W.t S B) : rws_monad R W.t S B :=
+    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m r s in let '(y, w2, s) := run_rws_monad (f x) r s in (y, W.append w1 w2, s)).
 
-  Definition bind {R S A B} (m : rws_monad R w S A) (f : A -> rws_monad R w S B) : rws_monad R w S B :=
-    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m r s in let '(y, w2, s) := run_rws_monad (f x) r s in (y, M.append w1 w2, s)).
+  Definition join {R S A} (m : rws_monad R W.t S (rws_monad R W.t S A)) : rws_monad R W.t S A :=
+    RWSMonad (fun r s => let '(m, w1, s) := run_rws_monad m r s in let '(x, w2, s) := run_rws_monad m r s in (x, W.append w1 w2, s)).
 
-  Definition join {R S A} (m : rws_monad R w S (rws_monad R w S A)) : rws_monad R w S A :=
-    RWSMonad (fun r s => let '(m, w1, s) := run_rws_monad m r s in let '(x, w2, s) := run_rws_monad m r s in (x, M.append w1 w2, s)).
+  Definition ask {R S} : rws_monad R W.t S R :=
+    RWSMonad (fun r s => (r, W.empty, s)).
 
-  Definition ask {R S} : rws_monad R w S R :=
-    RWSMonad (fun r s => (r, M.empty, s)).
+  Definition reader {R S A} (f : R -> A) : rws_monad R W.t S A :=
+    RWSMonad (fun r s => (f r, W.empty, s)).
 
-  Definition reader {R S A} (f : R -> A) : rws_monad R w S A :=
-    RWSMonad (fun r s => (f r, M.empty, s)).
+  Definition get {R S} : rws_monad R W.t S S :=
+    RWSMonad (fun _ s => (s, W.empty, s)).
 
-  Definition get {R S} : rws_monad R w S S :=
-    RWSMonad (fun _ s => (s, M.empty, s)).
+  Definition put {R S} (s : S) : rws_monad R W.t S unit :=
+    RWSMonad (fun _ _ => (tt, W.empty, s)).
 
-  Definition put {R S} (s : S) : rws_monad R w S unit :=
-    RWSMonad (fun _ _ => (tt, M.empty, s)).
+  Definition state {R S A} (f : S -> A * S) : rws_monad R W.t S A :=
+    RWSMonad (fun _ s => let (x, s) := f s in (x, W.empty, s)).
 
-  Definition state {R S A} (f : S -> A * S) : rws_monad R w S A :=
-    RWSMonad (fun _ s => let (x, s) := f s in (x, M.empty, s)).
+  Definition gets {R S A} (f : S -> A) : rws_monad R W.t S A :=
+    RWSMonad (fun _ s => (f s, W.empty, s)).
 
-  Definition gets {R S A} (f : S -> A) : rws_monad R w S A :=
-    RWSMonad (fun _ s => (f s, M.empty, s)).
-
-  Definition modify {R S} (f : S -> S) : rws_monad R w S unit :=
-    RWSMonad (fun _ s => (tt, M.empty, f s)).
+  Definition modify {R S} (f : S -> S) : rws_monad R W.t S unit :=
+    RWSMonad (fun _ s => (tt, W.empty, f s)).
 
   Module Notations.
     Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : rws_monad_scope.

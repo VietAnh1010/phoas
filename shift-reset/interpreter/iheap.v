@@ -1,7 +1,7 @@
 From shift_reset.lib Require gmap.
 From shift_reset.core Require Import syntax loc.
 
-Record iheap : Type := IHeap { iheap_car : LocMap.t val; iheap_next_loc : loc }.
+Record iheap : Type := IHeap { iheap_car : gmap.t loc val; iheap_next_loc : loc }.
 
 Definition iheap_empty : iheap :=
   IHeap gmap.empty loc_one.

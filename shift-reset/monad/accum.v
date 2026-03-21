@@ -22,33 +22,30 @@ Module AccumNotations.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : accum_scope.
 End AccumNotations.
 
-Module Make (M : Monoid).
-  Definition w : Type := M.t.
-  Definition t : Type -> Type := accum w.
+Module Make (W : Monoid).
+  Definition pure {A} (x : A) : accum W.t A :=
+    Accum (fun _ => (x, W.empty)).
 
-  Definition pure {A} (x : A) : accum w A :=
-    Accum (fun _ => (x, M.empty)).
+  Definition app {A B} (m1 : accum W.t (A -> B)) (m2 : accum W.t A) : accum W.t B :=
+    Accum (fun w => let (f, w1) := run_accum m1 w in let (x, w2) := run_accum m2 (W.append w w1) in (f x, W.append w1 w2)).
 
-  Definition app {A B} (m1 : accum w (A -> B)) (m2 : accum w A) : accum w B :=
-    Accum (fun w => let (f, w1) := run_accum m1 w in let (x, w2) := run_accum m2 (M.append w w1) in (f x, M.append w1 w2)).
+  Definition appl {A B} (m1 : accum W.t A) (m2 : accum W.t B) : accum W.t A :=
+    Accum (fun w => let (x, w1) := run_accum m1 w in let (_, w2) := run_accum m2 (W.append w w1) in (x, W.append w1 w2)).
 
-  Definition appl {A B} (m1 : accum w A) (m2 : accum w B) : accum w A :=
-    Accum (fun w => let (x, w1) := run_accum m1 w in let (_, w2) := run_accum m2 (M.append w w1) in (x, M.append w1 w2)).
+  Definition appr {A B} (m1 : accum W.t A) (m2 : accum W.t B) : accum W.t B :=
+    Accum (fun w => let (_, w1) := run_accum m1 w in let (x, w2) := run_accum m2 (W.append w w1) in (x, W.append w1 w2)).
 
-  Definition appr {A B} (m1 : accum w A) (m2 : accum w B) : accum w B :=
-    Accum (fun w => let (_, w1) := run_accum m1 w in let (x, w2) := run_accum m2 (M.append w w1) in (x, M.append w1 w2)).
+  Definition bind {A B} (m : accum W.t A) (f : A -> accum W.t B) : accum W.t B :=
+    Accum (fun w => let (x, w1) := run_accum m w in let (y, w2) := run_accum (f x) (W.append w w1) in (y, W.append w1 w2)).
 
-  Definition bind {A B} (m : accum w A) (f : A -> accum w B) : accum w B :=
-    Accum (fun w => let (x, w1) := run_accum m w in let (y, w2) := run_accum (f x) (M.append w w1) in (y, M.append w1 w2)).
+  Definition join {A} (m : accum W.t (accum W.t A)) : accum W.t A :=
+    Accum (fun w => let (m, w1) := run_accum m w in let (x, w2) := run_accum m (W.append w w1) in (x, W.append w1 w2)).
 
-  Definition join {A} (m : accum w (accum w A)) : accum w A :=
-    Accum (fun w => let (m, w1) := run_accum m w in let (x, w2) := run_accum m (M.append w w1) in (x, M.append w1 w2)).
+  Definition look : accum W.t W.t :=
+    Accum (fun w => (w, W.empty)).
 
-  Definition look : accum w w :=
-    Accum (fun w => (w, M.empty)).
-
-  Definition looks {A} (f : w -> A) : accum w A :=
-    Accum (fun w => (f w, M.empty)).
+  Definition looks {A} (f : W.t -> A) : accum W.t A :=
+    Accum (fun w => (f w, W.empty)).
 
   Module Notations.
     Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : accum_scope.

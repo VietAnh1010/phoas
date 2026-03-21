@@ -22,27 +22,24 @@ Module WriterNotations.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : writer_scope.
 End WriterNotations.
 
-Module Make (M : Monoid).
-  Definition w : Type := M.t.
-  Definition t : Type -> Type := writer w.
+Module Make (W : Monoid).
+  Definition pure {A} (x : A) : writer W.t A :=
+    Writer (x, W.empty).
 
-  Definition pure {A} (x : A) : writer w A :=
-    Writer (x, M.empty).
+  Definition app {A B} (m1 : writer W.t (A -> B)) (m2 : writer W.t A) : writer W.t B :=
+    Writer (let (f, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (f x, W.append w1 w2)).
 
-  Definition app {A B} (m1 : writer w (A -> B)) (m2 : writer w A) : writer w B :=
-    Writer (let (f, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (f x, M.append w1 w2)).
+  Definition appl {A B} (m1 : writer W.t A) (m2 : writer W.t B) : writer W.t A :=
+    Writer (let (x, w1) := run_writer m1 in let (_, w2) := run_writer m2 in (x, W.append w1 w2)).
 
-  Definition appl {A B} (m1 : writer w A) (m2 : writer w B) : writer w A :=
-    Writer (let (x, w1) := run_writer m1 in let (_, w2) := run_writer m2 in (x, M.append w1 w2)).
+  Definition appr {A B} (m1 : writer W.t A) (m2 : writer W.t B) : writer W.t B :=
+    Writer (let (_, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (x, W.append w1 w2)).
 
-  Definition appr {A B} (m1 : writer w A) (m2 : writer w B) : writer w B :=
-    Writer (let (_, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (x, M.append w1 w2)).
+  Definition bind {A B} (m : writer W.t A) (f : A -> writer W.t B) : writer W.t B :=
+    Writer (let (x, w1) := run_writer m in let (y, w2) := run_writer (f x) in (y, W.append w1 w2)).
 
-  Definition bind {A B} (m : writer w A) (f : A -> writer w B) : writer w B :=
-    Writer (let (x, w1) := run_writer m in let (y, w2) := run_writer (f x) in (y, M.append w1 w2)).
-
-  Definition join {A} (m : writer w (writer w A)) : writer w A :=
-    Writer (let (m, w1) := run_writer m in let (x, w2) := run_writer m in (x, M.append w1 w2)).
+  Definition join {A} (m : writer W.t (writer W.t A)) : writer W.t A :=
+    Writer (let (m, w1) := run_writer m in let (x, w2) := run_writer m in (x, W.append w1 w2)).
 
   Module Notations.
     Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : writer_scope.

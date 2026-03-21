@@ -33,25 +33,22 @@ Definition join {R W A} (m : cw_monad R W (cw_monad R W A)) : cw_monad R W A :=
 Definition callcc {R W A B} (f : (A -> cw_monad R W B) -> cw_monad R W A) : cw_monad R W A :=
   CWMonad (fun k => run_cw_monad (f (fun x => CWMonad (fun _ => k x))) k).
 
-Module Make (M : Monoid).
-  Definition w : Type := M.t.
-  Definition t (R : Type) : Type -> Type := cw_monad R w.
+Module Make (W : Monoid).
+  Definition reset {R R'} (m : cw_monad R W.t R) : cw_monad R' W.t R :=
+    CWMonad (fun k => let (x, w1) := run_cw_monad m (fun x => (x, W.empty)) in let (y, w2) := k x in (y, W.append w1 w2)).
 
-  Definition reset {R R'} (m : cw_monad R w R) : cw_monad R' w R :=
-    CWMonad (fun k => let (x, w1) := run_cw_monad m (fun x => (x, M.empty)) in let (y, w2) := k x in (y, M.append w1 w2)).
-
-  Definition shift {R R' A} (f : (A -> cw_monad R' w R) -> cw_monad R w R) : cw_monad R w A :=
+  Definition shift {R R' A} (f : (A -> cw_monad R' W.t R) -> cw_monad R W.t R) : cw_monad R W.t A :=
     CWMonad
       (fun k =>
          run_cw_monad
-           (f (fun x => CWMonad (fun k' => let (y, w1) := k x in let (z, w2) := k' y in (z, M.append w1 w2))))
-           (fun x => (x, M.empty))).
+           (f (fun x => CWMonad (fun k' => let (y, w1) := k x in let (z, w2) := k' y in (z, W.append w1 w2))))
+           (fun x => (x, W.empty))).
 
-  Definition tell {R} (w' : w) : cw_monad R w unit :=
-    CWMonad (fun k => let (x, w'') := k tt in (x, M.append w' w'')).
+  Definition tell {R} (w : W.t) : cw_monad R W.t unit :=
+    CWMonad (fun k => let (x, w') := k tt in (x, W.append w w')).
 
-  Definition writer {R A} (m : A * w) : cw_monad R w A :=
-    CWMonad (fun k => let (x, w1) := m in let (y, w2) := k x in (y, M.append w1 w2)).
+  Definition writer {R A} (m : A * W.t) : cw_monad R W.t A :=
+    CWMonad (fun k => let (x, w1) := m in let (y, w2) := k x in (y, W.append w1 w2)).
 End Make.
 
 Definition map_cont {R W A} (f : R -> R) (m : cw_monad R W A) : cw_monad R W A :=

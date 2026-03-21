@@ -18,6 +18,8 @@ Inductive pmap (A : Type) :=
 | PEmpty : pmap A
 | PNodes : pmap_ne A -> pmap A.
 
+Definition t : Type -> Type := pmap.
+
 Arguments PNode001 {A} _.
 Arguments PNode010 {A} _.
 Arguments PNode011 {A} _ _.
@@ -165,7 +167,7 @@ Fixpoint ne_remove {A} (i : positive) (t : pmap_ne A) {struct t} : pmap A :=
 Definition remove {A} : positive -> pmap A -> pmap A :=
   remove_aux ne_remove.
 
-Definition update_aux {A} (go : positive -> pmap_ne A -> pmap A) (f : option A -> option A) (i : positive) (mt : pmap A) : pmap A :=
+Definition update_aux {A} (go : positive -> pmap_ne A -> pmap A) (i : positive) (f : option A -> option A) (mt : pmap A) : pmap A :=
   match mt with
   | PEmpty =>
       match f None with
@@ -175,18 +177,19 @@ Definition update_aux {A} (go : positive -> pmap_ne A -> pmap A) (f : option A -
   | PNodes t => go i t
   end.
 
-Definition ne_update {A} (f : option A -> option A) : positive -> pmap_ne A -> pmap A :=
-  fix go i t {struct t} :=
+Definition ne_update {A} (i : positive) (f : option A -> option A) : pmap_ne A -> pmap A :=
+  let fix go i t {struct t} :=
     ne_case t
       (fun ml mx mr =>
          match i with
          | 1 => PNode ml (f mx) mr
-         | i~0 => PNode (update_aux go f i ml) mx mr
-         | i~1 => PNode ml mx (update_aux go f i mr)
-         end).
+         | i~0 => PNode (update_aux go i f ml) mx mr
+         | i~1 => PNode ml mx (update_aux go i f mr)
+         end)
+  in go i.
 
-Definition update {A} (f : option A -> option A) : positive -> pmap A -> pmap A :=
-  update_aux (ne_update f) f.
+Definition update {A} (i : positive) (f : option A -> option A) : pmap A -> pmap A :=
+  update_aux (fun i => ne_update i f) i f.
 
 Definition ne_map {A B} (f : A -> B) : pmap_ne A -> pmap_ne B :=
   fix go t :=

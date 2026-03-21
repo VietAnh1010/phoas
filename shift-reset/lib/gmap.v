@@ -26,6 +26,9 @@ Definition is_singleton {K A} (mt : gmap K A) : bool :=
 Definition map {K A B} (f : A -> B) (mt : gmap K A) : gmap K B :=
   GMap (pmap.map f (gmap_car mt)).
 
+Definition filter {K A} (f : A -> bool) (mt : gmap K A) : gmap K A :=
+  GMap (pmap.filter f (gmap_car mt)).
+
 Definition filter_map {K A B} (f : A -> option B) (mt : gmap K A) : gmap K B :=
   GMap (pmap.filter_map f (gmap_car mt)).
 

@@ -149,10 +149,16 @@ Definition add {A} (i : positive) (x : A) (mt : pmap A) : pmap A :=
   | PNodes t => PNodes (ne_add i x t)
   end.
 
-Definition remove_aux {A} (go : positive -> pmap_ne A -> pmap A) (i : positive) (mt : pmap A) : pmap A :=
+Definition lift {A B} (go : pmap_ne A -> pmap B) (mt : pmap A) : pmap B :=
   match mt with
   | PEmpty => PEmpty
-  | PNodes t => go i t
+  | PNodes t => go t
+  end.
+
+Definition lifti {K A B} (go : K -> pmap_ne A -> pmap B) (k : K) (mt : pmap A) : pmap B :=
+  match mt with
+  | PEmpty => PEmpty
+  | PNodes t => go k t
   end.
 
 Fixpoint ne_remove {A} (i : positive) (t : pmap_ne A) {struct t} : pmap A :=
@@ -160,12 +166,12 @@ Fixpoint ne_remove {A} (i : positive) (t : pmap_ne A) {struct t} : pmap A :=
     (fun ml mx mr =>
        match i with
        | 1 => PNode ml None mr
-       | i~0 => PNode (remove_aux ne_remove i ml) mx mr
-       | i~1 => PNode ml mx (remove_aux ne_remove i mr)
+       | i~0 => PNode (lifti ne_remove i ml) mx mr
+       | i~1 => PNode ml mx (lifti ne_remove i mr)
        end).
 
 Definition remove {A} : positive -> pmap A -> pmap A :=
-  remove_aux ne_remove.
+  lifti ne_remove.
 
 Definition update_aux {A} (go : positive -> pmap_ne A -> pmap A) (i : positive) (f : option A -> option A) (mt : pmap A) : pmap A :=
   match mt with
@@ -228,44 +234,32 @@ Definition mapi {A B} (f : positive -> A -> B) (mt : pmap A) : pmap B :=
   | PNodes t => PNodes (ne_mapi f t)
   end.
 
-Definition filter_map_aux {A B} (go : pmap_ne A -> pmap B) (mt : pmap A) : pmap B :=
-  match mt with
-  | PEmpty => PEmpty
-  | PNodes t => go t
-  end.
+Definition ne_filter {A} (f : A -> bool) : pmap_ne A -> pmap A :=
+  fix go t := ne_case t (fun ml mx mr => PNode (lift go ml) (option.filter f mx) (lift go mr)).
+
+Definition filter {A} (f : A -> bool) : pmap A -> pmap A :=
+  lift (ne_filter f).
 
 Definition ne_filter_map {A B} (f : A -> option B) : pmap_ne A -> pmap B :=
-  fix go t :=
-    ne_case t
-      (fun ml mx mr =>
-         PNode
-           (filter_map_aux go ml)
-           (option.bind mx f)
-           (filter_map_aux go mr)).
+  fix go t := ne_case t (fun ml mx mr => PNode (lift go ml) (option.bind mx f) (lift go mr)).
 
 Definition filter_map {A B} (f : A -> option B) : pmap A -> pmap B :=
-  filter_map_aux (ne_filter_map f).
-
-Definition filter_mapi_aux {A B} (go : (positive -> positive) -> pmap_ne A -> pmap B) (k : positive -> positive) (mt : pmap A) : pmap B :=
-  match mt with
-  | PEmpty => PEmpty
-  | PNodes t => go k t
-  end.
+  lift (ne_filter_map f).
 
 Definition ne_filter_mapi_aux {A B} (f : positive -> A -> option B) : (positive -> positive) -> pmap_ne A -> pmap B :=
   fix go k t :=
     ne_case t
       (fun ml mx mr =>
          PNode
-           (filter_mapi_aux go (fun i => k i~0) ml)
+           (lifti go (fun i => k i~0) ml)
            (option.bind mx (fun x => f (k 1) x))
-           (filter_mapi_aux go (fun i => k i~1) mr)).
+           (lifti go (fun i => k i~1) mr)).
 
 Definition ne_filter_mapi {A B} (f : positive -> A -> option B) : pmap_ne A -> pmap B :=
   ne_filter_mapi_aux f (fun i => i).
 
 Definition filter_mapi {A B} (f : positive -> A -> option B) : pmap A -> pmap B :=
-  filter_mapi_aux (ne_filter_mapi_aux f) (fun i => i).
+  lifti (ne_filter_mapi_aux f) (fun i => i).
 
 Definition merge_aux {A B C} (go : (positive -> positive) -> pmap_ne A -> pmap_ne B -> pmap C) (f : positive -> option A -> option B -> option C)
   (k : positive -> positive) (mt1 : pmap A) (mt2 : pmap B) : pmap C :=

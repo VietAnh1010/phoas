@@ -16,12 +16,12 @@ Fixpoint kont_length (k : kont) : nat :=
   | KApp k1 k2 => kont_length_acc k1 (kont_length k2)
   end.
 
-Fixpoint kont_flatten_app (k1 k2 : kont) : kont :=
+Fixpoint kont_flatten_append (k1 k2 : kont) : kont :=
   match k1 with
   | KNil => k2
-  | KCons0 t e k1' => KCons0 t e (kont_flatten_app k1' k2)
-  | KCons1 p t e k1' => KCons1 p t e (kont_flatten_app k1' k2)
-  | KApp k11 k12 => kont_flatten_app k11 (kont_flatten_app k12 k2)
+  | KCons0 t e k1' => KCons0 t e (kont_flatten_append k1' k2)
+  | KCons1 p t e k1' => KCons1 p t e (kont_flatten_append k1' k2)
+  | KApp k11 k12 => kont_flatten_append k11 (kont_flatten_append k12 k2)
   end.
 
 Fixpoint kont_flatten (k : kont) : kont :=
@@ -29,5 +29,5 @@ Fixpoint kont_flatten (k : kont) : kont :=
   | KNil => KNil
   | KCons0 t e k' => KCons0 t e (kont_flatten k')
   | KCons1 p t e k' => KCons1 p t e (kont_flatten k')
-  | KApp k1 k2 => kont_flatten_app k1 (kont_flatten k2)
+  | KApp k1 k2 => kont_flatten_append k1 (kont_flatten k2)
   end.

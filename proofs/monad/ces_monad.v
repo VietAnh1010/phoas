@@ -47,3 +47,15 @@ Proof.
   - reflexivity.
   - reflexivity.
 Qed.
+
+Lemma get_put {R E S} :
+  @bind R E S S unit get put = @pure R E S unit tt.
+Proof. cbv. reflexivity. Qed.
+
+Lemma put_get {R E S} (s : S) :
+  @appr R E S unit S (put s) get = @appr R E S unit S (put s) (pure s).
+Proof. cbv. reflexivity. Qed.
+
+Lemma put_put {R E S} (s1 s2 : S) :
+  @appr R E S unit unit (put s1) (put s2) = @put R E S s2.
+Proof. cbv. reflexivity. Qed.

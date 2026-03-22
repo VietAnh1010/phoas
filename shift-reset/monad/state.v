@@ -20,7 +20,7 @@ Definition appl {S A B} (m1 : state S A) (m2 : state S B) : state S A :=
   State (fun s => let (x, s) := run_state m1 s in let (_, s) := run_state m2 s in (x, s)).
 
 Definition appr {S A B} (m1 : state S A) (m2 : state S B) : state S B :=
-  State (fun s => let (_, s) := run_state m2 s in run_state m2 s).
+  State (fun s => let (_, s) := run_state m1 s in run_state m2 s).
 
 Definition bind {S A B} (m : state S A) (f : A -> state S B) : state S B :=
   State (fun s => let (x, s) := run_state m s in run_state (f x) s).

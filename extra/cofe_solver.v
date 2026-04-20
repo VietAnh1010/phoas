@@ -485,9 +485,11 @@ Proof.
       reflexivity.
 Qed.
 
-Record tower : Type := { tower_car (k : nat) : approx k; down_tower (k : nat) : down k (tower_car (S k)) = tower_car k }.
-Coercion tower_car : tower >-> Funclass.
+Record tower : Type :=
+  { tower_car (k : nat) : approx k;
+    down_tower (k : nat) : down k (tower_car (S k)) = tower_car k }.
 
+Coercion tower_car : tower >-> Funclass.
 Axiom tower_eq : forall (s t : tower), s = t <-> forall k, s k = t k.
 Axiom tower_dist : forall (n : nat) (s t : tower), s ={n}= t <-> forall k, s k ={n}= t k.
 

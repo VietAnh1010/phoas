@@ -54,14 +54,14 @@ Lemma contractive_dist {A B} (f : A -> B) {H_contractive : Contractive f} :
   forall (n : nat) (x y : A), (forall m, m < n -> x ={m}= y) -> f x ={n}= f y.
 Proof. exact f_contractive. Qed.
 
-Lemma contractive_dist_O {A B} {f : A -> B} {H_contractive : Contractive f}
+Lemma contractive_dist_O {A B} (f : A -> B) {H_contractive : Contractive f}
   (x y : A) : f x ={O}= f y.
 Proof.
   apply f_contractive.
   intros m H_lt. contradict (Nat.nlt_0_r m H_lt).
 Qed.
 
-Lemma contractive_dist_S {A B} {f : A -> B} {H_contractive : Contractive f}
+Lemma contractive_dist_S {A B} (f : A -> B) {H_contractive : Contractive f}
   (n : nat) (x y : A) (H_dist : x ={n}= y) : f x ={S n}= f y.
 Proof.
   apply f_contractive.
@@ -86,7 +86,7 @@ Lemma contractive2_dist {A B C} (f : A -> B -> C) {H_contractive2 : Contractive2
     f x u ={n}= f y v.
 Proof. exact f_contractive2. Qed.
 
-Lemma contractive2_dist_O {A B C} {f : A -> B -> C} {H_contractive2 : Contractive2 f}
+Lemma contractive2_dist_O {A B C} (f : A -> B -> C) {H_contractive2 : Contractive2 f}
   (x y : A) (u v : B) : f x u ={O}= f y v.
 Proof.
   apply f_contractive2.
@@ -94,7 +94,7 @@ Proof.
   - intros m H_lt. contradict (Nat.nlt_0_r m H_lt).
 Qed.
 
-Lemma contractive2_dist_S {A B C} {f : A -> B -> C} {H_contractive2 : Contractive2 f}
+Lemma contractive2_dist_S {A B C} (f : A -> B -> C) {H_contractive2 : Contractive2 f}
   (n : nat) (x y : A) (u v : B) (H_dist1 : x ={n}= y) (H_dist2 : u ={n}= v) : f x u ={S n}= f y v.
 Proof.
   apply f_contractive2.
@@ -226,13 +226,13 @@ Proof.
     rewrite -> dimap_comp.
     rewrite <- (@dimap_id (approx 1) (approx 1) x) at 2.
     apply dist_ext.
-    exact (contractive2_dist_O _ _ _ _).
+    exact (contractive2_dist_O dimap _ _ _ _).
   - rewrite -> up_S.
     rewrite -> down_S.
     rewrite -> dimap_comp.
     rewrite <- (@dimap_id (approx (S (S k'))) (approx (S (S k'))) x) at 2.
     apply dist_ext.
-    apply contractive2_dist_S.
+    apply (contractive2_dist_S dimap).
     + exact (proj2 (dist_ext k' _ _) IHk').
     + exact (proj2 (dist_ext k' _ _) IHk').
 Qed.
@@ -246,8 +246,7 @@ Fixpoint up_iter (n k : nat) (x : approx k) : approx (n + k) :=
 Lemma up_iter_O (k : nat) (x : approx k) : up_iter O k x = x.
 Proof. reflexivity. Qed.
 
-Lemma up_iter_S (n' k : nat) (x : approx k) :
-  up_iter (S n') k x = up (n' + k) (up_iter n' k x).
+Lemma up_iter_S (n' k : nat) (x : approx k) : up_iter (S n') k x = up (n' + k) (up_iter n' k x).
 Proof. reflexivity. Qed.
 
 Fixpoint down_iter (n k : nat) : approx (n + k) -> approx k :=
@@ -259,8 +258,7 @@ Fixpoint down_iter (n k : nat) : approx (n + k) -> approx k :=
 Lemma down_iter_O (k : nat) (x : approx k) : down_iter O k x = x.
 Proof. reflexivity. Qed.
 
-Lemma down_iter_S (n' k : nat) (x : approx (S (n' + k))) :
-  down_iter (S n') k x = down_iter n' k (down (n' + k) x).
+Lemma down_iter_S (n' k : nat) (x : approx (S (n' + k))) : down_iter (S n') k x = down_iter n' k (down (n' + k) x).
 Proof. reflexivity. Qed.
 
 Lemma down_iter_up_iter (n k : nat) (x : approx k) : down_iter n k (up_iter n k x) = x.
@@ -384,7 +382,7 @@ Lemma shift_obligation_1 : forall (m n : nat), m <= n -> n - m + m = n.
 Proof. exact Nat.sub_add. Qed.
 
 Lemma shift_obligation_2 (m n : nat) (H_lt : n < m) : m = m - n + n.
-Proof. symmetry. exact (Nat.sub_add n m (Nat.lt_le_incl n m H_lt)). Qed.
+Proof. exact (eq_sym (Nat.sub_add n m (Nat.lt_le_incl n m H_lt))). Qed.
 
 Definition shift (m n : nat) (x : approx m) : approx n :=
   match le_lt_dec m n with
@@ -402,6 +400,7 @@ Proof.
         exact (Nat.lt_succ_pred _ _ (proj1 (Nat.le_succ_l m n) H_le1)). }
       destruct H_eq as [p H_eq].
       destruct H_eq as [].
+      change (S p - S m) with (p - m).
       assert (H_le := proj2 (Nat.succ_le_mono m p) H_le1 : m <= p).
       assert (H_eq : S (p - m + m) = S p).
       { rewrite -> (Nat.sub_add m p H_le).
@@ -472,6 +471,7 @@ Proof.
         exact (Nat.lt_succ_pred _ _ H_lt2). }
       destruct H_eq as [p H_eq].
       destruct H_eq as [].
+      change (S p - S n) with (p - n).
       assert (H_le := proj1 (Nat.lt_succ_r n p) H_lt2 : n <= p).
       assert (H_eq : S p = S (p - n + n)).
       { rewrite -> (Nat.sub_add n p H_le).
@@ -570,6 +570,20 @@ Proof. unfold proj. exact (down_tower t k). Qed.
 Lemma embed_proj (k : nat) (t : tower) : embed (S k) (proj (S k) t) ={k}= t.
 Proof. unfold proj. exact (embed_tower t k). Qed.
 
+Lemma roll_obligation (m : F tower tower) (k : nat) :
+  down k (down (S k) (dimap (embed (S k)) (proj (S k)) m)) =
+  down k (dimap (embed k) (proj k) m).
+Proof.
+  rewrite -> down_S.
+  rewrite -> dimap_comp.
+  rewrite -> (functional_extensionality _ _ (embed_up k)).
+  rewrite -> (functional_extensionality _ _ (down_proj k)).
+  reflexivity.
+Qed.
+
+Definition roll (m : F tower tower) : tower :=
+  {| tower_car (k : nat) := down k (dimap (embed k) (proj k) m); down_tower := roll_obligation m |}.
+
 Record chain (A : Type) : Type :=
   { chain_car : nat -> A;
     cauchy (n i : nat) : n <= i -> chain_car i ={n}= chain_car n }.
@@ -650,20 +664,6 @@ Definition unroll_chain (t : tower) : chain (F tower tower) :=
 
 Definition unroll (t : tower) : F tower tower :=
   compl (unroll_chain t).
-
-Lemma roll_obligation (m : F tower tower) (k : nat) :
-  down k (down (S k) (dimap (embed (S k)) (proj (S k)) m)) =
-  down k (dimap (embed k) (proj k) m).
-Proof.
-  rewrite -> down_S.
-  rewrite -> dimap_comp.
-  rewrite -> (functional_extensionality _ _ (embed_up k)).
-  rewrite -> (functional_extensionality _ _ (down_proj k)).
-  reflexivity.
-Qed.
-
-Definition roll (m : F tower tower) : tower :=
-  {| tower_car (k : nat) := down k (dimap (embed k) (proj k) m); down_tower := roll_obligation m |}.
 
 Lemma dimap_up_iter_down_iter_tower (t : tower) (n k : nat) :
   dimap (up_iter n k) (down_iter n k) (t (S (n + k))) = t (S k).
@@ -750,8 +750,8 @@ Proof.
   rewrite <- (dimap_id m) at 2.
   apply dist_ext.
   destruct n as [| n'].
-  - exact (contractive2_dist_O _ _ _ _).
-  - apply contractive2_dist_S.
+  - exact (contractive2_dist_O dimap _ _ _ _).
+  - apply (contractive2_dist_S dimap).
     + apply dist_ext. intros t.
       rewrite -> embed_up.
       rewrite -> embed_proj.

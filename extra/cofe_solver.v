@@ -8,23 +8,27 @@ Axiom dist_sym : forall {A} (n : nat) (x y : A), x ={n}= y -> y ={n}= x.
 Axiom dist_trans : forall {A} (n : nat) (x y z : A), x ={n}= y -> y ={n}= z -> x ={n}= z.
 Axiom dist_le : forall {A} (n m : nat) (x y : A), m <= n -> x ={n}= y -> x ={m}= y.
 
-Instance dist_Reflexive {A} (n : nat) : Reflexive (@dist A n).
+Instance dist_Reflexive A (n : nat) : Reflexive (@dist A n).
 Proof. exact (dist_refl n). Qed.
 
-Instance dist_Symmetric {A} (n : nat) : Symmetric (@dist A n).
+Instance dist_Symmetric A (n : nat) : Symmetric (@dist A n).
 Proof. exact (dist_sym n). Qed.
 
-Instance dist_Transitive {A} (n : nat) : Transitive (@dist A n).
+Instance dist_Transitive A (n : nat) : Transitive (@dist A n).
 Proof. exact (dist_trans n). Qed.
 
-Instance dist_Equivalence {A} (n : nat) : Equivalence (@dist A n).
-Proof. constructor. apply dist_Reflexive. apply dist_Symmetric. apply dist_Transitive. Qed.
+Instance dist_Equivalence A (n : nat) : Equivalence (@dist A n).
+Proof.
+  constructor.
+  - exact (dist_Reflexive A n).
+  - exact (dist_Symmetric A n).
+  - exact (dist_Transitive A n).
+Qed.
 
-Instance dist_RewriteRelation {A} (n : nat) : RewriteRelation (@dist A n) := {}.
+Instance dist_RewriteRelation A (n : nat) : RewriteRelation (@dist A n) := {}.
 
 Axiom eq_dist : forall {A} (x y : A), x = y <-> forall n, x ={n}= y.
 Axiom dist_ext : forall {A B} (n : nat) (f g : A -> B), f ={n}= g <-> forall x, f x ={n}= g x.
-Axiom dist_ext_dep : forall {A} {B : A -> Type} (n : nat) (f g : forall x, B x), f ={n}= g <-> forall x, f x ={n}= g x.
 
 Class NonExpansive {A B} (f : A -> B) : Prop :=
   f_ne (n : nat) (x y : A) : x ={n}= y -> f x ={n}= f y.
@@ -123,17 +127,6 @@ Proof.
   intros x y H_dist1 u v H_dist2 s t. exact (ne3_dist f n x y u v s t H_dist1 H_dist2).
 Qed.
 
-Lemma dist_ext2 {A B C} (n : nat) (f g : A -> B -> C) :
-  f ={n}= g <-> forall x y, f x y ={n}= g x y.
-Proof.
-  split.
-  - intros H_dist x.
-    exact (proj1 (dist_ext n (f x) (g x)) (proj1 (dist_ext n f g) H_dist x)).
-  - intros H_dist.
-    apply (proj2 (dist_ext n f g)). intros x.
-    exact (proj2 (dist_ext n (f x) (g x)) (H_dist x)).
-Qed.
-
 (* F is a profunctor *)
 Parameter F : Type -> Type -> Type.
 Parameter inhabitant : F unit unit.
@@ -213,7 +206,7 @@ Proof.
   - rewrite -> down_S.
     rewrite -> up_S.
     rewrite -> dimap_comp.
-    rewrite -> (functional_extensionality (fun y => down k' (up k' y)) (fun y => y) IHk').
+    rewrite -> (functional_extensionality _ _ IHk').
     rewrite -> dimap_id.
     reflexivity.
 Qed.
@@ -281,17 +274,22 @@ Proof.
   exact H_dist.
 Qed.
 
-Lemma cast_id (n : nat) (x : approx n) : cast n n eq_refl x = x.
-Proof. unfold cast. reflexivity. Qed.
+Lemma cast_id (n : nat) (H_eq : n = n) (x : approx n) : cast n n H_eq x = x.
+Proof.
+  rewrite -> (UIP_nat _ _ H_eq eq_refl).
+  unfold cast. reflexivity.
+Qed.
 
-Lemma cast_comp (m n p : nat) (H_eq1 : m = n) (H_eq2 : n = p) (x : approx m) :
-  cast n p H_eq2 (cast m n H_eq1 x) = cast m p (eq_trans H_eq1 H_eq2) x.
+Lemma cast_comp (m n p : nat) (H_eq1 : m = n) (H_eq2 : n = p) (H_eq3 : m = p) (x : approx m) :
+  cast n p H_eq2 (cast m n H_eq1 x) = cast m p H_eq3 x.
 Proof.
   destruct H_eq1 as [].
   destruct H_eq2 as [].
-  unfold cast, eq_trans. reflexivity.
+  rewrite -> (UIP_nat _ _ H_eq3 eq_refl).
+  unfold cast. reflexivity.
 Qed.
 
+(* The naturality square *)
 Lemma cast_natural (f g : nat -> nat) (eta : forall i, approx (f i) -> approx (g i)) (m n : nat) (H_eq : m = n) (x : approx (f m)) :
   cast (g m) (g n) (f_equal g H_eq) (eta m x) = eta n (cast (f m) (f n) (f_equal f H_eq) x).
 Proof.
@@ -299,82 +297,109 @@ Proof.
   unfold cast, f_equal. reflexivity.
 Qed.
 
-Lemma cast_up (m n : nat) (H_eq : m = n) (x : approx m) :
-  cast (S m) (S n) (f_equal S H_eq) (up m x) = up n (cast m n H_eq x).
+Lemma cast_up (m n : nat) (H_eq1 : S m = S n) (H_eq2 : m = n) (x : approx m) :
+  cast (S m) (S n) H_eq1 (up m x) = up n (cast m n H_eq2 x).
 Proof.
-  destruct H_eq as [].
-  unfold cast, f_equal. reflexivity.
+  destruct H_eq2 as [].
+  rewrite -> (UIP_nat _ _ H_eq1 eq_refl).
+  unfold cast. reflexivity.
 Qed.
 
-Lemma down_cast (m n : nat) (H_eq : n = m) (x : approx (S n)) :
-  down m (cast (S n) (S m) (f_equal S H_eq) x) = cast n m H_eq (down n x).
+Lemma down_cast (m n : nat) (H_eq1 : S n = S m) (H_eq2 : n = m) (x : approx (S n)) :
+  down m (cast (S n) (S m) H_eq1 x) = cast n m H_eq2 (down n x).
 Proof.
-  destruct H_eq as [].
-  unfold cast, f_equal. reflexivity.
+  destruct H_eq2 as [].
+  rewrite -> (UIP_nat _ _ H_eq1 eq_refl).
+  unfold cast. reflexivity.
 Qed.
 
-Lemma cast_up_iter_r (k m n : nat) (H_eq : m = n) (x : approx m) :
-  cast (k + m) (k + n) (f_equal (Nat.add k) H_eq) (up_iter k m x) = up_iter k n (cast m n H_eq x).
+Lemma cast_up_iter_r (k m n : nat) (H_eq1 : k + m = k + n) (H_eq2 : m = n) (x : approx m) :
+  cast (k + m) (k + n) H_eq1 (up_iter k m x) =
+  up_iter k n (cast m n H_eq2 x).
 Proof.
-  destruct H_eq as [].
-  unfold cast, f_equal. reflexivity.
+  destruct H_eq2 as [].
+  rewrite -> (UIP_nat _ _ H_eq1 eq_refl).
+  unfold cast. reflexivity.
 Qed.
 
-Lemma down_iter_cast_r (k n m : nat) (H_eq : n = m) (x : approx (k + n)) :
-  down_iter k m (cast (k + n) (k + m) (f_equal (Nat.add k) H_eq) x) = cast n m H_eq (down_iter k n x).
+Lemma down_iter_cast_r (k m n : nat) (H_eq1 : k + n = k + m) (H_eq2 : n = m) (x : approx (k + n)) :
+  down_iter k m (cast (k + n) (k + m) H_eq1 x) =
+  cast n m H_eq2 (down_iter k n x).
 Proof.
-  destruct H_eq as [].
-  unfold cast, f_equal. reflexivity.
+  destruct H_eq2 as [].
+  rewrite -> (UIP_nat _ _ H_eq1 eq_refl).
+  unfold cast. reflexivity.
 Qed.
 
-Lemma cast_up_iter_l (m n k : nat) (H_eq : m = n) (x : approx k) :
-  cast (m + k) (n + k) (f_equal (fun p => p + k) H_eq) (up_iter m k x) = up_iter n k x.
+Lemma cast_up_iter_l (m n k i : nat) (H_eq1 : m + k = i) (H_eq2 : n + k = i) (x : approx k) :
+  cast (m + k) i H_eq1 (up_iter m k x) =
+  cast (n + k) i H_eq2 (up_iter n k x).
 Proof.
-  destruct H_eq as [].
-  unfold cast, f_equal. reflexivity.
+  destruct (proj1 (Nat.add_cancel_r m n k) (eq_trans_r H_eq1 H_eq2) : m = n) as [].
+  rewrite -> (UIP_nat _ _ H_eq1 H_eq2).
+  reflexivity.
 Qed.
 
-Lemma down_iter_cast_l (m n k : nat) (H_eq : n = m) (x : approx (n + k)) :
-  down_iter m k (cast (n + k) (m + k) (f_equal (fun p => p + k) H_eq) x) = down_iter n k x.
+Lemma down_iter_cast_l (m n k i : nat) (H_eq1 : i = m + k) (H_eq2 : i = n + k) (x : approx i) :
+  down_iter m k (cast i (m + k) H_eq1 x) =
+  down_iter n k (cast i (n + k) H_eq2 x).
 Proof.
-  destruct H_eq as [].
-  unfold cast, f_equal. reflexivity.
+  destruct (proj1 (Nat.add_cancel_r m n k) (eq_stepl H_eq2 H_eq1) : m = n) as [].
+  rewrite -> (UIP_nat _ _ H_eq1 H_eq2).
+  reflexivity.
 Qed.
 
-Lemma cast_up_iter_up (n k : nat) (x : approx k) :
-  cast (n + S k) (S (n + k)) (Nat.add_succ_r n k) (up_iter n (S k) (up k x)) =
-  up_iter (S n) k x.
+Lemma cast_up_iter_l' (m n k : nat) (H_eq : m + k = n + k) (x : approx k) :
+  cast (m + k) (n + k) H_eq (up_iter m k x) = up_iter n k x.
 Proof.
-  induction n as [| n' IHn'].
-  - rewrite -> up_iter_S.
+  destruct (proj1 (Nat.add_cancel_r m n k) H_eq : m = n) as [].
+  rewrite -> cast_id.
+  reflexivity.
+Qed.
+
+Lemma down_iter_cast_l' (m n k : nat) (H_eq : n + k = m + k) (x : approx (n + k)) :
+  down_iter m k (cast (n + k) (m + k) H_eq x) =
+  down_iter n k x.
+Proof.
+  destruct (proj1 (Nat.add_cancel_r n m k) H_eq : n = m) as [].
+  rewrite -> cast_id.
+  reflexivity.
+Qed.
+
+Lemma up_iter_up (n k : nat) (H_eq : S (n + k) = n + S k) (x : approx k) :
+  up_iter n (S k) (up k x) =
+  cast (S (n + k)) (n + S k) H_eq (up_iter (S n) k x).
+Proof.
+  revert H_eq.
+  induction n as [| n' IHn']; intros H_eq.
+  - rewrite -> up_iter_O.
+    rewrite -> cast_id.
+    rewrite -> up_iter_S.
     rewrite -> up_iter_O.
-    rewrite -> up_iter_O.
-    rewrite -> (UIP_nat _ _ _ eq_refl).
-    unfold cast. reflexivity.
-  - rewrite -> (up_iter_S n' (S k)).
-    rewrite -> (UIP_nat _ _ _ (f_equal S (Nat.add_succ_r n' k))).
-    rewrite -> (cast_up (n' + S k)).
-    rewrite -> IHn'.
-    rewrite <- (up_iter_S (S n') k).
+    reflexivity.
+  - rewrite -> (up_iter_S (S n') k).
+    rewrite -> (cast_up (S (n' + k)) (n' + S k) _ (eq_sym (Nat.add_succ_r n' k))).
+    rewrite <- (IHn' _).
+    rewrite <- (up_iter_S n' (S k)).
     reflexivity.
 Qed.
 
-Lemma down_down_iter_cast (n k : nat) :
-  forall (x : approx (S (n + k))),
-    down k (down_iter n (S k) (cast (S (n + k)) (n + S k) (eq_sym (Nat.add_succ_r n k)) x)) =
-    down_iter (S n) k x.
+Lemma down_down_iter (n k : nat) :
+  forall (H_eq : n + S k = S (n + k))
+         (x : approx (n + S k)),
+    down k (down_iter n (S k) x) =
+    down_iter (S n) k (cast (n + S k) (S (n + k)) H_eq x).
 Proof.
-  induction n as [| n' IHn']; intros x.
-  - rewrite -> down_iter_S.
+  induction n as [| n' IHn']; intros H_eq x.
+  - rewrite -> down_iter_O.
+    rewrite -> down_iter_S.
     rewrite -> down_iter_O.
-    rewrite -> down_iter_O.
-    rewrite -> (UIP_nat _ _ _ eq_refl).
-    unfold cast. reflexivity.
-  - rewrite -> (down_iter_S n' (S k)).
-    rewrite -> (UIP_nat _ _ _ (f_equal S (eq_sym (Nat.add_succ_r n' k)))).
-    rewrite -> down_cast.
-    rewrite -> (IHn' (down (S (n' + k)) x)).
-    rewrite <- (down_iter_S (S n') k).
+    rewrite -> cast_id.
+    reflexivity.
+  - rewrite -> (down_iter_S (S n') k).
+    rewrite -> (down_cast (S (n' + k)) (n' + S k) _ (Nat.add_succ_r n' k)).
+    rewrite <- (IHn' _ (down (n' + S k) x)).
+    rewrite <- (down_iter_S n' (S k)).
     reflexivity.
 Qed.
 
@@ -395,45 +420,29 @@ Proof.
   unfold shift.
   destruct (le_lt_dec (S m) n) as [H_le1 | H_lt1].
   - destruct (le_lt_dec m n) as [H_le2 | H_lt2].
-    + assert (H_eq : exists p, S p = n).
-      { exists (pred n).
-        exact (Nat.lt_succ_pred _ _ (proj1 (Nat.le_succ_l m n) H_le1)). }
-      destruct H_eq as [p H_eq].
-      destruct H_eq as [].
-      change (S p - S m) with (p - m).
-      assert (H_le := proj2 (Nat.succ_le_mono m p) H_le1 : m <= p).
-      assert (H_eq : S (p - m + m) = S p).
-      { rewrite -> (Nat.sub_add m p H_le).
+    + rewrite -> (up_iter_up (n - S m) m (eq_sym (Nat.add_succ_r (n - S m) m))).
+      assert (H_eq : S (n - S m + m) = n).
+      { rewrite <- Nat.add_succ_l.
+        rewrite -> Nat.sub_succ_r.
+        rewrite -> (Nat.succ_pred (n - m) (Nat.sub_gt n m (proj1 (Nat.le_succ_l m n) H_le1))).
+        rewrite -> (Nat.sub_add m n H_le2).
         reflexivity. }
-      rewrite -> (UIP_nat _ _ _ (eq_trans (Nat.add_succ_r (p - m) m) H_eq)).
-      rewrite <- cast_comp.
-      rewrite -> (cast_up_iter_up (p - m) m).
-      rewrite <- (cast_up_iter_l (S (p - m)) (S p - m) m (eq_sym (Nat.sub_succ_l m p H_le))).
-      rewrite -> cast_comp.
-      rewrite -> (UIP_nat _ _ (eq_trans _ _) H_eq).
+      rewrite -> (cast_comp _ _ _ _ _ H_eq).
+      rewrite -> (cast_up_iter_l (S (n - S m)) (n - m) m n _ (shift_obligation_1 m n H_le2)).
       reflexivity.
     + contradict (Nat.lt_irrefl n (Nat.lt_trans n m n H_lt2 (proj1 (Nat.le_succ_l m n) H_le1))).
   - destruct (le_lt_dec m n) as [H_le2 | H_lt2].
     + destruct (Nat.le_antisymm n m (proj1 (Nat.lt_succ_r n m) H_lt1) H_le2 : n = m) as [].
-      assert (H_eq := Nat.sub_diag n : n - n = O).
-      assert (H_eq' : 1 = S n - n).
-      { rewrite -> (Nat.sub_succ_l n n (Nat.le_refl n)).
-        rewrite -> H_eq.
-        reflexivity. }
-      rewrite -> (UIP_nat _ _ _ (f_equal (fun p => p + n) H_eq')).
-      rewrite -> (down_iter_cast_l (S n - n) 1 n).
+      rewrite -> (down_iter_cast_l' (S n - n) 1).
       rewrite -> down_iter_S.
       rewrite -> down_iter_O.
       rewrite -> down_up.
-      rewrite -> (UIP_nat _ _ _ (f_equal (fun p : nat => p + n) H_eq)).
-      rewrite -> (cast_up_iter_l (n - n) O n).
+      rewrite -> (cast_up_iter_l' (n - n) O).
       rewrite -> up_iter_O.
       reflexivity.
-    + rewrite <- (down_iter_cast_l (S (m - n)) (S m - n) n (Nat.sub_succ_l n m (Nat.lt_le_incl n m H_lt2))).
-      rewrite -> cast_comp.
-      rewrite -> (UIP_nat _ _ _ (f_equal S (shift_obligation_2 m n H_lt2))).
+    + rewrite -> (down_iter_cast_l (S m - n) (S (m - n)) n (S m) _ (f_equal S (shift_obligation_2 m n H_lt2))).
       rewrite -> down_iter_S.
-      rewrite -> (down_cast (m - n + n) m).
+      rewrite -> (down_cast (m - n + n) m _ (shift_obligation_2 m n H_lt2)).
       rewrite -> down_up.
       reflexivity.
 Qed.
@@ -443,45 +452,30 @@ Proof.
   unfold shift.
   destruct (le_lt_dec m (S n)) as [H_le1 | H_lt1].
   - destruct (le_lt_dec m n) as [H_le2 | H_lt2].
-    + rewrite <- (cast_up_iter_l (S (n - m)) (S n - m) m (eq_sym (Nat.sub_succ_l m n H_le2))).
-      rewrite -> cast_comp.
-      rewrite -> (UIP_nat _ _ _ (f_equal S (shift_obligation_1 m n H_le2))).
+    + rewrite -> (cast_up_iter_l (S n - m) (S (n - m)) m (S n) _ (f_equal S (shift_obligation_1 m n H_le2))).
+      rewrite -> (down_cast n (n - m + m) _ (shift_obligation_1 m n H_le2)).
       rewrite -> up_iter_S.
-      rewrite -> (cast_up (n - m + m) n).
       rewrite -> down_up.
       reflexivity.
     + destruct (Nat.le_antisymm _ _ H_lt2 H_le1 : S n = m) as [].
-      assert (H_eq := Nat.sub_diag n : n - n = O).
-      rewrite -> (UIP_nat _ _ _ (f_equal (fun p => p + S n) H_eq)).
-      rewrite -> (cast_up_iter_l (n - n) O (S n)).
+      change (S n - S n) with (n - n).
+      rewrite -> (cast_up_iter_l' (n - n) O).
       rewrite -> up_iter_O.
-      assert (H_eq' : 1 = S n - n).
-      { rewrite -> (Nat.sub_succ_l n n (Nat.le_refl n)).
-        rewrite -> H_eq.
-        reflexivity. }
-      rewrite -> (UIP_nat _ _ _ (f_equal (fun p => p + n) H_eq')).
-      rewrite -> (down_iter_cast_l (S n - n) 1 n).
+      rewrite -> (down_iter_cast_l' (S n - n) 1).
       rewrite -> down_iter_S.
       rewrite -> down_iter_O.
       reflexivity.
   - destruct (le_lt_dec m n) as [H_le2 | H_lt2].
     + contradict (Nat.lt_irrefl m (Nat.lt_trans m (S n) m (proj2 (Nat.lt_succ_r m n) H_le2) H_lt1)).
-    + assert (H_eq : exists p, S p = m).
-      { exists (pred m).
-        exact (Nat.lt_succ_pred _ _ H_lt2). }
-      destruct H_eq as [p H_eq].
-      destruct H_eq as [].
-      change (S p - S n) with (p - n).
-      assert (H_le := proj1 (Nat.lt_succ_r n p) H_lt2 : n <= p).
-      assert (H_eq : S p = S (p - n + n)).
-      { rewrite -> (Nat.sub_add n p H_le).
+    + rewrite -> (down_down_iter (m - S n) n (Nat.add_succ_r (m - S n) n)).
+      assert (H_eq : m = S (m - S n + n)).
+      { rewrite <- Nat.add_succ_l.
+        rewrite -> Nat.sub_succ_r.
+        rewrite -> (Nat.succ_pred (m - n) (Nat.sub_gt m n H_lt2)).
+        rewrite -> (Nat.sub_add n m (Nat.lt_le_incl n m H_lt2)).
         reflexivity. }
-      rewrite -> (UIP_nat _ _ _ (eq_trans H_eq (eq_sym (Nat.add_succ_r (p - n) n)))).
-      rewrite <- cast_comp.
-      rewrite -> (down_down_iter_cast (p - n) n).
-      rewrite <- (down_iter_cast_l (S (p - n)) (S p - n) n (Nat.sub_succ_l n p H_le)).
-      rewrite -> cast_comp.
-      rewrite -> (UIP_nat _ _ (eq_trans _ _) H_eq).
+      rewrite -> (cast_comp _ _ _ _ _ H_eq).
+      rewrite -> (down_iter_cast_l (S (m - S n)) (m - n) n m _ (shift_obligation_2 m n H_lt2)).
       reflexivity.
 Qed.
 
@@ -520,15 +514,13 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma cast_tower (t : tower) (m n : nat) (H_eq : m = n) :
-  cast m n H_eq (t m) = t n.
+Lemma cast_tower (t : tower) (m n : nat) (H_eq : m = n) : cast m n H_eq (t m) = t n.
 Proof.
   destruct H_eq as [].
   unfold cast. reflexivity.
 Qed.
 
-Lemma shift_tower (t : tower) (m n : nat) :
-  shift (S m) n (t (S m)) ={m}= t n.
+Lemma shift_tower (t : tower) (m n : nat) : shift (S m) n (t (S m)) ={m}= t n.
 Proof.
   unfold shift.
   destruct (le_lt_dec (S m) n) as [H_le | H_lt].
@@ -608,7 +600,10 @@ Parameter F_Complete : forall A, Complete A -> Complete (F A A).
 Existing Instance F_Complete.
 
 Lemma unit_Complete_obligation (n : nat) (c : chain unit) : tt ={n}= c n.
-Proof. destruct (c n) as []. reflexivity. Qed.
+Proof.
+  destruct (c n) as [].
+  reflexivity.
+Qed.
 
 Instance unit_Complete : Complete unit :=
   {| compl _ := tt; compl_conv := unit_Complete_obligation |}.
@@ -625,17 +620,16 @@ Lemma tower_compl_obligation (c : chain tower) (k : nat) :
   down k (compl (tower_chain c (S k))) = compl (tower_chain c k).
 Proof.
   apply eq_dist. intros n.
-  rewrite -> compl_conv.
   rewrite -> compl_conv. simpl.
   rewrite -> down_tower.
+  rewrite -> compl_conv. simpl.
   reflexivity.
 Qed.
 
 Definition tower_compl (c : chain tower) : tower :=
   {| tower_car (k : nat) := compl (tower_chain c k); down_tower := tower_compl_obligation c |}.
 
-Lemma tower_Complete_obligation (n : nat) (c : chain tower) :
-  tower_compl c ={n}= c n.
+Lemma tower_Complete_obligation (n : nat) (c : chain tower) : tower_compl c ={n}= c n.
 Proof.
   apply tower_dist. intros k. simpl.
   rewrite -> compl_conv. simpl.
@@ -667,66 +661,82 @@ Definition unroll_chain (t : tower) : chain (F tower tower) :=
 Definition unroll (t : tower) : F tower tower :=
   compl (unroll_chain t).
 
-Lemma dimap_up_iter_down_iter_tower (t : tower) (n k : nat) :
-  dimap (up_iter n k) (down_iter n k) (t (S (n + k))) = t (S k).
+Lemma dimap_up_iter_down_iter (n k : nat) :
+  forall (H_eq : S (n + k) = n + S k)
+         (x : approx (S (n + k))),
+    dimap (up_iter n k) (down_iter n k) x =
+    down_iter n (S k) (cast (S (n + k)) (n + S k) H_eq x).
 Proof.
-  induction n as [| n' IHn']; simpl.
+  induction n as [| n' IHn']; intros H_eq x; simpl.
   - rewrite -> dimap_id.
+    rewrite -> cast_id.
     reflexivity.
   - rewrite <- dimap_comp.
     rewrite <- (down_S (n' + k)).
-    rewrite -> down_tower.
-    rewrite -> IHn'.
+    rewrite -> (down_cast (n' + S k) (S (n' + k)) _ (eq_sym (Nat.add_succ_r n' k))).
+    rewrite <- (IHn' _ (down (S (n' + k)) x)).
     reflexivity.
 Qed.
 
-Lemma dimap_down_iter_up_iter_tower (t : tower) (n k : nat) :
-  dimap (down_iter n k) (up_iter n k) (t (S k)) ={k}= t (S (n + k)).
+Lemma dimap_down_iter_up_iter (n k : nat) (H_eq : n + S k = S (n + k)) (x : approx (S k)) :
+  dimap (down_iter n k) (up_iter n k) x ={k}=
+  cast (n + S k) (S (n + k)) H_eq (up_iter n (S k) x).
 Proof.
-  induction n as [| n' IHn']; simpl.
+  revert H_eq.
+  induction n as [| n' IHn']; intros H_eq; simpl.
   - rewrite -> dimap_id.
+    rewrite -> cast_id.
     reflexivity.
   - rewrite <- dimap_comp.
     rewrite <- (up_S (n' + k)).
-    rewrite -> IHn'.
-    apply (dist_le (n' + k) k _ _ (Nat.le_add_l k n')).
-    rewrite -> up_tower.
+    rewrite -> (cast_up (n' + S k) (S (n' + k)) _ (Nat.add_succ_r n' k)).
+    rewrite <- (IHn' _).
     reflexivity.
 Qed.
 
-Lemma dimap_cast_cast_tower (t : tower) (m n : nat) (H_eq : m = n) :
-  dimap (cast m n H_eq) (cast n m (eq_sym H_eq)) (t (S n)) = t (S m).
+Lemma dimap_cast_cast (m n : nat) (H_eq1 : m = n) (H_eq2 : n = m) (H_eq3 : S n = S m) (x : approx (S n)) :
+  dimap (cast m n H_eq1) (cast n m H_eq2) x = cast (S n) (S m) H_eq3 x.
 Proof.
-  destruct H_eq as [].
-  unfold cast, eq_sym.
-  rewrite -> dimap_id.
-  reflexivity.
+  destruct H_eq1 as [].
+  rewrite -> (UIP_nat _ _ H_eq2 eq_refl).
+  rewrite -> (UIP_nat _ _ H_eq3 eq_refl).
+  unfold cast. rewrite -> dimap_id. reflexivity.
 Qed.
 
-Lemma dimap_shift_shift_tower (t : tower) (m n : nat) :
-  dimap (shift m n) (shift n m) (t (S n)) ={n}= t (S m).
+Lemma dimap_shift_shift (m n : nat) (x : approx (S n)) :
+  dimap (shift m n) (shift n m) x ={n}= shift (S n) (S m) x.
 Proof.
   unfold shift.
+  change (S m - S n) with (m - n).
+  change (S n - S m) with (n - m).
   destruct (le_lt_dec m n) as [H_le1 | H_lt1].
   - destruct (le_lt_dec n m) as [H_le2 | H_lt2].
     + destruct (Nat.le_antisymm _ _ H_le2 H_le1 : n = m) as [].
-      assert (H_eq := Nat.sub_diag n : n - n = O).
-      rewrite -> (le_unique _ _ H_le1 H_le2).
-      rewrite -> (UIP_nat _ _ _ (f_equal (fun p : nat => p + n) H_eq)).
-      rewrite -> (functional_extensionality (fun x => cast (n - n + n) n _ _) _  (cast_up_iter_l (n - n) O n H_eq)). simpl.
-      rewrite -> dimap_id.
-      reflexivity.
-    + rewrite <- dimap_comp.
-      rewrite -> (UIP_nat _ _ _ (eq_sym (shift_obligation_1 m n H_le1))).
-      rewrite -> dimap_cast_cast_tower.
-      rewrite -> dimap_up_iter_down_iter_tower.
-      reflexivity.
+      destruct (le_lt_dec (S n) (S n)) as [H_le3 | H_lt3].
+      * rewrite -> (le_unique _ _ H_le1 H_le2).
+        rewrite -> (functional_extensionality (fun x => cast (n - n + n) n _ _) _ (cast_up_iter_l' (n - n) O n _)).
+        rewrite -> (functional_extensionality _ _ (up_iter_O n)).
+        rewrite -> dimap_id.
+        rewrite -> (cast_up_iter_l' (n - n) O).
+        rewrite -> up_iter_O.
+        reflexivity.
+      * contradict (Nat.lt_irrefl (S n) H_lt3).
+    + destruct (le_lt_dec (S n) (S m)) as [H_le3 | H_lt3].
+      * contradict (Nat.lt_irrefl m (Nat.lt_le_trans m n m H_lt2 (proj2 (Nat.succ_le_mono n m) H_le3))).
+      * rewrite <- dimap_comp.
+        rewrite -> (dimap_up_iter_down_iter (n - m) m (eq_sym (Nat.add_succ_r (n - m) m))).
+        rewrite -> (dimap_cast_cast (n - m + m) n _ _ (f_equal S (shift_obligation_2 n m H_lt2))).
+        rewrite -> (cast_comp _ _ _ _ _ (shift_obligation_2 (S n) (S m) H_lt3)).
+        change (S n - S m) with (n - m).
+        reflexivity.
   - destruct (le_lt_dec n m) as [H_le2 | H_lt2].
-    + rewrite <- dimap_comp.
-      rewrite -> dimap_down_iter_up_iter_tower.
-      rewrite -> (UIP_nat _ _ _ (eq_sym (shift_obligation_2 m n H_lt1))).
-      rewrite -> dimap_cast_cast_tower.
-      reflexivity.
+    + destruct (le_lt_dec (S n) (S m)) as [H_le3 | H_lt3].
+      * rewrite <- dimap_comp.
+        rewrite -> (dimap_cast_cast m (m - n + n) _ _ (f_equal S (shift_obligation_1 n m H_le2))).
+        rewrite -> (dimap_down_iter_up_iter (m - n) n (Nat.add_succ_r (m - n) n)).
+        rewrite -> (cast_comp _ _ _ _ _ (shift_obligation_1 (S n) (S m) H_le3)).
+        reflexivity.
+      * contradict (Nat.lt_irrefl n (Nat.lt_trans n m n H_lt1 (proj2 (Nat.succ_lt_mono m n) H_lt3))).
     + contradict (Nat.lt_irrefl n (Nat.lt_trans n m n H_lt1 H_lt2)).
 Qed.
 
@@ -737,7 +747,8 @@ Proof.
   unfold unroll.
   rewrite -> compl_conv. simpl.
   rewrite -> dimap_comp. simpl.
-  rewrite -> dimap_shift_shift_tower.
+  rewrite -> dimap_shift_shift.
+  rewrite -> shift_tower.
   rewrite -> down_tower.
   reflexivity.
 Qed.

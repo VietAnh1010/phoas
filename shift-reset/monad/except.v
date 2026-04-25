@@ -40,31 +40,31 @@ Definition appl {E A B} (m1 : except E A) (m2 : except E B) : except E A :=
     end.
 
 Definition appr {E A B} (m1 : except E A) (m2 : except E B) : except E B :=
-  Except match run_except m1 with
-    | inl e => inl e
-    | inr _ => run_except m2
-    end.
+  match run_except m1 with
+  | inl e => Except (inl e)
+  | inr _ => m2
+  end.
 
 Definition bind {E A B} (m : except E A) (f : A -> except E B) : except E B :=
-  Except match run_except m with
-    | inl e => inl e
-    | inr x => run_except (f x)
-    end.
+  match run_except m with
+  | inl e => Except (inl e)
+  | inr x => f x
+  end.
 
 Definition join {E A} (m : except E (except E A)) : except E A :=
-  Except match run_except m with
-    | inl e => inl e
-    | inr m => run_except m
-    end.
+  match run_except m with
+  | inl e => Except (inl e)
+  | inr m => m
+  end.
 
 Definition throw {E A} (e : E) : except E A :=
   Except (inl e).
 
 Definition catch {E A} (m : except E A) (f : E -> except E A) : except E A :=
-  Except match run_except m with
-    | inl e => run_except (f e)
-    | inr x => inr x
-    end.
+  match run_except m with
+  | inl e => f e
+  | inr x => Except (inr x)
+  end.
 
 Definition try {E A} (m : except E A) : except E (E + A) :=
   Except (inr (run_except m)).

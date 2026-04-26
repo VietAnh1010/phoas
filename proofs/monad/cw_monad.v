@@ -1,6 +1,5 @@
 From Stdlib Require Import FunctionalExtensionality.
-From shift_reset.lib Require Import signatures signature_laws.
-From shift_reset.monad Require Import cw_monad.
+From shift_reset.monad Require Import signatures signatures_laws cw_monad.
 
 Module Type MakeSig (W : Monoid).
   Include Make W.
@@ -17,7 +16,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     apply functional_extensionality. intros k.
     destruct m as [m].
     destruct (m (fun x => (x, W.empty))) as [x w].
-    rewrite -> append_empty_r.
+    rewrite -> combine_empty_r.
     reflexivity.
   Qed.
 
@@ -27,11 +26,11 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     cbv. f_equal.
     apply functional_extensionality. intros k.
     destruct m as [m].
-    apply (f_equal (fun k' => let (x, w1) := m k' in let (y, w2) := k x in (y, W.append w1 w2))).
+    apply (f_equal (fun k' => let (x, w1) := m k' in let (y, w2) := k x in (y, W.combine w1 w2))).
     apply functional_extensionality. intros x.
     destruct (f x) as [m'].
     destruct (m' (fun x => (x, W.empty))) as [x' w].
-    rewrite -> append_empty_r.
+    rewrite -> combine_empty_r.
     reflexivity.
   Qed.
 
@@ -40,9 +39,9 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
   Proof.
     cbv. f_equal.
     apply functional_extensionality. intros k.
-    destruct (f (fun x => CWMonad (fun k' => let (y, w1) := k x in let (z, w2) := k' y in (z, W.append w1 w2)))) as [m].
+    destruct (f (fun x => CWMonad (fun k' => let (y, w1) := k x in let (z, w2) := k' y in (z, W.combine w1 w2)))) as [m].
     destruct (m (fun x => (x, W.empty))) as [x w].
-    rewrite -> append_empty_r.
+    rewrite -> combine_empty_r.
     reflexivity.
   Qed.
 End MakeLaws.

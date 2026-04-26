@@ -1,6 +1,5 @@
 From Stdlib Require Import FunctionalExtensionality.
-From shift_reset.lib Require Import signatures signature_laws.
-From shift_reset.monad Require Import accum.
+From shift_reset.monad Require Import signatures signatures_laws accum.
 
 Lemma map_id {W A} (m : accum W A) :
   map (fun x => x) m = m.
@@ -34,9 +33,9 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
   Proof.
     cbv. destruct (f x) as [m]. f_equal.
     apply functional_extensionality. intros w.
-    rewrite -> append_empty_r.
+    rewrite -> combine_empty_r.
     destruct (m w) as [y w'].
-    rewrite -> append_empty_l.
+    rewrite -> combine_empty_l.
     reflexivity.
   Qed.
 
@@ -46,7 +45,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     cbv. destruct m as [m]. f_equal.
     apply functional_extensionality. intros w.
     destruct (m w) as [x w'].
-    rewrite -> append_empty_r.
+    rewrite -> combine_empty_r.
     reflexivity.
   Qed.
 
@@ -58,11 +57,11 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     destruct m as [m].
     destruct (m w) as [x w'].
     destruct (f x) as [m'].
-    destruct (m' (W.append w w')) as [y w''].
+    destruct (m' (W.combine w w')) as [y w''].
     destruct (g y) as [m''].
-    rewrite -> append_assoc.
-    destruct (m'' (W.append w (W.append w' w''))) as [z w'''].
-    rewrite -> append_assoc.
+    rewrite -> combine_assoc.
+    destruct (m'' (W.combine w (W.combine w' w''))) as [z w'''].
+    rewrite -> combine_assoc.
     reflexivity.
   Qed.
 End MakeLaws.

@@ -56,9 +56,9 @@ Lemma get_put {E S} :
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_get {E S} (s : S) :
-  @appr E S unit S (put s) get = @appr E S unit S (put s) (pure s).
+  @seq_right E S unit S (put s) get = @seq_right E S unit S (put s) (pure s).
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_put {E S} (s1 s2 : S) :
-  @appr E S unit unit (put s1) (put s2) = @put E S s2.
+  @seq_right E S unit unit (put s1) (put s2) = @put E S s2.
 Proof. cbv. reflexivity. Qed.

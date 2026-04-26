@@ -1235,5 +1235,4 @@ Hint Rewrite
   fold_unfold_interpret_term'_aux_TShallowHandle
   fold_unfold_interpret_term'_O
   fold_unfold_interpret_term'_S
-  fold_unfold_interpret_term
-  : fold_unfold_interpret_db.
+  fold_unfold_interpret_term : fold_unfold_interpret_db.

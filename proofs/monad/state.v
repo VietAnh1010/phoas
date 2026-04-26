@@ -48,9 +48,9 @@ Lemma get_put {S} :
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_get {S} (s : S) :
-  appr (put s) get = appr (put s) (pure s).
+  seq_right (put s) get = seq_right (put s) (pure s).
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_put {S} (s1 s2 : S) :
-  appr (put s1) (put s2) = put s2.
+  seq_right (put s1) (put s2) = put s2.
 Proof. cbv. reflexivity. Qed.

@@ -1,5 +1,4 @@
-From shift_reset.lib Require Import signatures signature_laws.
-From shift_reset.monad Require Import writer.
+From shift_reset.monad Require Import signatures signatures_laws writer.
 
 Lemma map_id {W A} (m : writer W A) :
   map (fun x => x) m = m.
@@ -33,7 +32,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     cbv.
     destruct (f x) as [m].
     destruct m as [y w].
-    rewrite -> append_empty_l.
+    rewrite -> combine_empty_l.
     reflexivity.
   Qed.
 
@@ -43,7 +42,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     cbv.
     destruct m as [m].
     destruct m as [x w].
-    rewrite -> append_empty_r.
+    rewrite -> combine_empty_r.
     reflexivity.
   Qed.
 
@@ -57,7 +56,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     destruct m as [y w'].
     destruct (g y) as [m].
     destruct m as [z w''].
-    rewrite -> append_assoc.
+    rewrite -> combine_assoc.
     reflexivity.
   Qed.
 End MakeLaws.

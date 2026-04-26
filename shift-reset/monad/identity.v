@@ -9,14 +9,14 @@ Definition pure {A} : A -> identity A := Identity.
 Definition map {A B} (f : A -> B) (m : identity A) : identity B :=
   Identity (f (run_identity m)).
 
-Definition mapl {A B} (x : B) (_ : identity A) : identity B :=
+Definition map_const {A B} (x : B) (_ : identity A) : identity B :=
   Identity x.
 
-Definition app {A B} (m1 : identity (A -> B)) (m2 : identity A) : identity B :=
+Definition apply {A B} (m1 : identity (A -> B)) (m2 : identity A) : identity B :=
   Identity (run_identity m1 (run_identity m2)).
 
-Definition appl {A B} (m : identity A) (_ : identity B) : identity A := m.
-Definition appr {A B} (_ : identity A) (m : identity B) : identity B := m.
+Definition seq_left {A B} (m : identity A) (_ : identity B) : identity A := m.
+Definition seq_right {A B} (_ : identity A) (m : identity B) : identity B := m.
 
 Definition bind {A B} (m : identity A) (f : A -> identity B) : identity B :=
   f (run_identity m).
@@ -29,10 +29,10 @@ Module IdentityNotations.
   Bind Scope identity_scope with identity.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : identity_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : identity_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : identity_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : identity_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : identity_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : identity_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : identity_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : identity_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : identity_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : identity_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : identity_scope.

@@ -149,7 +149,7 @@ Example Map :=
          in
          "go" "m"
        in
-       let "foldl" ("f", "z", "m") :=
+       let "fold_left" ("f", "z", "m") :=
          let fix "go" ("acc", "m") :=
            match "m" with
            | Inl _ => "acc"
@@ -161,7 +161,7 @@ Example Map :=
          in
          "go" ("z", "m")
        in
-       let "foldr" ("f", "z", "m") :=
+       let "fold_right" ("f", "z", "m") :=
          let fix "go" ("m", "acc") :=
            match "m" with
            | Inl _ => "acc"
@@ -222,8 +222,8 @@ Example Map :=
         ; "add"
         ; "remove"
         ; "min_binding_remove"
-        ; "foldl"
-        ; "foldr"
+        ; "fold_left"
+        ; "fold_right"
         ; "bindings_append"
         ; "bindings"
         ; "cardinal"

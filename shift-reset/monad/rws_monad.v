@@ -1,4 +1,4 @@
-From shift_reset.lib Require Import signatures.
+From shift_reset.monad Require Import signatures.
 
 Record rws_monad (R W S A : Type) : Type := RWSMonad { run_rws_monad : R -> S -> A * W * S }.
 Definition t : Type -> Type -> Type -> Type -> Type := rws_monad.
@@ -9,7 +9,7 @@ Arguments run_rws_monad {R W S A} _ _ _.
 Definition map {R W S A B} (f : A -> B) (m : rws_monad R W S A) : rws_monad R W S B :=
   RWSMonad (fun r s => let '(x, w, s) := run_rws_monad m r s in (f x, w, s)).
 
-Definition mapl {R W S A B} (x : B) (m : rws_monad R W S A) : rws_monad R W S B :=
+Definition map_const {R W S A B} (x : B) (m : rws_monad R W S A) : rws_monad R W S B :=
   RWSMonad (fun r s => let '(_, w, s) := run_rws_monad m r s in (x, w, s)).
 
 Module RWSMonadNotations.
@@ -18,7 +18,7 @@ Module RWSMonadNotations.
   Bind Scope rws_monad_scope with rws_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : rws_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : rws_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : rws_monad_scope.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : rws_monad_scope.
 End RWSMonadNotations.
 
@@ -26,20 +26,20 @@ Module Make (W : Monoid).
   Definition pure {R S A} (x : A) : rws_monad R W.t S A :=
     RWSMonad (fun _ s => (x, W.empty, s)).
 
-  Definition app {R S A B} (m1 : rws_monad R W.t S (A -> B)) (m2 : rws_monad R W.t S A) : rws_monad R W.t S B :=
-    RWSMonad (fun r s => let '(f, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (f x, W.append w1 w2, s)).
+  Definition apply {R S A B} (m1 : rws_monad R W.t S (A -> B)) (m2 : rws_monad R W.t S A) : rws_monad R W.t S B :=
+    RWSMonad (fun r s => let '(f, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (f x, W.combine w1 w2, s)).
 
-  Definition appl {R S A B} (m1 : rws_monad R W.t S A) (m2 : rws_monad R W.t S B) : rws_monad R W.t S A :=
-    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m1 r s in let '(_, w2, s) := run_rws_monad m2 r s in (x, W.append w1 w2, s)).
+  Definition seq_left {R S A B} (m1 : rws_monad R W.t S A) (m2 : rws_monad R W.t S B) : rws_monad R W.t S A :=
+    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m1 r s in let '(_, w2, s) := run_rws_monad m2 r s in (x, W.combine w1 w2, s)).
 
-  Definition appr {R S A B} (m1 : rws_monad R W.t S A) (m2 : rws_monad R W.t S B) : rws_monad R W.t S B :=
-    RWSMonad (fun r s => let '(_, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (x, W.append w1 w2, s)).
+  Definition seq_right {R S A B} (m1 : rws_monad R W.t S A) (m2 : rws_monad R W.t S B) : rws_monad R W.t S B :=
+    RWSMonad (fun r s => let '(_, w1, s) := run_rws_monad m1 r s in let '(x, w2, s) := run_rws_monad m2 r s in (x, W.combine w1 w2, s)).
 
   Definition bind {R S A B} (m : rws_monad R W.t S A) (f : A -> rws_monad R W.t S B) : rws_monad R W.t S B :=
-    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m r s in let '(y, w2, s) := run_rws_monad (f x) r s in (y, W.append w1 w2, s)).
+    RWSMonad (fun r s => let '(x, w1, s) := run_rws_monad m r s in let '(y, w2, s) := run_rws_monad (f x) r s in (y, W.combine w1 w2, s)).
 
   Definition join {R S A} (m : rws_monad R W.t S (rws_monad R W.t S A)) : rws_monad R W.t S A :=
-    RWSMonad (fun r s => let '(m, w1, s) := run_rws_monad m r s in let '(x, w2, s) := run_rws_monad m r s in (x, W.append w1 w2, s)).
+    RWSMonad (fun r s => let '(m, w1, s) := run_rws_monad m r s in let '(x, w2, s) := run_rws_monad m r s in (x, W.combine w1 w2, s)).
 
   Definition ask {R S} : rws_monad R W.t S R :=
     RWSMonad (fun r s => (r, W.empty, s)).
@@ -63,9 +63,9 @@ Module Make (W : Monoid).
     RWSMonad (fun _ s => (tt, W.empty, f s)).
 
   Module Notations.
-    Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : rws_monad_scope.
-    Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : rws_monad_scope.
-    Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : rws_monad_scope.
+    Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : rws_monad_scope.
+    Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : rws_monad_scope.
+    Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : rws_monad_scope.
     Notation "m >>= f" := (bind m f) (at level 50, left associativity) : rws_monad_scope.
     Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : rws_monad_scope.
   End Notations.

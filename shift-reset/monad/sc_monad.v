@@ -10,16 +10,16 @@ Definition pure {S R A} (x : A) : sc_monad S R A :=
 Definition map {S R A B} (f : A -> B) (m : sc_monad S R A) : sc_monad S R B :=
   SCMonad (fun s k => run_sc_monad m s (fun x => k (f x))).
 
-Definition mapl {S R A B} (x : B) (m : sc_monad S R A) : sc_monad S R B :=
+Definition map_const {S R A B} (x : B) (m : sc_monad S R A) : sc_monad S R B :=
   SCMonad (fun s k => run_sc_monad m s (fun _ => k x)).
 
-Definition app {S R A B} (m1 : sc_monad S R (A -> B)) (m2 : sc_monad S R A) : sc_monad S R B :=
+Definition apply {S R A B} (m1 : sc_monad S R (A -> B)) (m2 : sc_monad S R A) : sc_monad S R B :=
   SCMonad (fun s k => run_sc_monad m1 s (fun f s => run_sc_monad m2 s (fun x => k (f x)))).
 
-Definition appl {S R A B} (m1 : sc_monad S R A) (m2 : sc_monad S R B) : sc_monad S R A :=
+Definition seq_left {S R A B} (m1 : sc_monad S R A) (m2 : sc_monad S R B) : sc_monad S R A :=
   SCMonad (fun s k => run_sc_monad m1 s (fun x s => run_sc_monad m2 s (fun _ => k x))).
 
-Definition appr {S R A B} (m1 : sc_monad S R A) (m2 : sc_monad S R B) : sc_monad S R B :=
+Definition seq_right {S R A B} (m1 : sc_monad S R A) (m2 : sc_monad S R B) : sc_monad S R B :=
   SCMonad (fun s k => run_sc_monad m1 s (fun _ s => run_sc_monad m2 s k)).
 
 Definition bind {S R A B} (m : sc_monad S R A) (f : A -> sc_monad S R B) : sc_monad S R B :=
@@ -70,10 +70,10 @@ Module SCMonadNotations.
   Bind Scope sc_monad_scope with sc_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : sc_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : sc_monad_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : sc_monad_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : sc_monad_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : sc_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : sc_monad_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : sc_monad_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : sc_monad_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : sc_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : sc_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : sc_monad_scope.

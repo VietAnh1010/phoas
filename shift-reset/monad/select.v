@@ -10,14 +10,14 @@ Definition pure {R A} (x : A) : select R A :=
 Definition map {R A B} (f : A -> B) (m : select R A) : select R B :=
   Select (fun k => f (run_select m (fun x => k (f x)))).
 
-Definition mapl {R A B} (x : B) (_ : select R A) : select R B :=
+Definition map_const {R A B} (x : B) (_ : select R A) : select R B :=
   Select (fun _ => x).
 
-Definition app {R A B} (m1 : select R (A -> B)) (m2 : select R A) : select R B :=
+Definition apply {R A B} (m1 : select R (A -> B)) (m2 : select R A) : select R B :=
   Select (fun k => let f := run_select m1 (fun f => k (f (run_select m2 (fun x => k (f x))))) in f (run_select m2 (fun x => k (f x)))).
 
-Definition appl {R A B} (m : select R A) (_ : select R B) : select R A := m.
-Definition appr {R A B} (_ : select R A) (m : select R B) : select R B := m.
+Definition seq_left {R A B} (m : select R A) (_ : select R B) : select R A := m.
+Definition seq_right {R A B} (_ : select R A) (m : select R B) : select R B := m.
 
 Definition bind {R A B} (m : select R A) (f : A -> select R B) : select R B :=
   Select (fun k => run_select (f (run_select m (fun x => k (run_select (f x) k)))) k).
@@ -34,10 +34,10 @@ Module SelectNotations.
   Bind Scope select_scope with select.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : select_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : select_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : select_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : select_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : select_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : select_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : select_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : select_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : select_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : select_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : select_scope.

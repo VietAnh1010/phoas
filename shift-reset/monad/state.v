@@ -10,16 +10,16 @@ Definition pure {S A} (x : A) : state S A :=
 Definition map {S A B} (f : A -> B) (m : state S A) : state S B :=
   State (fun s => let (x, s) := run_state m s in (f x, s)).
 
-Definition mapl {S A B} (x : B) (m : state S A) : state S B :=
+Definition map_const {S A B} (x : B) (m : state S A) : state S B :=
   State (fun s => let (_, s) := run_state m s in (x, s)).
 
-Definition app {S A B} (m1 : state S (A -> B)) (m2 : state S A) : state S B :=
+Definition apply {S A B} (m1 : state S (A -> B)) (m2 : state S A) : state S B :=
   State (fun s => let (f, s) := run_state m1 s in let (x, s) := run_state m2 s in (f x, s)).
 
-Definition appl {S A B} (m1 : state S A) (m2 : state S B) : state S A :=
+Definition seq_left {S A B} (m1 : state S A) (m2 : state S B) : state S A :=
   State (fun s => let (x, s) := run_state m1 s in let (_, s) := run_state m2 s in (x, s)).
 
-Definition appr {S A B} (m1 : state S A) (m2 : state S B) : state S B :=
+Definition seq_right {S A B} (m1 : state S A) (m2 : state S B) : state S B :=
   State (fun s => let (_, s) := run_state m1 s in run_state m2 s).
 
 Definition bind {S A B} (m : state S A) (f : A -> state S B) : state S B :=
@@ -52,10 +52,10 @@ Module StateNotations.
   Bind Scope state_scope with state.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : state_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : state_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : state_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : state_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : state_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : state_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : state_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : state_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : state_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : state_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : state_scope.

@@ -1,4 +1,4 @@
-From shift_reset.lib Require Import signatures.
+From shift_reset.monad Require Import signatures.
 
 Record cw_monad (R W A : Type) : Type := CWMonad { run_cw_monad : (A -> R * W) -> R * W }.
 Definition t : Type -> Type -> Type -> Type := cw_monad.
@@ -12,16 +12,16 @@ Definition pure {R W A} (x : A) : cw_monad R W A :=
 Definition map {R W A B} (f : A -> B) (m : cw_monad R W A) : cw_monad R W B :=
   CWMonad (fun k => run_cw_monad m (fun x => k (f x))).
 
-Definition mapl {R W A B} (x : B) (m : cw_monad R W A) : cw_monad R W B :=
+Definition map_const {R W A B} (x : B) (m : cw_monad R W A) : cw_monad R W B :=
   CWMonad (fun k => run_cw_monad m (fun _ => k x)).
 
-Definition app {R W A B} (m1 : cw_monad R W (A -> B)) (m2 : cw_monad R W A) : cw_monad R W B :=
+Definition apply {R W A B} (m1 : cw_monad R W (A -> B)) (m2 : cw_monad R W A) : cw_monad R W B :=
   CWMonad (fun k => run_cw_monad m1 (fun f => run_cw_monad m2 (fun x => k (f x)))).
 
-Definition appl {R W A B} (m1 : cw_monad R W A) (m2 : cw_monad R W B) : cw_monad R W A :=
+Definition seq_left {R W A B} (m1 : cw_monad R W A) (m2 : cw_monad R W B) : cw_monad R W A :=
   CWMonad (fun k => run_cw_monad m1 (fun x => run_cw_monad m2 (fun _ => k x))).
 
-Definition appr {R W A B} (m1 : cw_monad R W A) (m2 : cw_monad R W B) : cw_monad R W B :=
+Definition seq_right {R W A B} (m1 : cw_monad R W A) (m2 : cw_monad R W B) : cw_monad R W B :=
   CWMonad (fun k => run_cw_monad m1 (fun _ => run_cw_monad m2 k)).
 
 Definition bind {R W A B} (m : cw_monad R W A) (f : A -> cw_monad R W B) : cw_monad R W B :=
@@ -35,20 +35,20 @@ Definition callcc {R W A B} (f : (A -> cw_monad R W B) -> cw_monad R W A) : cw_m
 
 Module Make (W : Monoid).
   Definition reset {R R'} (m : cw_monad R W.t R) : cw_monad R' W.t R :=
-    CWMonad (fun k => let (x, w1) := run_cw_monad m (fun x => (x, W.empty)) in let (y, w2) := k x in (y, W.append w1 w2)).
+    CWMonad (fun k => let (x, w1) := run_cw_monad m (fun x => (x, W.empty)) in let (y, w2) := k x in (y, W.combine w1 w2)).
 
   Definition shift {R R' A} (f : (A -> cw_monad R' W.t R) -> cw_monad R W.t R) : cw_monad R W.t A :=
     CWMonad
       (fun k =>
          run_cw_monad
-           (f (fun x => CWMonad (fun k' => let (y, w1) := k x in let (z, w2) := k' y in (z, W.append w1 w2))))
+           (f (fun x => CWMonad (fun k' => let (y, w1) := k x in let (z, w2) := k' y in (z, W.combine w1 w2))))
            (fun x => (x, W.empty))).
 
   Definition tell {R} (w : W.t) : cw_monad R W.t unit :=
-    CWMonad (fun k => let (x, w') := k tt in (x, W.append w w')).
+    CWMonad (fun k => let (x, w') := k tt in (x, W.combine w w')).
 
   Definition writer {R A} (m : A * W.t) : cw_monad R W.t A :=
-    CWMonad (fun k => let (x, w1) := m in let (y, w2) := k x in (y, W.append w1 w2)).
+    CWMonad (fun k => let (x, w1) := m in let (y, w2) := k x in (y, W.combine w1 w2)).
 End Make.
 
 Definition map_cont {R W A} (f : R -> R) (m : cw_monad R W A) : cw_monad R W A :=
@@ -60,10 +60,10 @@ Module CWMonadNotations.
   Bind Scope cw_monad_scope with cw_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : cw_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : cw_monad_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : cw_monad_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : cw_monad_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : cw_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : cw_monad_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : cw_monad_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : cw_monad_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : cw_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : cw_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : cw_monad_scope.

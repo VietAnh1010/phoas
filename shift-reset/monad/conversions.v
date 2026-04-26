@@ -1,8 +1,7 @@
-From shift_reset.lib Require Import signatures.
-From shift_reset.monad Require Import
-  accum cont except reader select state writer
-  ce_monad cs_monad ec_monad es_monad sc_monad se_monad
-  ces_monad esc_monad.
+From shift_reset.monad Require Import signatures.
+From shift_reset.monad Require Import accum cont except reader select state writer.
+From shift_reset.monad Require Import ce_monad cs_monad ec_monad es_monad sc_monad se_monad.
+From shift_reset.monad Require Import ces_monad esc_monad.
 
 Definition except_to_es_monad {E S A} (m : except.t E A) : es_monad E S A :=
   ESMonad (fun s => (run_except m, s)).
@@ -92,5 +91,5 @@ Module MakeAccum (W : Monoid).
     Accum (fun w => (run_reader m w, W.empty)).
 
   Definition accum_to_state {A} (m : accum W.t A) : state.t W.t A :=
-    State (fun w => let (x, w') := run_accum m w in (x, W.append w w')).
+    State (fun w => let (x, w') := run_accum m w in (x, W.combine w w')).
 End MakeAccum.

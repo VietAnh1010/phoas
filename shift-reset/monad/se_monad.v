@@ -15,7 +15,7 @@ Definition map {S E A B} (f : A -> B) (m : se_monad S E A) : se_monad S E B :=
        | inr (x, s) => inr (f x, s)
        end).
 
-Definition mapl {S E A B} (x : B) (m : se_monad S E A) : se_monad S E B :=
+Definition map_const {S E A B} (x : B) (m : se_monad S E A) : se_monad S E B :=
   SEMonad
     (fun s =>
        match run_se_monad m s with
@@ -23,7 +23,7 @@ Definition mapl {S E A B} (x : B) (m : se_monad S E A) : se_monad S E B :=
        | inr (_, s) => inr (x, s)
        end).
 
-Definition app {S E A B} (m1 : se_monad S E (A -> B)) (m2 : se_monad S E A) : se_monad S E B :=
+Definition apply {S E A B} (m1 : se_monad S E (A -> B)) (m2 : se_monad S E A) : se_monad S E B :=
   SEMonad
     (fun s =>
        match run_se_monad m1 s with
@@ -35,7 +35,7 @@ Definition app {S E A B} (m1 : se_monad S E (A -> B)) (m2 : se_monad S E A) : se
            end
        end).
 
-Definition appl {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_monad S E A :=
+Definition seq_left {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_monad S E A :=
   SEMonad
     (fun s =>
        match run_se_monad m1 s with
@@ -47,7 +47,7 @@ Definition appl {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_monad
            end
        end).
 
-Definition appr {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_monad S E B :=
+Definition seq_right {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_monad S E B :=
   SEMonad
     (fun s =>
        match run_se_monad m1 s with
@@ -170,10 +170,10 @@ Module SEMonadNotations.
   Bind Scope se_monad_scope with se_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : se_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : se_monad_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : se_monad_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : se_monad_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : se_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : se_monad_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : se_monad_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : se_monad_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : se_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : se_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : se_monad_scope.

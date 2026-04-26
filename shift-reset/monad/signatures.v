@@ -1,6 +1,6 @@
 Module Type Semigroup.
   Parameter t : Type.
-  Parameter append : t -> t -> t.
+  Parameter combine : t -> t -> t.
 End Semigroup.
 
 Module Type Monoid.
@@ -16,8 +16,14 @@ End Functor.
 Module Type Applicative.
   Include Functor.
   Parameter pure : forall {A}, A -> t A.
-  Parameter app : forall {A B}, t (A -> B) -> t A -> t B.
+  Parameter apply : forall {A B}, t (A -> B) -> t A -> t B.
 End Applicative.
+
+Module Type Alternative.
+  Include Applicative.
+  Parameter empty : forall {A}, A -> t A.
+  Parameter combine : forall {A}, t A -> t A -> t A.
+End Alternative.
 
 Module Type Monad.
   Include Applicative.

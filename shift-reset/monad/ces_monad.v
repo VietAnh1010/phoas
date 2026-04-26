@@ -10,16 +10,16 @@ Definition pure {R E S A} (x : A) : ces_monad R E S A :=
 Definition map {R E S A B} (f : A -> B) (m : ces_monad R E S A) : ces_monad R E S B :=
   CESMonad (fun k => run_ces_monad m (fun x => k (f x))).
 
-Definition mapl {R E S A B} (x : B) (m : ces_monad R E S A) : ces_monad R E S B :=
+Definition map_const {R E S A B} (x : B) (m : ces_monad R E S A) : ces_monad R E S B :=
   CESMonad (fun k => run_ces_monad m (fun _ => k x)).
 
-Definition app {R E S A B} (m1 : ces_monad R E S (A -> B)) (m2 : ces_monad R E S A) : ces_monad R E S B :=
+Definition apply {R E S A B} (m1 : ces_monad R E S (A -> B)) (m2 : ces_monad R E S A) : ces_monad R E S B :=
   CESMonad (fun k => run_ces_monad m1 (fun f => run_ces_monad m2 (fun x => k (f x)))).
 
-Definition appl {R E S A B} (m1 : ces_monad R E S A) (m2 : ces_monad R E S B) : ces_monad R E S A :=
+Definition seq_left {R E S A B} (m1 : ces_monad R E S A) (m2 : ces_monad R E S B) : ces_monad R E S A :=
   CESMonad (fun k => run_ces_monad m1 (fun x => run_ces_monad m2 (fun _ => k x))).
 
-Definition appr {R E S A B} (m1 : ces_monad R E S A) (m2 : ces_monad R E S B) : ces_monad R E S B :=
+Definition seq_right {R E S A B} (m1 : ces_monad R E S A) (m2 : ces_monad R E S B) : ces_monad R E S B :=
   CESMonad (fun k => run_ces_monad m1 (fun _ => run_ces_monad m2 k)).
 
 Definition bind {R E S A B} (m : ces_monad R E S A) (f : A -> ces_monad R E S B) : ces_monad R E S B :=
@@ -101,10 +101,10 @@ Module CESMonadNotations.
   Bind Scope ces_monad_scope with ces_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : ces_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : ces_monad_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : ces_monad_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : ces_monad_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : ces_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : ces_monad_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : ces_monad_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : ces_monad_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : ces_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : ces_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : ces_monad_scope.

@@ -10,16 +10,16 @@ Definition pure {R A} (x : A) : cont R A :=
 Definition map {R A B} (f : A -> B) (m : cont R A) : cont R B :=
   Cont (fun k => run_cont m (fun x => k (f x))).
 
-Definition mapl {R A B} (x : B) (m : cont R A) : cont R B :=
+Definition map_const {R A B} (x : B) (m : cont R A) : cont R B :=
   Cont (fun k => run_cont m (fun _ => k x)).
 
-Definition app {R A B} (m1 : cont R (A -> B)) (m2 : cont R A) : cont R B :=
+Definition apply {R A B} (m1 : cont R (A -> B)) (m2 : cont R A) : cont R B :=
   Cont (fun k => run_cont m1 (fun f => run_cont m2 (fun x => k (f x)))).
 
-Definition appl {R A B} (m1 : cont R A) (m2 : cont R B) : cont R A :=
+Definition seq_left {R A B} (m1 : cont R A) (m2 : cont R B) : cont R A :=
   Cont (fun k => run_cont m1 (fun x => run_cont m2 (fun _ => k x))).
 
-Definition appr {R A B} (m1 : cont R A) (m2 : cont R B) : cont R B :=
+Definition seq_right {R A B} (m1 : cont R A) (m2 : cont R B) : cont R B :=
   Cont (fun k => run_cont m1 (fun _ => run_cont m2 k)).
 
 Definition bind {R A B} (m : cont R A) (f : A -> cont R B) : cont R B :=
@@ -49,10 +49,10 @@ Module ContNotations.
   Bind Scope cont_scope with cont.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : cont_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : cont_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : cont_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : cont_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : cont_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : cont_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : cont_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : cont_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : cont_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : cont_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : cont_scope.

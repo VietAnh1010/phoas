@@ -39,7 +39,7 @@ Example List :=
        in
        "go" "xs"
      in
-     let "foldr" `("f", "z", "xs") :=
+     let "fold_right" `("f", "z", "xs") :=
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => "z"
@@ -50,7 +50,7 @@ Example List :=
        in
        "go" "xs"
      in
-     let "foldl" `("f", "z", "xs") :=
+     let "fold_left" `("f", "z", "xs") :=
        let fix "go" ("acc", "xs") :=
          match "xs" with
          | Inl _ => "z"
@@ -153,8 +153,8 @@ Example List :=
       ; "ne_tail"
       ; "ne_uncons"
       ; "iter"
-      ; "foldr"
-      ; "foldl"
+      ; "fold_right"
+      ; "fold_left"
       ; "map"
       ; "filter"
       ; "filter_map"

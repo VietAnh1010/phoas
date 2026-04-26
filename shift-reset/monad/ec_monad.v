@@ -10,16 +10,16 @@ Definition pure {E R A} (x : A) : ec_monad E R A :=
 Definition map {E R A B} (f : A -> B) (m : ec_monad E R A) : ec_monad E R B :=
   ECMonad (fun h k => run_ec_monad m h (fun x => k (f x))).
 
-Definition mapl {E R A B} (x : B) (m : ec_monad E R A) : ec_monad E R B :=
+Definition map_const {E R A B} (x : B) (m : ec_monad E R A) : ec_monad E R B :=
   ECMonad (fun h k => run_ec_monad m h (fun _ => k x)).
 
-Definition app {E R A B} (m1 : ec_monad E R (A -> B)) (m2 : ec_monad E R A) : ec_monad E R B :=
+Definition apply {E R A B} (m1 : ec_monad E R (A -> B)) (m2 : ec_monad E R A) : ec_monad E R B :=
   ECMonad (fun h k => run_ec_monad m1 h (fun f => run_ec_monad m2 h (fun x => k (f x)))).
 
-Definition appl {E R A B} (m1 : ec_monad E R A) (m2 : ec_monad E R B) : ec_monad E R A :=
+Definition seq_left {E R A B} (m1 : ec_monad E R A) (m2 : ec_monad E R B) : ec_monad E R A :=
   ECMonad (fun h k => run_ec_monad m1 h (fun x => run_ec_monad m2 h (fun _ => k x))).
 
-Definition appr {E R A B} (m1 : ec_monad E R A) (m2 : ec_monad E R B) : ec_monad E R B :=
+Definition seq_right {E R A B} (m1 : ec_monad E R A) (m2 : ec_monad E R B) : ec_monad E R B :=
   ECMonad (fun h k => run_ec_monad m1 h (fun _ => run_ec_monad m2 h k)).
 
 Definition bind {E R A B} (m : ec_monad E R A) (f : A -> ec_monad E R B) : ec_monad E R B :=
@@ -84,10 +84,10 @@ Module ECMonadNotations.
   Bind Scope ec_monad_scope with ec_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : ec_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : ec_monad_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : ec_monad_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : ec_monad_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : ec_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : ec_monad_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : ec_monad_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : ec_monad_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : ec_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : ec_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : ec_monad_scope.

@@ -1,4 +1,4 @@
-From shift_reset.lib Require Import signatures.
+From shift_reset.monad Require Import signatures.
 
 Record writer (W A : Type) : Type := Writer { run_writer : A * W }.
 Definition t : Type -> Type -> Type := writer.
@@ -9,7 +9,7 @@ Arguments run_writer {W A} _.
 Definition map {W A B} (f : A -> B) (m : writer W A) : writer W B :=
   Writer (let (x, w) := run_writer m in (f x, w)).
 
-Definition mapl {W A B} (x : B) (m : writer W A) : writer W B :=
+Definition map_const {W A B} (x : B) (m : writer W A) : writer W B :=
   Writer (let (_, w) := run_writer m in (x, w)).
 
 Module WriterNotations.
@@ -18,7 +18,7 @@ Module WriterNotations.
   Bind Scope writer_scope with writer.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : writer_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : writer_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : writer_scope.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : writer_scope.
 End WriterNotations.
 
@@ -26,25 +26,25 @@ Module Make (W : Monoid).
   Definition pure {A} (x : A) : writer W.t A :=
     Writer (x, W.empty).
 
-  Definition app {A B} (m1 : writer W.t (A -> B)) (m2 : writer W.t A) : writer W.t B :=
-    Writer (let (f, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (f x, W.append w1 w2)).
+  Definition apply {A B} (m1 : writer W.t (A -> B)) (m2 : writer W.t A) : writer W.t B :=
+    Writer (let (f, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (f x, W.combine w1 w2)).
 
-  Definition appl {A B} (m1 : writer W.t A) (m2 : writer W.t B) : writer W.t A :=
-    Writer (let (x, w1) := run_writer m1 in let (_, w2) := run_writer m2 in (x, W.append w1 w2)).
+  Definition seq_left {A B} (m1 : writer W.t A) (m2 : writer W.t B) : writer W.t A :=
+    Writer (let (x, w1) := run_writer m1 in let (_, w2) := run_writer m2 in (x, W.combine w1 w2)).
 
-  Definition appr {A B} (m1 : writer W.t A) (m2 : writer W.t B) : writer W.t B :=
-    Writer (let (_, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (x, W.append w1 w2)).
+  Definition seq_right {A B} (m1 : writer W.t A) (m2 : writer W.t B) : writer W.t B :=
+    Writer (let (_, w1) := run_writer m1 in let (x, w2) := run_writer m2 in (x, W.combine w1 w2)).
 
   Definition bind {A B} (m : writer W.t A) (f : A -> writer W.t B) : writer W.t B :=
-    Writer (let (x, w1) := run_writer m in let (y, w2) := run_writer (f x) in (y, W.append w1 w2)).
+    Writer (let (x, w1) := run_writer m in let (y, w2) := run_writer (f x) in (y, W.combine w1 w2)).
 
   Definition join {A} (m : writer W.t (writer W.t A)) : writer W.t A :=
-    Writer (let (m, w1) := run_writer m in let (x, w2) := run_writer m in (x, W.append w1 w2)).
+    Writer (let (m, w1) := run_writer m in let (x, w2) := run_writer m in (x, W.combine w1 w2)).
 
   Module Notations.
-    Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : writer_scope.
-    Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : writer_scope.
-    Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : writer_scope.
+    Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : writer_scope.
+    Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : writer_scope.
+    Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : writer_scope.
     Notation "m >>= f" := (bind m f) (at level 50, left associativity) : writer_scope.
     Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : writer_scope.
   End Notations.

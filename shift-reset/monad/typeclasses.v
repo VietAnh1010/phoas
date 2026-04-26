@@ -1,26 +1,34 @@
 Local Open Scope type_scope.
 
-(** class Functor m where *)
+(** class Functor f where *)
 
-Class Map (M : Type -> Type) : Type :=
-  map : forall {A B}, (A -> B) -> M A -> M B.
+Class Map (F : Type -> Type) : Type :=
+  map : forall {A B}, (A -> B) -> F A -> F B.
 
-Class Mapl (M : Type -> Type) : Type :=
-  mapl : forall {A B}, B -> M A -> M B.
+Class MapConst (F : Type -> Type) : Type :=
+  map_const : forall {A B}, B -> F A -> F B.
 
-(** class Functor m => Applicative m where *)
+(** class Functor f => Applicative f where *)
 
-Class Pure (M : Type -> Type) : Type :=
-  pure : forall {A}, A -> M A.
+Class Pure (F : Type -> Type) : Type :=
+  pure : forall {A}, A -> F A.
 
-Class App (M : Type -> Type) : Type :=
-  app : forall {A B}, M (A -> B) -> M A -> M B.
+Class Apply (F : Type -> Type) : Type :=
+  apply : forall {A B}, F (A -> B) -> F A -> F B.
 
-Class Appl (M : Type -> Type) : Type :=
-  appl : forall {A B}, M A -> M B -> M A.
+Class SeqLeft (F : Type -> Type) : Type :=
+  seq_left : forall {A B}, F A -> F B -> F A.
 
-Class Appr (M : Type -> Type) : Type :=
-  appr : forall {A B}, M A -> M B -> M B.
+Class SeqRight (F : Type -> Type) : Type :=
+  seq_right : forall {A B}, F A -> F B -> F B.
+
+(** class Applicative f => Alternative f where *)
+
+Class Empty (F : Type -> Type) : Type :=
+  empty : forall {A}, A -> F A.
+
+Class Combine (F : Type -> Type) : Type :=
+  combine : forall {A}, F A -> F A -> F A.
 
 (** class Applicative m => Monad m where *)
 
@@ -102,13 +110,13 @@ Class Accum (W : Type) (M : Type -> Type) : Type :=
 
 Declare Scope monad_scope.
 Delimit Scope monad_scope with monad.
-Local Open Scope monad_scope.
 
 Notation "f <$> m" := (map f m) (at level 65, right associativity) : monad_scope.
-Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : monad_scope.
-Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : monad_scope.
-Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : monad_scope.
-Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : monad_scope.
+Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : monad_scope.
+Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : monad_scope.
+Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : monad_scope.
+Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : monad_scope.
+Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : monad_scope.
 Notation "m >>= f" := (bind m f) (at level 50, left associativity) : monad_scope.
 
 Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : monad_scope.

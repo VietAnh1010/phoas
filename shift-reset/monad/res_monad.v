@@ -16,7 +16,7 @@ Definition map {R E S A B} (f : A -> B) (m : res_monad R E S A) : res_monad R E 
        | inr x => (inr (f x), s)
        end).
 
-Definition mapl {R E S A B} (x : B) (m : res_monad R E S A) : res_monad R E S B :=
+Definition map_const {R E S A B} (x : B) (m : res_monad R E S A) : res_monad R E S B :=
   RESMonad
     (fun r s =>
        let (m, s) := run_res_monad m r s in
@@ -25,7 +25,7 @@ Definition mapl {R E S A B} (x : B) (m : res_monad R E S A) : res_monad R E S B 
        | inr _ => (inr x, s)
        end).
 
-Definition app {R E S A B} (m1 : res_monad R E S (A -> B)) (m2 : res_monad R E S A) : res_monad R E S B :=
+Definition apply {R E S A B} (m1 : res_monad R E S (A -> B)) (m2 : res_monad R E S A) : res_monad R E S B :=
   RESMonad
     (fun r s =>
        let (m, s) := run_res_monad m1 r s in
@@ -39,7 +39,7 @@ Definition app {R E S A B} (m1 : res_monad R E S (A -> B)) (m2 : res_monad R E S
            end
        end).
 
-Definition appl {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B) : res_monad R E S A :=
+Definition seq_left {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B) : res_monad R E S A :=
   RESMonad
     (fun r s =>
        let (m, s) := run_res_monad m1 r s in
@@ -53,7 +53,7 @@ Definition appl {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B) : 
            end
        end).
 
-Definition appr {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B) : res_monad R E S B :=
+Definition seq_right {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B) : res_monad R E S B :=
   RESMonad
     (fun r s =>
        let (m, s) := run_res_monad m1 r s in
@@ -174,10 +174,10 @@ Module RESMonadNotations.
   Bind Scope res_monad_scope with res_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : res_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : res_monad_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : res_monad_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : res_monad_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : res_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : res_monad_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : res_monad_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : res_monad_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : res_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : res_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : res_monad_scope.

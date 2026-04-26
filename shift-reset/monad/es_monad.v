@@ -16,7 +16,7 @@ Definition map {E S A B} (f : A -> B) (m : es_monad E S A) : es_monad E S B :=
        | inr x => (inr (f x), s)
        end).
 
-Definition mapl {E S A B} (x : B) (m : es_monad E S A) : es_monad E S B :=
+Definition map_const {E S A B} (x : B) (m : es_monad E S A) : es_monad E S B :=
   ESMonad
     (fun s =>
        let (m, s) := run_es_monad m s in
@@ -25,7 +25,7 @@ Definition mapl {E S A B} (x : B) (m : es_monad E S A) : es_monad E S B :=
        | inr _ => (inr x, s)
        end).
 
-Definition app {E S A B} (m1 : es_monad E S (A -> B)) (m2 : es_monad E S A) : es_monad E S B :=
+Definition apply {E S A B} (m1 : es_monad E S (A -> B)) (m2 : es_monad E S A) : es_monad E S B :=
   ESMonad
     (fun s =>
        let (m, s) := run_es_monad m1 s in
@@ -39,7 +39,7 @@ Definition app {E S A B} (m1 : es_monad E S (A -> B)) (m2 : es_monad E S A) : es
            end
        end).
 
-Definition appl {E S A B} (m1 : es_monad E S A) (m2 : es_monad E S B) : es_monad E S A :=
+Definition seq_left {E S A B} (m1 : es_monad E S A) (m2 : es_monad E S B) : es_monad E S A :=
   ESMonad
     (fun s =>
        let (m, s) := run_es_monad m1 s in
@@ -53,7 +53,7 @@ Definition appl {E S A B} (m1 : es_monad E S A) (m2 : es_monad E S B) : es_monad
            end
        end).
 
-Definition appr {E S A B} (m1 : es_monad E S A) (m2 : es_monad E S B) : es_monad E S B :=
+Definition seq_right {E S A B} (m1 : es_monad E S A) (m2 : es_monad E S B) : es_monad E S B :=
   ESMonad
     (fun s =>
        let (m, s) := run_es_monad m1 s in
@@ -153,10 +153,10 @@ Module ESMonadNotations.
   Bind Scope es_monad_scope with es_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : es_monad_scope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : es_monad_scope.
-  Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : es_monad_scope.
-  Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : es_monad_scope.
-  Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : es_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : es_monad_scope.
+  Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : es_monad_scope.
+  Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : es_monad_scope.
+  Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : es_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : es_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : es_monad_scope.

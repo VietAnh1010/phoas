@@ -1,4 +1,4 @@
-From shift_reset.lib Require Import signatures.
+From shift_reset.monad Require Import signatures.
 
 Record wc_monad (W R A : Type) : Type := WCMonad { run_wc_monad : (A -> W -> R) -> R }.
 Definition t : Type -> Type -> Type -> Type := wc_monad.
@@ -9,7 +9,7 @@ Arguments run_wc_monad {W R A} _ _.
 Definition map {W R A B} (f : A -> B) (m : wc_monad W R A) : wc_monad W R B :=
   WCMonad (fun k => run_wc_monad m (fun x => k (f x))).
 
-Definition mapl {W R A B} (x : B) (m : wc_monad W R A) : wc_monad W R B :=
+Definition map_const {W R A B} (x : B) (m : wc_monad W R A) : wc_monad W R B :=
   WCMonad (fun k => run_wc_monad m (fun _ => k x)).
 
 Module WCMonadNotations.
@@ -18,7 +18,7 @@ Module WCMonadNotations.
   Bind Scope wc_monad_wcope with wc_monad.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : wc_monad_wcope.
-  Notation "x <$ m" := (mapl x m) (at level 65, right associativity) : wc_monad_wcope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : wc_monad_wcope.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : wc_monad_wcope.
 End WCMonadNotations.
 
@@ -26,20 +26,20 @@ Module Make (W : Monoid).
   Definition pure {R A} (x : A) : wc_monad W.t R A :=
     WCMonad (fun k => k x W.empty).
 
-  Definition app {R A B} (m1 : wc_monad W.t R (A -> B)) (m2 : wc_monad W.t R A) : wc_monad W.t R B :=
-    WCMonad (fun k => run_wc_monad m1 (fun f w1 => run_wc_monad m2 (fun x w2 => k (f x) (W.append w1 w2)))).
+  Definition apply {R A B} (m1 : wc_monad W.t R (A -> B)) (m2 : wc_monad W.t R A) : wc_monad W.t R B :=
+    WCMonad (fun k => run_wc_monad m1 (fun f w1 => run_wc_monad m2 (fun x w2 => k (f x) (W.combine w1 w2)))).
 
-  Definition appl {R A B} (m1 : wc_monad W.t R A) (m2 : wc_monad W.t R B) : wc_monad W.t R A :=
-    WCMonad (fun k => run_wc_monad m1 (fun x w1 => run_wc_monad m2 (fun _ w2 => k x (W.append w1 w2)))).
+  Definition seq_left {R A B} (m1 : wc_monad W.t R A) (m2 : wc_monad W.t R B) : wc_monad W.t R A :=
+    WCMonad (fun k => run_wc_monad m1 (fun x w1 => run_wc_monad m2 (fun _ w2 => k x (W.combine w1 w2)))).
 
-  Definition appr {R A B} (m1 : wc_monad W.t R A) (m2 : wc_monad W.t R B) : wc_monad W.t R B :=
-    WCMonad (fun k => run_wc_monad m1 (fun _ w1 => run_wc_monad m2 (fun x w2 => k x (W.append w1 w2)))).
+  Definition seq_right {R A B} (m1 : wc_monad W.t R A) (m2 : wc_monad W.t R B) : wc_monad W.t R B :=
+    WCMonad (fun k => run_wc_monad m1 (fun _ w1 => run_wc_monad m2 (fun x w2 => k x (W.combine w1 w2)))).
 
   Definition bind {R A B} (m : wc_monad W.t R A) (f : A -> wc_monad W.t R B) : wc_monad W.t R B :=
-    WCMonad (fun k => run_wc_monad m (fun x w1 => run_wc_monad (f x) (fun y w2 => k y (W.append w1 w2)))).
+    WCMonad (fun k => run_wc_monad m (fun x w1 => run_wc_monad (f x) (fun y w2 => k y (W.combine w1 w2)))).
 
   Definition join {R A} (m : wc_monad W.t R (wc_monad W.t R A)) : wc_monad W.t R A :=
-    WCMonad (fun k => run_wc_monad m (fun m w1 => run_wc_monad m (fun x w2 => k x (W.append w1 w2)))).
+    WCMonad (fun k => run_wc_monad m (fun m w1 => run_wc_monad m (fun x w2 => k x (W.combine w1 w2)))).
 
   Definition cont {R A} (f : (A -> R) -> R) : wc_monad W.t R A :=
     WCMonad (fun k => f (fun x => k x W.empty)).
@@ -48,9 +48,9 @@ Module Make (W : Monoid).
     WCMonad (fun k => run_wc_monad (f (fun x => WCMonad (fun _ => k x W.empty))) k).
 
   Module Notations.
-    Notation "m1 <*> m2" := (app m1 m2) (at level 55, left associativity) : wc_monad_wcope.
-    Notation "m1 <* m2" := (appl m1 m2) (at level 55, left associativity) : wc_monad_wcope.
-    Notation "m1 *> m2" := (appr m1 m2) (at level 55, left associativity) : wc_monad_wcope.
+    Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : wc_monad_wcope.
+    Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : wc_monad_wcope.
+    Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : wc_monad_wcope.
     Notation "m >>= f" := (bind m f) (at level 50, left associativity) : wc_monad_wcope.
     Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : wc_monad_wcope.
   End Notations.

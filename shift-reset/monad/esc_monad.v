@@ -1,3 +1,5 @@
+From shift_reset.monad Require Import signatures.
+
 Record esc_monad (E S R A : Type) : Type := ESCMonad { run_esc_monad : S -> (E -> S -> R) -> (A -> S -> R) -> R }.
 Definition t : Type -> Type -> Type -> Type -> Type := esc_monad.
 
@@ -117,3 +119,15 @@ Module ESCMonadNotations.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : esc_monad_scope.
   Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : esc_monad_scope.
 End ESCMonadNotations.
+
+Module MakeAlternative (E : Monoid).
+  Definition empty {S R A} : esc_monad E.t S R A :=
+    ESCMonad (fun s h _ => h E.empty s).
+
+  Definition combine {S R A} (m1 : esc_monad E.t S R A) (m2 : esc_monad E.t S R A) : esc_monad E.t S R A :=
+    ESCMonad (fun s h k => run_esc_monad m1 s (fun e1 s => run_esc_monad m2 s (fun e2 => h (E.combine e1 e2)) k) k).
+
+  Module Notations.
+    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : esc_monad_scope.
+  End Notations.
+End MakeAlternative.

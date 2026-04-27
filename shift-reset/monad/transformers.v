@@ -1,6 +1,7 @@
 Local Open Scope type_scope.
 
 Definition identity (A : Type) : Type := A.
+Definition maybe_t (M : Type -> Type) (A : Type) : Type := M (option A).
 Definition reader_t (R : Type) (M : Type -> Type) (A : Type) : Type := R -> M A.
 Definition writer_t (W : Type) (M : Type -> Type) (A : Type) : Type := M (A * W).
 Definition state_t (S : Type) (M : Type -> Type) (A : Type) : Type := S -> M (A * S).

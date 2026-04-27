@@ -1,3 +1,5 @@
+From shift_reset.monad Require Import signatures.
+
 Record es_monad (E S A : Type) : Type := ESMonad { run_es_monad : S -> (E + A) * S }.
 Definition t : Type -> Type -> Type -> Type := es_monad.
 
@@ -162,3 +164,26 @@ Module ESMonadNotations.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : es_monad_scope.
   Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : es_monad_scope.
 End ESMonadNotations.
+
+Module MakeAlternative (E : Monoid).
+  Definition empty {S A} : es_monad E.t S A :=
+    ESMonad (fun s => (inl E.empty, s)).
+
+  Definition combine {S A} (m1 : es_monad E.t S A) (m2 : es_monad E.t S A) : es_monad E.t S A :=
+    ESMonad
+      (fun s =>
+         let (m, s) := run_es_monad m1 s in
+         match m with
+         | inl e1 =>
+             let (m, s) := run_es_monad m2 s in
+             match m with
+             | inl e2 => (inl (E.combine e1 e2), s)
+             | inr x => (inr x, s)
+             end
+         | inr x => (inr x, s)
+         end).
+
+  Module Notations.
+    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : es_monad_scope.
+  End Notations.
+End MakeAlternative.

@@ -1,3 +1,5 @@
+From shift_reset.monad Require Import signatures.
+
 Record se_monad (S E A : Type) : Type := SEMonad { run_se_monad : S -> E + (A * S) }.
 Definition t : Type -> Type -> Type -> Type := se_monad.
 
@@ -179,3 +181,24 @@ Module SEMonadNotations.
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : se_monad_scope.
   Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : se_monad_scope.
 End SEMonadNotations.
+
+Module MakeAlternative (E : Monoid).
+  Definition empty {S A} : se_monad S E.t A :=
+    SEMonad (fun _ => inl E.empty).
+
+  Definition combine {S A} (m1 : se_monad S E.t A) (m2 : se_monad S E.t A) : se_monad S E.t A :=
+    SEMonad
+      (fun s =>
+         match run_se_monad m1 s with
+         | inl e1 =>
+             match run_se_monad m2 s with
+             | inl e2 => inl (E.combine e1 e2)
+             | inr p => inr p
+             end
+         | inr p => inr p
+         end).
+
+  Module Notations.
+    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : se_monad_scope.
+  End Notations.
+End MakeAlternative.

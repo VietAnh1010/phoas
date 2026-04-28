@@ -115,7 +115,7 @@ Definition try {S E A} (m : se_monad S E A) : se_monad S E (E + A) :=
        | inr (x, s) => inr (inr x, s)
        end).
 
-Definition finally {S E A} (m1 : se_monad S E A) (m2 : se_monad S E unit) : se_monad S E A :=
+Definition finally {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_monad S E A :=
   SEMonad
     (fun s =>
        match run_se_monad m1 s with

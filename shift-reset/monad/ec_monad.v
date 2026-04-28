@@ -47,7 +47,7 @@ Definition catch {E R A} (m : ec_monad E R A) (f : E -> ec_monad E R A) : ec_mon
 Definition try {E R A} (m : ec_monad E R A) : ec_monad E R (E + A) :=
   ECMonad (fun _ k => run_ec_monad m (fun e => k (inl e)) (fun x => k (inr x))).
 
-Definition finally {E R A} (m1 : ec_monad E R A) (m2 : ec_monad E R unit) : ec_monad E R A :=
+Definition finally {E R A B} (m1 : ec_monad E R A) (m2 : ec_monad E R B) : ec_monad E R A :=
   ECMonad (fun h k => run_ec_monad m1 (fun e => run_ec_monad m2 h (fun _ => h e)) (fun x => run_ec_monad m2 h (fun _ => k x))).
 
 Definition cont {E R A} (f : (A -> R) -> R) : ec_monad E R A :=

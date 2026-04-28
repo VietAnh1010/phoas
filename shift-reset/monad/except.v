@@ -71,6 +71,24 @@ Definition catch {E A} (m : except E A) (f : E -> except E A) : except E A :=
 Definition try {E A} (m : except E A) : except E (E + A) :=
   Except (inr (run_except m)).
 
+Definition finally {E A B} (m1 : except E A) (m2 : except E B) : except E A :=
+  Except
+    (let m := run_except m1 in
+     match run_except m2 with
+     | inl e => inl e
+     | inr _ => m
+     end).
+
+Definition on {E A B} (m1 : except E A) (m2 : except E B) : except E A :=
+  Except match run_except m1 with
+    | inl e1 =>
+        match run_except m2 with
+        | inl e2 => inl e2
+        | inr _ => inl e1
+        end
+    | inr x => inr x
+    end.
+
 Definition map_except {E E' A B} (f : E + A -> E' + B) (m : except E A) : except E' B :=
   Except (f (run_except m)).
 

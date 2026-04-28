@@ -127,7 +127,7 @@ Definition catch {R E S A} (m : res_monad R E S A) (f : E -> res_monad R E S A) 
 Definition try {R E S A} (m : res_monad R E S A) : res_monad R E S (E + A) :=
   RESMonad (fun r s => let (m, s) := run_res_monad m r s in (inr m, s)).
 
-Definition finally {R E S A} (m1 : res_monad R E S A) (m2 : res_monad R E S unit) : res_monad R E S A :=
+Definition finally {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B) : res_monad R E S A :=
   RESMonad
     (fun r s =>
        let (m1, s) := run_res_monad m1 r s in

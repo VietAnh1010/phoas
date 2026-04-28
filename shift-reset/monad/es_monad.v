@@ -100,7 +100,7 @@ Definition catch {E S A} (m : es_monad E S A) (f : E -> es_monad E S A) : es_mon
 Definition try {E S A} (m : es_monad E S A) : es_monad E S (E + A) :=
   ESMonad (fun s => let (m, s) := run_es_monad m s in (inr m, s)).
 
-Definition finally {E S A} (m1 : es_monad E S A) (m2 : es_monad E S unit) : es_monad E S A :=
+Definition finally {E S A B} (m1 : es_monad E S A) (m2 : es_monad E S B) : es_monad E S A :=
   ESMonad
     (fun s =>
        let (m1, s) := run_es_monad m1 s in

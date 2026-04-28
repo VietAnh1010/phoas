@@ -100,7 +100,7 @@ Module Make (W : Monoid).
        | inr x => (inr x, w1)
        end).
 
-  Definition finally {E A} (m1 : ew_monad E W.t A) (m2 : ew_monad E W.t unit) : ew_monad E W.t A :=
+  Definition finally {E A B} (m1 : ew_monad E W.t A) (m2 : ew_monad E W.t B) : ew_monad E W.t A :=
     EWMonad
       (let (m1, w1) := run_ew_monad m1 in
        let (m2, w2) := run_ew_monad m2 in

@@ -98,10 +98,47 @@ Fixpoint join {S A} (m : ls_monad S (ls_monad S A)) : ls_monad S A :=
        end).
 
 Fixpoint of_list {S A} (xs : list A) : ls_monad S A :=
-  match xs with
-  | [] => empty
-  | x :: xs' => LSMonad (fun s => (Cons x (of_list xs'), s))
-  end.
+  LSMonad
+    (fun s =>
+       match xs with
+       | [] => (Nil, s)
+       | x :: xs' => (Cons x (of_list xs'), s)
+       end).
+
+Fixpoint take {S A} (n : nat) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad
+    (fun s =>
+       match n with
+       | O => (Nil, s)
+       | S n' =>
+           let (m, s) := run_ls_monad m s in
+           match m with
+           | Nil => (Nil, s)
+           | Cons x m' => (Cons x (take n' m'), s)
+           end
+       end).
+
+Fixpoint drop {S A} (n : nat) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad
+    (fun s =>
+       match n with
+       | O => run_ls_monad m s
+       | S n' =>
+           let (m, s) := run_ls_monad m s in
+           match m with
+           | Nil => (Nil, s)
+           | Cons _ m' => run_ls_monad (drop n' m') s
+           end
+       end).
+
+Fixpoint filter {S A} (f : A -> bool) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad
+    (fun s =>
+       let (m, s) := run_ls_monad m s in
+       match m with
+       | Nil => (Nil, s)
+       | Cons x m' => if f x then (Cons x (filter f m'), s) else run_ls_monad (filter f m') s
+       end).
 
 Definition get {S} : ls_monad S S :=
   LSMonad (fun s => (Cons s empty, s)).

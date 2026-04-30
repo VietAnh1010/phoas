@@ -1,5 +1,3 @@
-From shift_reset.monad Require Import signatures.
-
 Record ec_monad (E R A : Type) : Type := ECMonad { run_ec_monad : (E -> R) -> (A -> R) -> R }.
 Definition t : Type -> Type -> Type -> Type := ec_monad.
 
@@ -50,6 +48,9 @@ Definition try {E R A} (m : ec_monad E R A) : ec_monad E R (E + A) :=
 Definition finally {E R A B} (m1 : ec_monad E R A) (m2 : ec_monad E R B) : ec_monad E R A :=
   ECMonad (fun h k => run_ec_monad m1 (fun e => run_ec_monad m2 h (fun _ => h e)) (fun x => run_ec_monad m2 h (fun _ => k x))).
 
+Definition combine {E R A} (m1 : ec_monad E R A) (m2 : ec_monad E R A) : ec_monad E R A :=
+  ECMonad (fun h k => run_ec_monad m1 (fun _ => run_ec_monad m2 h k) k).
+
 Definition cont {E R A} (f : (A -> R) -> R) : ec_monad E R A :=
   ECMonad (fun _ => f).
 
@@ -91,19 +92,8 @@ Module ECMonadNotations.
   Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : ec_monad_scope.
   Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : ec_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : ec_monad_scope.
+  Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : ec_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : ec_monad_scope.
   Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : ec_monad_scope.
 End ECMonadNotations.
-
-Module MakeAlternative (E : Monoid).
-  Definition empty {R A} : ec_monad E.t R A :=
-    ECMonad (fun h _ => h E.empty).
-
-  Definition combine {R A} (m1 : ec_monad E.t R A) (m2 : ec_monad E.t R A) : ec_monad E.t R A :=
-    ECMonad (fun h k => run_ec_monad m1 (fun e1 => run_ec_monad m2 (fun e2 => h (E.combine e1 e2)) k) k).
-
-  Module Notations.
-    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : ec_monad_scope.
-  End Notations.
-End MakeAlternative.

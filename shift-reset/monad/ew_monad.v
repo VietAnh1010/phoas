@@ -109,11 +109,20 @@ Module Make (W : Monoid).
        | inr _ => (m1, W.combine w1 w2)
        end).
 
+  Definition combine {E A} (m1 : ew_monad E W.t A) (m2 : ew_monad E W.t A) : ew_monad E W.t A :=
+    EWMonad
+      (let (m, w1) := run_ew_monad m1 in
+       match m with
+       | inl _ => let (m, w2) := run_ew_monad m2 in (m, W.combine w1 w2)
+       | inr x => (inr x, w1)
+       end).
+
   Module Notations.
     Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : ew_monad_scope.
     Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : ew_monad_scope.
     Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : ew_monad_scope.
     Notation "m >>= f" := (bind m f) (at level 50, left associativity) : ew_monad_scope.
+    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : ew_monad_scope.
     Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : ew_monad_scope.
   End Notations.
 End Make.
@@ -166,25 +175,3 @@ Definition with_except {E E' W A} (f : E -> E') (m : ew_monad E W A) : ew_monad 
      | inl e => (inl (f e), w)
      | inr x => (inr x, w)
      end).
-
-Module MakeAlternative (E : Monoid) (W : Monoid).
-  Definition empty {A} : ew_monad E.t W.t A :=
-    EWMonad (inl E.empty, W.empty).
-
-  Definition combine {A} (m1 : ew_monad E.t W.t A) (m2 : ew_monad E.t W.t A) : ew_monad E.t W.t A :=
-    EWMonad
-      (let (m, w1) := run_ew_monad m1 in
-       match m with
-       | inl e1 =>
-           let (m, w2) := run_ew_monad m2 in
-           match m with
-           | inl e2 => (inl (E.combine e1 e2), W.combine w1 w2)
-           | inr x => (inr x, W.combine w1 w2)
-           end
-       | inr x => (inr x, w1)
-       end).
-
-  Module Notations.
-    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : ew_monad_scope.
-  End Notations.
-End MakeAlternative.

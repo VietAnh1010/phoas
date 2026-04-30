@@ -1,5 +1,3 @@
-From shift_reset.monad Require Import signatures.
-
 Record esc_monad (E S R A : Type) : Type := ESCMonad { run_esc_monad : S -> (E -> S -> R) -> (A -> S -> R) -> R }.
 Definition t : Type -> Type -> Type -> Type -> Type := esc_monad.
 
@@ -49,6 +47,9 @@ Definition try {E S R A} (m : esc_monad E S R A) : esc_monad E S R (E + A) :=
 
 Definition finally {E S R A B} (m1 : esc_monad E S R A) (m2 : esc_monad E S R B) : esc_monad E S R A :=
   ESCMonad (fun s h k => run_esc_monad m1 s (fun e s => run_esc_monad m2 s h (fun _ => h e)) (fun x s => run_esc_monad m2 s h (fun _ => k x))).
+
+Definition combine {E S R A} (m1 : esc_monad E S R A) (m2 : esc_monad E S R A) : esc_monad E S R A :=
+  ESCMonad (fun s h k => run_esc_monad m1 s (fun _ s => run_esc_monad m2 s h k) k).
 
 Definition get {E S R} : esc_monad E S R S :=
   ESCMonad (fun s _ k => k s s).
@@ -115,19 +116,8 @@ Module ESCMonadNotations.
   Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : esc_monad_scope.
   Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : esc_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : esc_monad_scope.
+  Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : esc_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : esc_monad_scope.
   Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : esc_monad_scope.
 End ESCMonadNotations.
-
-Module MakeAlternative (E : Monoid).
-  Definition empty {S R A} : esc_monad E.t S R A :=
-    ESCMonad (fun s h _ => h E.empty s).
-
-  Definition combine {S R A} (m1 : esc_monad E.t S R A) (m2 : esc_monad E.t S R A) : esc_monad E.t S R A :=
-    ESCMonad (fun s h k => run_esc_monad m1 s (fun e1 s => run_esc_monad m2 s (fun e2 => h (E.combine e1 e2)) k) k).
-
-  Module Notations.
-    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : esc_monad_scope.
-  End Notations.
-End MakeAlternative.

@@ -1,5 +1,3 @@
-From shift_reset.monad Require Import signatures.
-
 Record except (E A : Type) : Type := Except { run_except : E + A }.
 Definition t : Type -> Type -> Type := except.
 
@@ -89,6 +87,12 @@ Definition on {E A B} (m1 : except E A) (m2 : except E B) : except E A :=
     | inr x => inr x
     end.
 
+Definition combine {E A} (m1 : except E A) (m2 : except E A) : except E A :=
+  Except match run_except m1 with
+    | inl _ => run_except m2
+    | inr x => inr x
+    end.
+
 Definition map_except {E E' A B} (f : E + A -> E' + B) (m : except E A) : except E' B :=
   Except (f (run_except m)).
 
@@ -109,26 +113,8 @@ Module ExceptNotations.
   Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : except_scope.
   Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : except_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : except_scope.
+  Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : except_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : except_scope.
   Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : except_scope.
 End ExceptNotations.
-
-Module MakeAlternative (E : Monoid).
-  Definition empty {A} : except E.t A :=
-    Except (inl E.empty).
-
-  Definition combine {A} (m1 : except E.t A) (m2 : except E.t A) : except E.t A :=
-    Except match run_except m1 with
-      | inl e1 =>
-          match run_except m2 with
-          | inl e2 => inl (E.combine e1 e2)
-          | inr x => inr x
-          end
-      | inr x => inr x
-      end.
-
-  Module Notations.
-    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : except_scope.
-  End Notations.
-End MakeAlternative.

@@ -1,5 +1,3 @@
-From shift_reset.monad Require Import signatures.
-
 Record res_monad (R E S A : Type) : Type := RESMonad { run_res_monad : R -> S -> (E + A) * S }.
 Definition t : Type -> Type -> Type -> Type -> Type := res_monad.
 
@@ -137,6 +135,15 @@ Definition finally {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B)
        | inr _ => (m1, s)
        end).
 
+Definition combine {R E S A} (m1 : res_monad R E S A) (m2 : res_monad R E S A) : res_monad R E S A :=
+  RESMonad
+    (fun r s =>
+       let (m, s) := run_res_monad m1 r s in
+       match m with
+       | inl _ => run_res_monad m2 r s
+       | inr x => (inr x, s)
+       end).
+
 Definition with_reader {R' R E S A} (f : R' -> R) (m : res_monad R E S A) : res_monad R' E S A :=
   RESMonad (fun r => run_res_monad m (f r)).
 
@@ -181,30 +188,8 @@ Module RESMonadNotations.
   Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : res_monad_scope.
   Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : res_monad_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : res_monad_scope.
+  Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : res_monad_scope.
 
   Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : res_monad_scope.
   Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : res_monad_scope.
 End RESMonadNotations.
-
-Module MakeAlternative (E : Monoid).
-  Definition empty {R S A} : res_monad R E.t S A :=
-    RESMonad (fun _ s => (inl E.empty, s)).
-
-  Definition combine {R S A} (m1 : res_monad R E.t S A) (m2 : res_monad R E.t S A) : res_monad R E.t S A :=
-    RESMonad
-      (fun r s =>
-         let (m, s) := run_res_monad m1 r s in
-         match m with
-         | inl e1 =>
-             let (m, s) := run_res_monad m2 r s in
-             match m with
-             | inl e2 => (inl (E.combine e1 e2), s)
-             | inr x => (inr x, s)
-             end
-         | inr x => (inr x, s)
-         end).
-
-  Module Notations.
-    Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : res_monad_scope.
-  End Notations.
-End MakeAlternative.

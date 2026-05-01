@@ -25,7 +25,7 @@ Definition empty {S A} : ls_monad S A :=
 Definition cons {S A} (x : A) (m : ls_monad S A) : ls_monad S A :=
   LSMonad (fun s => (Cons x m, s)).
 
-Fixpoint combine {S A} (m1 : ls_monad S A) (m2 : ls_monad S A) : ls_monad S A :=
+Fixpoint combine {S A} (m1 m2 : ls_monad S A) : ls_monad S A :=
   LSMonad
     (fun s =>
        let (m, s) := run_ls_monad m1 s in

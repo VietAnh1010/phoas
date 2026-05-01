@@ -25,7 +25,7 @@ Definition empty {R A} : lr_monad R A :=
 Definition cons {R A} (x : A) (m : lr_monad R A) : lr_monad R A :=
   LRMonad (fun _ => Cons x m).
 
-Fixpoint combine {R A} (m1 : lr_monad R A) (m2 : lr_monad R A) : lr_monad R A :=
+Fixpoint combine {R A} (m1 m2 : lr_monad R A) : lr_monad R A :=
   LRMonad
     (fun r =>
        match run_lr_monad m1 r with

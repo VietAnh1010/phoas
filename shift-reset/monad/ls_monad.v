@@ -22,6 +22,9 @@ Definition run_ls_monad {S A} : ls_monad S A -> S -> step S A * S :=
 Definition empty {S A} : ls_monad S A :=
   LSMonad (fun s => (Nil, s)).
 
+Definition cons {S A} (x : A) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad (fun s => (Cons x m, s)).
+
 Fixpoint combine {S A} (m1 : ls_monad S A) (m2 : ls_monad S A) : ls_monad S A :=
   LSMonad
     (fun s =>
@@ -140,6 +143,24 @@ Fixpoint filter {S A} (f : A -> bool) (m : ls_monad S A) : ls_monad S A :=
        | Cons x m' => if f x then (Cons x (filter f m'), s) else run_ls_monad (filter f m') s
        end).
 
+Fixpoint take_while {S A} (f : A -> bool) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad
+    (fun s =>
+       let (m, s) := run_ls_monad m s in
+       match m with
+       | Nil => (Nil, s)
+       | Cons x m' => if f x then (Cons x (take_while f m'), s) else (Nil, s)
+       end).
+
+Fixpoint drop_while {S A} (f : A -> bool) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad
+    (fun s =>
+       let (m, s) := run_ls_monad m s in
+       match m with
+       | Nil => (Nil, s)
+       | Cons x m' => if f x then run_ls_monad (drop_while f m') s else (Cons x m', s)
+       end).
+
 Definition get {S} : ls_monad S S :=
   LSMonad (fun s => (Cons s empty, s)).
 
@@ -154,6 +175,24 @@ Definition gets {S A} (f : S -> A) : ls_monad S A :=
 
 Definition modify {S} (f : S -> S) : ls_monad S unit :=
   LSMonad (fun s => (Cons tt empty, f s)).
+
+Fixpoint map_state {S A B} (f : A * S -> B * S) (m : ls_monad S A) : ls_monad S B :=
+  LSMonad
+    (fun s =>
+       let (m, s) := run_ls_monad m s in
+       match m with
+       | Nil => (Nil, s)
+       | Cons x m' => let (y, s) := f (x, s) in (Cons y (map_state f m'), s)
+       end).
+
+Fixpoint with_state {S A} (f : S -> S) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad
+    (fun s =>
+       let (m, s) := run_ls_monad m (f s) in
+       match m with
+       | Nil => (Nil, s)
+       | Cons x m' => (Cons x (with_state f m'), s)
+       end).
 
 Module LSMonadNotations.
   Declare Scope ls_monad_scope.

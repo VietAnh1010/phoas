@@ -161,6 +161,20 @@ Fixpoint drop_while {S A} (f : A -> bool) (m : ls_monad S A) : ls_monad S A :=
        | Cons x m' => if f x then run_ls_monad (drop_while f m') s else (Cons x m', s)
        end).
 
+Fixpoint zip {S A B} (m1 : ls_monad S A) (m2 : ls_monad S B) : ls_monad S (A * B) :=
+  LSMonad
+    (fun s =>
+       let (m, s) := run_ls_monad m1 s in
+       match m with
+       | Nil => (Nil, s)
+       | Cons x m1' =>
+           let (m, s) := run_ls_monad m2 s in
+           match m with
+           | Nil => (Nil, s)
+           | Cons y m2' => (Cons (x, y) (zip m1' m2'), s)
+           end
+       end).
+
 Definition get {S} : ls_monad S S :=
   LSMonad (fun s => (Cons s empty, s)).
 

@@ -74,9 +74,6 @@ End Make.
 Definition local {R W S A} (f : R -> R) (m : rws_monad R W S A) : rws_monad R W S A :=
   RWSMonad (fun r => run_rws_monad m (f r)).
 
-Definition scope {R W S A} (r : R) (m : rws_monad R W S A) : rws_monad R W S A :=
-  RWSMonad (fun _ => run_rws_monad m r).
-
 Definition tell {R W S} (w : W) : rws_monad R W S unit :=
   RWSMonad (fun _ s => (tt, w, s)).
 

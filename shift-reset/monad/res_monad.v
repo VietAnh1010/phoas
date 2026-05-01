@@ -89,9 +89,6 @@ Definition reader {R E S A} (f : R -> A) : res_monad R E S A :=
 Definition local {R E S A} (f : R -> R) (m : res_monad R E S A) : res_monad R E S A :=
   RESMonad (fun r => run_res_monad m (f r)).
 
-Definition scope {R E S A} (r : R) (m : res_monad R E S A) : res_monad R E S A :=
-  RESMonad (fun _ => run_res_monad m r).
-
 Definition get {R E S} : res_monad R E S S :=
   RESMonad (fun _ s => (inr s, s)).
 

@@ -31,9 +31,6 @@ Definition ask {R} : reader R R :=
 Definition local {R A} (f : R -> R) (m : reader R A) : reader R A :=
   Reader (fun r => run_reader m (f r)).
 
-Definition scope {R A} (r : R) (m : reader R A) : reader R A :=
-  Reader (fun _ => run_reader m r).
-
 Definition with_reader {R' R A} (f : R' -> R) (m : reader R A) : reader R' A :=
   Reader (fun r => run_reader m (f r)).
 

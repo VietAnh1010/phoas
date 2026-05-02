@@ -60,7 +60,7 @@ Definition join {A} (m : maybe (maybe A)) : maybe A :=
 Definition empty {A} : maybe A :=
   Maybe None.
 
-Definition combine {A} (m1 : maybe A) (m2 : maybe A) : maybe A :=
+Definition combine {A} (m1 m2 : maybe A) : maybe A :=
   Maybe match run_maybe m1 with
     | None => run_maybe m2
     | Some x => Some x

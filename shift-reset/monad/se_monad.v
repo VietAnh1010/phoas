@@ -129,7 +129,7 @@ Definition finally {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_mo
            end
        end).
 
-Definition combine {S E A} (m1 : se_monad S E A) (m2 : se_monad S E A) : se_monad S E A :=
+Definition combine {S E A} (m1 m2 : se_monad S E A) : se_monad S E A :=
   SEMonad
     (fun s =>
        match run_se_monad m1 s with

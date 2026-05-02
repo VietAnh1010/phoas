@@ -109,7 +109,7 @@ Module Make (W : Monoid).
        | inr _ => (m1, W.combine w1 w2)
        end).
 
-  Definition combine {E A} (m1 : ew_monad E W.t A) (m2 : ew_monad E W.t A) : ew_monad E W.t A :=
+  Definition combine {E A} (m1 m2 : ew_monad E W.t A) : ew_monad E W.t A :=
     EWMonad
       (let (m, w1) := run_ew_monad m1 in
        match m with

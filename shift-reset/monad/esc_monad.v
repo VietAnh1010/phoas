@@ -48,7 +48,7 @@ Definition try {E S R A} (m : esc_monad E S R A) : esc_monad E S R (E + A) :=
 Definition finally {E S R A B} (m1 : esc_monad E S R A) (m2 : esc_monad E S R B) : esc_monad E S R A :=
   ESCMonad (fun s h k => run_esc_monad m1 s (fun e s => run_esc_monad m2 s h (fun _ => h e)) (fun x s => run_esc_monad m2 s h (fun _ => k x))).
 
-Definition combine {E S R A} (m1 : esc_monad E S R A) (m2 : esc_monad E S R A) : esc_monad E S R A :=
+Definition combine {E S R A} (m1 m2 : esc_monad E S R A) : esc_monad E S R A :=
   ESCMonad (fun s h k => run_esc_monad m1 s (fun _ s => run_esc_monad m2 s h k) k).
 
 Definition get {E S R} : esc_monad E S R S :=

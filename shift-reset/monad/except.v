@@ -87,7 +87,7 @@ Definition on {E A B} (m1 : except E A) (m2 : except E B) : except E A :=
     | inr x => inr x
     end.
 
-Definition combine {E A} (m1 : except E A) (m2 : except E A) : except E A :=
+Definition combine {E A} (m1 m2 : except E A) : except E A :=
   Except match run_except m1 with
     | inl _ => run_except m2
     | inr x => inr x

@@ -132,7 +132,7 @@ Definition finally {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S B)
        | inr _ => (m1, s)
        end).
 
-Definition combine {R E S A} (m1 : res_monad R E S A) (m2 : res_monad R E S A) : res_monad R E S A :=
+Definition combine {R E S A} (m1 m2 : res_monad R E S A) : res_monad R E S A :=
   RESMonad
     (fun r s =>
        let (m, s) := run_res_monad m1 r s in

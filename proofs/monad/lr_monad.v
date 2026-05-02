@@ -54,8 +54,8 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma bind_combine_distr {R A B} (m1 m2 : lr_monad R A) (f : A -> lr_monad R B) :
-  bind (combine m1 m2) f = combine (bind m1 f) (bind m2 f).
+Lemma map_combine_distr {R A B} (f : A -> B) (m1 m2 : lr_monad R A) :
+  combine (map f m1) (map f m2) = map f (combine m1 m2).
 Proof.
   revert m1 m2. fix IH 1.
   intros [m1] m2. cbn. f_equal.
@@ -64,6 +64,34 @@ Proof.
   - destruct m2 as [m2]. cbn.
     reflexivity.
   - rewrite -> (IH m1' m2).
+    reflexivity.
+Qed.
+
+Lemma apply_combine_distr_r {R A B} (m1 m2 : lr_monad R (A -> B)) (m3 : lr_monad R A) :
+  combine (apply m1 m3) (apply m2 m3) = apply (combine m1 m2) m3.
+Proof.
+  revert m1 m2. fix IH 1.
+  intros [m1] m2. cbn. f_equal.
+  apply functional_extensionality. intros r.
+  destruct (m1 r) as [| f m1'].
+  - destruct m2 as [m2]. cbn.
+    reflexivity.
+  - rewrite <- (IH m1' m2).
+    rewrite <- combine_assoc.
+    destruct (combine (map f m3) (apply m1' m3)) as [m]. cbn.
+    reflexivity.
+Qed.
+
+Lemma bind_combine_distr {R A B} (m1 m2 : lr_monad R A) (f : A -> lr_monad R B) :
+  combine (bind m1 f) (bind m2 f) = bind (combine m1 m2) f.
+Proof.
+  revert m1 m2. fix IH 1.
+  intros [m1] m2. cbn. f_equal.
+  apply functional_extensionality. intros r.
+  destruct (m1 r) as [| x m1'].
+  - destruct m2 as [m2]. cbn.
+    reflexivity.
+  - rewrite <- (IH m1' m2).
     rewrite <- combine_assoc.
     destruct (combine (f x) (bind m1' f)) as [m]. cbn.
     reflexivity.
@@ -72,6 +100,19 @@ Qed.
 Lemma empty_bind {R A B} (f : A -> lr_monad R B) :
   bind empty f = empty.
 Proof. cbn. reflexivity. Qed.
+
+Lemma seq_right_empty {R A B} (m : lr_monad R A) :
+  seq_right m (@empty R B) = empty.
+Proof.
+  revert m. fix IH 1.
+  intros [m]. cbn.
+  unfold empty at 2. f_equal.
+  apply functional_extensionality. intros r.
+  destruct (m r) as [| _ m'].
+  - reflexivity.
+  - rewrite -> (IH m'). cbn.
+    reflexivity.
+Qed.
 
 Lemma pure_bind {R A B} (x : A) (f : A -> lr_monad R B) :
   bind (pure x) f = f x.
@@ -104,7 +145,7 @@ Proof.
   destruct (m r) as [| x m'].
   - reflexivity.
   - rewrite <- (IH m').
-    rewrite <- (bind_combine_distr).
+    rewrite -> bind_combine_distr.
     destruct (combine (f x) (bind m' f)) as [m'']. cbn.
     reflexivity.
 Qed.

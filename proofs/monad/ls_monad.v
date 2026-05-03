@@ -104,8 +104,20 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma map_empty {S A B} (f : A -> B) :
+  map f (@empty S A) = empty.
+Proof. cbv. reflexivity. Qed.
+
+Lemma apply_empty {S A B} (m : ls_monad S A) :
+  apply (@empty S (A -> B)) m = empty.
+Proof. cbv. reflexivity. Qed.
+
 Lemma bind_empty {S A B} (f : A -> ls_monad S B) :
   bind empty f = empty.
+Proof. cbv. reflexivity. Qed.
+
+Lemma map_pure {S A B} (f : A -> B) (x : A) :
+  map f (@pure S A x) = pure (f x).
 Proof. cbv. reflexivity. Qed.
 
 Lemma bind_pure_l {S A B} (x : A) (f : A -> ls_monad S B) :

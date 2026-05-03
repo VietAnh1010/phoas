@@ -97,22 +97,17 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma map_empty {R A B} (f : A -> B) :
+  map f (@empty R A) = empty.
+Proof. cbv. reflexivity. Qed.
+
+Lemma apply_empty {R A B} (m : lr_monad R A) :
+  apply (@empty R (A -> B)) m = empty.
+Proof. cbv. reflexivity. Qed.
+
 Lemma bind_empty {R A B} (f : A -> lr_monad R B) :
   bind empty f = empty.
 Proof. cbv. reflexivity. Qed.
-
-Lemma seq_right_empty {R A B} (m : lr_monad R A) :
-  seq_right m (@empty R B) = empty.
-Proof.
-  revert m. fix IH 1.
-  intros [m]. cbn.
-  unfold empty at 2. f_equal.
-  apply functional_extensionality. intros r.
-  destruct (m r) as [| _ m'].
-  - reflexivity.
-  - rewrite -> (IH m'). cbn.
-    reflexivity.
-Qed.
 
 Lemma map_pure {R A B} (f : A -> B) (x : A) :
   map f (@pure R A x) = pure (f x).

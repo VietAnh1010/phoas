@@ -2,7 +2,7 @@ From Stdlib Require Import FunctionalExtensionality.
 From shift_reset.monad Require Import cs_monad.
 
 Lemma reset_idemp {R R' S} (m : cs_monad R S R) :
-  @reset R R' S (reset m) = @reset R R' S m.
+  @reset R R' S (reset m) = reset m.
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros k.
@@ -13,7 +13,7 @@ Proof.
 Qed.
 
 Lemma reset_bind_reset {R R' S A} (m : cs_monad R S A) (f : A -> cs_monad R S R) :
-  @reset R R' S (bind m (fun x => (reset (f x)))) = @reset R R' S (bind m f).
+  @reset R R' S (bind m (fun x => (reset (f x)))) = reset (bind m f).
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros k.
@@ -39,13 +39,13 @@ Proof.
 Qed.
 
 Lemma get_put {R S} :
-  @bind R S S unit get put = @pure R S unit tt.
+  bind (@get R S) put = pure tt.
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_get {R S} (s : S) :
-  @seq_right R S unit S (put s) get = @seq_right R S unit S (put s) (pure s).
+  seq_right (@put R S s) get = seq_right (put s) (pure s).
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_put {R S} (s1 s2 : S) :
-  @seq_right R S unit unit (put s1) (put s2) = @put R S s2.
+  seq_right (@put R S s1) (put s2) = put s2.
 Proof. cbv. reflexivity. Qed.

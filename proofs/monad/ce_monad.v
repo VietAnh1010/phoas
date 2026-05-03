@@ -2,7 +2,7 @@ From Stdlib Require Import FunctionalExtensionality.
 From shift_reset.monad Require Import ce_monad.
 
 Lemma reset_idemp {R R' E} (m : ce_monad R E R) :
-  @reset R R' E (reset m) = @reset R R' E m.
+  @reset R R' E (reset m) = reset m.
 Proof.
   cbv. f_equal.
   destruct m as [m].
@@ -12,7 +12,7 @@ Proof.
 Qed.
 
 Lemma reset_bind_reset {R R' E A} (m : ce_monad R E A) (f : A -> ce_monad R E R) :
-  @reset R R' E (bind m (fun x => (reset (f x)))) = @reset R R' E (bind m f).
+  @reset R R' E (bind m (fun x => (reset (f x)))) = reset (bind m f).
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros k.

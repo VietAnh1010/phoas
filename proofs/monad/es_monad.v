@@ -13,7 +13,7 @@ Proof.
 Qed.
 
 Lemma map_comp {E S A B C} (f : B -> C) (g : A -> B) (m : es_monad E S A) :
-  map f (map g m) = map (fun x => f (g x)) m.
+  map (fun x => f (g x)) m = map f (map g m).
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros s.
@@ -24,11 +24,11 @@ Proof.
   - reflexivity.
 Qed.
 
-Lemma pure_bind {E S A B} (x : A) (f : A -> es_monad E S B) :
+Lemma bind_pure_l {E S A B} (x : A) (f : A -> es_monad E S B) :
   bind (pure x) f = f x.
 Proof. cbv. destruct (f x) as [m]. reflexivity. Qed.
 
-Lemma bind_pure {E S A} (m : es_monad E S A) :
+Lemma bind_pure_r {E S A} (m : es_monad E S A) :
   bind m pure = m.
 Proof.
   cbv. destruct m as [m]. f_equal.
@@ -52,13 +52,13 @@ Proof.
 Qed.
 
 Lemma get_put {E S} :
-  @bind E S S unit get put = @pure E S unit tt.
+  bind (@get E S) put = pure tt.
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_get {E S} (s : S) :
-  @seq_right E S unit S (put s) get = @seq_right E S unit S (put s) (pure s).
+  seq_right (@put E S s) get = seq_right (put s) (pure s).
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_put {E S} (s1 s2 : S) :
-  @seq_right E S unit unit (put s1) (put s2) = @put E S s2.
+  seq_right (@put E S s1) (put s2) = put s2.
 Proof. cbv. reflexivity. Qed.

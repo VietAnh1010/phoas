@@ -1,11 +1,11 @@
 From Stdlib Require Import FunctionalExtensionality.
 From shift_reset.monad Require Import ces_monad.
 
-Lemma bind_pure {R E S A B} (x : A) (f : A -> ces_monad R E S B) :
+Lemma bind_pure_l {R E S A B} (x : A) (f : A -> ces_monad R E S B) :
   bind (pure x) f = f x.
 Proof. cbv. destruct (f x) as [m]. reflexivity. Qed.
 
-Lemma pure_bind {R E S A} (m : ces_monad R E S A) :
+Lemma bind_pure_r {R E S A} (m : ces_monad R E S A) :
   bind m pure = m.
 Proof. cbv. destruct m as [m]. reflexivity. Qed.
 
@@ -14,7 +14,7 @@ Lemma bind_assoc {R E S A B C} (m : ces_monad R E S A) (f : A -> ces_monad R E S
 Proof. cbv. reflexivity. Qed.
 
 Lemma reset_idemp {R R' E S} (m : ces_monad R E S R) :
-  @reset R R' E S (reset m) = @reset R R' E S m.
+  @reset R R' E S (reset m) = reset m.
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros k.
@@ -27,7 +27,7 @@ Proof.
 Qed.
 
 Lemma reset_bind_reset {R R' E S A} (m : ces_monad R E S A) (f : A -> ces_monad R E S R) :
-  @reset R R' E S (bind m (fun x => (reset (f x)))) = @reset R R' E S (bind m f).
+  @reset R R' E S (bind m (fun x => (reset (f x)))) = reset (bind m f).
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros k.
@@ -49,13 +49,13 @@ Proof.
 Qed.
 
 Lemma get_put {R E S} :
-  @bind R E S S unit get put = @pure R E S unit tt.
+  bind (@get R E S) put = pure tt.
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_get {R E S} (s : S) :
-  @seq_right R E S unit S (put s) get = @seq_right R E S unit S (put s) (pure s).
+  seq_right (@put R E S s) get = seq_right (put s) (pure s).
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_put {R E S} (s1 s2 : S) :
-  @seq_right R E S unit unit (put s1) (put s2) = @put R E S s2.
+  seq_right (@put R E S s1) (put s2) = put s2.
 Proof. cbv. reflexivity. Qed.

@@ -10,7 +10,7 @@ Proof.
 Qed.
 
 Lemma map_comp {W A B C} (f : B -> C) (g : A -> B) (m : writer W A) :
-  map f (map g m) = map (fun x => f (g x)) m.
+  map (fun x => f (g x)) m = map f (map g m).
 Proof.
   cbv. f_equal.
   destruct m as [m].
@@ -26,7 +26,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
   Import WLaws.
   Import MSig.
 
-  Lemma pure_bind {A B} (x : A) (f : A -> writer W.t B) :
+  Lemma bind_pure_l {A B} (x : A) (f : A -> writer W.t B) :
     bind (pure x) f = f x.
   Proof.
     cbv.
@@ -36,7 +36,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     reflexivity.
   Qed.
 
-  Lemma bind_pure {A} (m : writer W.t A) :
+  Lemma bind_pure_r {A} (m : writer W.t A) :
     bind m pure = m.
   Proof.
     cbv.

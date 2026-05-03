@@ -11,7 +11,7 @@ Proof.
 Qed.
 
 Lemma map_comp {W A B C} (f : B -> C) (g : A -> B) (m : accum W A) :
-  map f (map g m) = map (fun x => f (g x)) m.
+  map (fun x => f (g x)) m = map f (map g m).
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros w.
@@ -28,7 +28,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
   Import WLaws.
   Import MSig.
 
-  Lemma pure_bind {A B} (x : A) (f : A -> accum W.t B) :
+  Lemma bind_pure_l {A B} (x : A) (f : A -> accum W.t B) :
     bind (pure x) f = f x.
   Proof.
     cbv. destruct (f x) as [m]. f_equal.
@@ -39,7 +39,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
     reflexivity.
   Qed.
 
-  Lemma bind_pure {A} (m : accum W.t A) :
+  Lemma bind_pure_r {A} (m : accum W.t A) :
     bind m pure = m.
   Proof.
     cbv. destruct m as [m]. f_equal.

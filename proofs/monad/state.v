@@ -11,7 +11,7 @@ Proof.
 Qed.
 
 Lemma map_comp {S A B C} (f : B -> C) (g : A -> B) (m : state S A) :
-  map f (map g m) = map (fun x => f (g x)) m.
+  map (fun x => f (g x)) m = map f (map g m).
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros s.
@@ -20,11 +20,11 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma pure_bind {S A B} (x : A) (f : A -> state S B) :
+Lemma bind_pure_l {S A B} (x : A) (f : A -> state S B) :
   bind (pure x) f = f x.
 Proof. cbv. destruct (f x) as [m]. reflexivity. Qed.
 
-Lemma bind_pure {S A} (m : state S A) :
+Lemma bind_pure_r {S A} (m : state S A) :
   bind m pure = m.
 Proof.
   cbv. destruct m as [m]. f_equal.
@@ -44,7 +44,7 @@ Proof.
 Qed.
 
 Lemma get_put {S} :
-  @bind S S unit get put = @pure S unit tt.
+  bind (@get S) put = pure tt.
 Proof. cbv. reflexivity. Qed.
 
 Lemma put_get {S} (s : S) :

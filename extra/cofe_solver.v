@@ -140,7 +140,8 @@ Axiom dimap_comp :
          (h : B1 -> B2)
          (k : B2 -> B3)
          (m : F A1 B1),
-    dimap f k (dimap g h m) = dimap (fun x => g (f x)) (fun x => k (h x)) m.
+    dimap (fun x => g (f x)) (fun x => k (h x)) m =
+    dimap f k (dimap g h m).
 
 Axiom dimap_NonExpansive2 : forall {A1 A2 B1 B2}, NonExpansive2 (@dimap A1 A2 B1 B2).
 Axiom dimap_NonExpansive3 : forall {A1 A2 B1 B2}, NonExpansive3 (@dimap A1 A2 B1 B2).
@@ -205,7 +206,7 @@ Proof.
     destruct x as []. reflexivity.
   - rewrite -> down_S.
     rewrite -> up_S.
-    rewrite -> dimap_comp.
+    rewrite <- dimap_comp.
     rewrite -> (functional_extensionality _ _ IHk').
     rewrite -> dimap_id.
     reflexivity.
@@ -216,13 +217,13 @@ Proof.
   induction k as [| k' IHk']; intros x.
   - rewrite -> up_S.
     rewrite -> down_S.
-    rewrite -> dimap_comp.
+    rewrite <- dimap_comp.
     rewrite <- (@dimap_id (approx 1) (approx 1) x) at 2.
     apply dist_ext.
     exact (contractive2_dist_O dimap _ _ _ _).
   - rewrite -> up_S.
     rewrite -> down_S.
-    rewrite -> dimap_comp.
+    rewrite <- dimap_comp.
     rewrite <- (@dimap_id (approx (S (S k'))) (approx (S (S k'))) x) at 2.
     apply dist_ext.
     apply (contractive2_dist_S dimap).
@@ -569,7 +570,7 @@ Lemma roll_obligation (m : F tower tower) (k : nat) :
   down k (dimap (embed k) (proj k) m).
 Proof.
   rewrite -> down_S.
-  rewrite -> dimap_comp.
+  rewrite <- dimap_comp.
   rewrite -> (functional_extensionality _ _ (embed_up k)).
   rewrite -> (functional_extensionality _ _ (down_proj k)).
   reflexivity.
@@ -649,7 +650,7 @@ Proof.
     apply (dist_le i n _ _ H_le).
     rewrite <- (up_tower t i).
     rewrite -> up_S.
-    rewrite -> dimap_comp.
+    rewrite <- dimap_comp.
     rewrite -> (functional_extensionality _ _ (down_proj i)).
     rewrite -> (functional_extensionality _ _ (embed_up i)).
     reflexivity.
@@ -671,7 +672,7 @@ Proof.
   - rewrite -> dimap_id.
     rewrite -> cast_id.
     reflexivity.
-  - rewrite <- dimap_comp.
+  - rewrite -> dimap_comp.
     rewrite <- (down_S (n' + k)).
     rewrite -> (down_cast (n' + S k) (S (n' + k)) _ (eq_sym (Nat.add_succ_r n' k))).
     rewrite <- (IHn' _ (down (S (n' + k)) x)).
@@ -687,7 +688,7 @@ Proof.
   - rewrite -> dimap_id.
     rewrite -> cast_id.
     reflexivity.
-  - rewrite <- dimap_comp.
+  - rewrite -> dimap_comp.
     rewrite <- (up_S (n' + k)).
     rewrite -> (cast_up (n' + S k) (S (n' + k)) _ (Nat.add_succ_r n' k)).
     rewrite <- (IHn' _).
@@ -723,7 +724,7 @@ Proof.
       * contradict (Nat.lt_irrefl (S n) H_lt3).
     + destruct (le_lt_dec (S n) (S m)) as [H_le3 | H_lt3].
       * contradict (Nat.lt_irrefl m (Nat.lt_le_trans m n m H_lt2 (proj2 (Nat.succ_le_mono n m) H_le3))).
-      * rewrite <- dimap_comp.
+      * rewrite -> dimap_comp.
         rewrite -> (dimap_up_iter_down_iter (n - m) m (eq_sym (Nat.add_succ_r (n - m) m))).
         rewrite -> (dimap_cast_cast (n - m + m) n _ _ (f_equal S (shift_obligation_2 n m H_lt2))).
         rewrite -> (cast_comp _ _ _ _ _ (shift_obligation_2 (S n) (S m) H_lt3)).
@@ -731,7 +732,7 @@ Proof.
         reflexivity.
   - destruct (le_lt_dec n m) as [H_le2 | H_lt2].
     + destruct (le_lt_dec (S n) (S m)) as [H_le3 | H_lt3].
-      * rewrite <- dimap_comp.
+      * rewrite -> dimap_comp.
         rewrite -> (dimap_cast_cast m (m - n + n) _ _ (f_equal S (shift_obligation_1 n m H_le2))).
         rewrite -> (dimap_down_iter_up_iter (m - n) n (Nat.add_succ_r (m - n) n)).
         rewrite -> (cast_comp _ _ _ _ _ (shift_obligation_1 (S n) (S m) H_le3)).
@@ -746,7 +747,7 @@ Proof.
   apply tower_dist. intros k. simpl.
   unfold unroll.
   rewrite -> compl_conv. simpl.
-  rewrite -> dimap_comp. simpl.
+  rewrite <- dimap_comp. simpl.
   rewrite -> dimap_shift_shift.
   rewrite -> shift_tower.
   rewrite -> down_tower.
@@ -758,8 +759,8 @@ Proof.
   apply eq_dist. intros n.
   unfold unroll.
   rewrite -> compl_conv. simpl.
-  rewrite -> dimap_comp.
-  rewrite -> dimap_comp.
+  rewrite <- dimap_comp.
+  rewrite <- dimap_comp.
   rewrite <- (dimap_id m) at 2.
   apply dist_ext.
   destruct n as [| n'].

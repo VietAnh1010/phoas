@@ -171,6 +171,14 @@ Fixpoint local {R A} (f : R -> R) (m : lr_monad R A) : lr_monad R A :=
        | Cons x m' => Cons x (local f m')
        end).
 
+Fixpoint with_reader {R' R A} (f : R' -> R) (m : lr_monad R A) : lr_monad R' A :=
+  LRMonad
+    (fun r =>
+       match run_lr_monad m (f r) with
+       | Nil => Nil
+       | Cons x m' => Cons x (with_reader f m')
+       end).
+
 Module LRMonadNotations.
   Declare Scope lr_monad_scope.
   Delimit Scope lr_monad_scope with lr_monad.

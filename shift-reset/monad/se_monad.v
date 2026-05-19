@@ -117,10 +117,10 @@ Definition finally {S E A B} (m1 : se_monad S E A) (m2 : se_monad S E B) : se_mo
   SEMonad
     (fun s =>
        match run_se_monad m1 s with
-       | inl e1 =>
+       | inl e =>
            match run_se_monad m2 s with
-           | inl e2 => inl e2
-           | inr _ => inl e1
+           | inl e => inl e
+           | inr _ => inl e
            end
        | inr (x, s) =>
            match run_se_monad m2 s with

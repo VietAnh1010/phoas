@@ -224,3 +224,46 @@ Proof.
       destruct (combine (f x) (bind m' f)) as [m'']. cbn.
       reflexivity.
 Qed.
+
+Lemma bind_throw {E A B} (e : E) (f : A -> le_monad E B) :
+  bind (throw e) f = throw e.
+Proof. cbv. reflexivity. Qed.
+
+Lemma catch_throw_l {E A} (e : E) (f : E -> le_monad E A) :
+  catch (throw e) f = f e.
+Proof. cbv. destruct (f e) as [m]. reflexivity. Qed.
+
+Lemma catch_throw_r {E A} (m : le_monad E A) :
+  catch m throw = m.
+Proof.
+  revert m. fix IH 1.
+  intros [m]. cbn. f_equal.
+  destruct m as [e | m].
+  - reflexivity.
+  - destruct m as [| x m'].
+    + reflexivity.
+    + rewrite -> (IH m').
+      reflexivity.
+Qed.
+
+Lemma catch_empty {E A} (h : E -> le_monad E A) :
+  catch empty h = empty.
+Proof. cbv. reflexivity. Qed.
+
+Lemma catch_pure {E A} (x : A) (f : E -> le_monad E A) :
+  catch (pure x) f = pure x.
+Proof. cbv. reflexivity. Qed.
+
+Lemma catch_assoc {E A} (m : le_monad E A) (f g : E -> le_monad E A) :
+  catch (catch m f) g = catch m (fun e => catch (f e) g).
+Proof.
+  revert m. fix IH 1.
+  intros [m]. cbn. f_equal.
+  destruct m as [e | m].
+  - destruct (f e) as [m]. cbn.
+    reflexivity.
+  - destruct m as [| x m'].
+    + reflexivity.
+    + rewrite -> (IH m').
+      reflexivity.
+Qed.

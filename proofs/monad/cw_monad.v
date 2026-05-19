@@ -21,7 +21,7 @@ Module MakeLaws (W : Monoid) (WLaws : MonoidLaws W) (MSig : MakeSig W).
   Qed.
 
   Lemma reset_bind_reset {R R' A} (m : cw_monad R W.t A) (f : A -> cw_monad R W.t R) :
-    @reset R R' (bind m (fun x => (reset (f x)))) = reset (bind m f).
+    @reset R R' (bind m (fun x => reset (f x))) = reset (bind m f).
   Proof.
     cbv. f_equal.
     apply functional_extensionality. intros k.

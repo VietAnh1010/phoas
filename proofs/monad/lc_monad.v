@@ -79,3 +79,11 @@ Proof. cbv. reflexivity. Qed.
 Lemma bind_assoc {R A B C} (m : lc_monad R A) (f : A -> lc_monad R B) (g : B -> lc_monad R C) :
   bind (bind m f) g = bind m (fun x => bind (f x) g).
 Proof. cbv. reflexivity. Qed.
+
+Lemma callcc_abort {R A B} (x : A) (f : (A -> lc_monad R B) -> B -> lc_monad R A) :
+  callcc (fun k => bind (k x) (f k)) = pure x.
+Proof. cbv. reflexivity. Qed.
+
+Lemma callcc_bind {R A B C} (m : lc_monad R A) (f : (B -> lc_monad R C) -> A -> lc_monad R B) :
+  callcc (fun k => bind m (f k)) = bind m (fun x => callcc (fun k => f k x)).
+Proof. cbv. reflexivity. Qed.

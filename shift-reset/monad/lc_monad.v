@@ -52,10 +52,10 @@ Definition cont {R A} (f : (A -> R) -> R) : lc_monad R A :=
   LCMonad (fun r k => f (fun x => k x r)).
 
 Definition callcc {R A B} (f : (A -> lc_monad R B) -> lc_monad R A) : lc_monad R A :=
-  LCMonad (fun r k => run_lc_monad (f (fun x => LCMonad (fun _ _ => k x r))) r k).
+  LCMonad (fun r k => run_lc_monad (f (fun x => LCMonad (fun r _ => k x r))) r k).
 
 Definition callcc' {R A B} (f : (A -> lc_monad R B) -> lc_monad R A) : lc_monad R A :=
-  LCMonad (fun r k => run_lc_monad (f (fun x => LCMonad (fun r _ => k x r))) r k).
+  LCMonad (fun r k => run_lc_monad (f (fun x => LCMonad (fun _ _ => k x r))) r k).
 
 Definition map_cont {R A} (f : R -> R) (m : lc_monad R A) : lc_monad R A :=
   LCMonad (fun r k => f (run_lc_monad m r (fun x r => k x (f r)))).

@@ -12,7 +12,7 @@ Proof.
 Qed.
 
 Lemma reset_bind_reset {R R' E A} (m : ce_monad R E A) (f : A -> ce_monad R E R) :
-  @reset R R' E (bind m (fun x => (reset (f x)))) = reset (bind m f).
+  @reset R R' E (bind m (fun x => reset (f x))) = reset (bind m f).
 Proof.
   cbv. f_equal.
   apply functional_extensionality. intros k.

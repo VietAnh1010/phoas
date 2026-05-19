@@ -208,6 +208,9 @@ Fixpoint with_state {S A} (f : S -> S) (m : ls_monad S A) : ls_monad S A :=
        | Cons x m' => (Cons x (with_state f m'), s)
        end).
 
+Definition with_state' {S A} (f : S -> S) (m : ls_monad S A) : ls_monad S A :=
+  LSMonad (fun s => run_ls_monad m (f s)).
+
 Module LSMonadNotations.
   Declare Scope ls_monad_scope.
   Delimit Scope ls_monad_scope with ls_monad.

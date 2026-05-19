@@ -212,3 +212,35 @@ Proof.
     destruct (combine (f x) (bind m' f)) as [m'']. cbn.
     reflexivity.
 Qed.
+
+Lemma local_id {R A} (m : lr_monad R A) :
+  local (fun x => x) m = m.
+Proof.
+  revert m. fix IH 1.
+  intros [m]. cbn. f_equal.
+  apply functional_extensionality. intros r.
+  destruct (m r) as [| x m'].
+  - reflexivity.
+  - rewrite -> (IH m').
+    reflexivity.
+Qed.
+
+Lemma local_comp {R A} (f g : R -> R) (m : lr_monad R A) :
+  local (fun r => f (g r)) m = local g (local f m).
+Proof.
+  revert m. fix IH 1.
+  intros [m]. cbn. f_equal.
+  apply functional_extensionality. intros r.
+  destruct (m (f (g r))) as [| x m'].
+  - reflexivity.
+  - rewrite -> (IH m').
+    reflexivity.
+Qed.
+
+Lemma local'_id {R A} (m : lr_monad R A) :
+  local' (fun x => x) m = m.
+Proof. cbv. destruct m as [m]. reflexivity. Qed.
+
+Lemma local'_comp {R A} (f g : R -> R) (m : lr_monad R A) :
+  local' (fun r => f (g r)) m = local' g (local' f m).
+Proof. cbv. reflexivity. Qed.

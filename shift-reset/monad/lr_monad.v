@@ -171,6 +171,9 @@ Fixpoint local {R A} (f : R -> R) (m : lr_monad R A) : lr_monad R A :=
        | Cons x m' => Cons x (local f m')
        end).
 
+Definition local' {R A} (f : R -> R) (m : lr_monad R A) : lr_monad R A :=
+  LRMonad (fun r => run_lr_monad m (f r)).
+
 Fixpoint with_reader {R' R A} (f : R' -> R) (m : lr_monad R A) : lr_monad R' A :=
   LRMonad
     (fun r =>

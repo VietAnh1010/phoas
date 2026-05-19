@@ -229,6 +229,14 @@ Lemma bind_throw {E A B} (e : E) (f : A -> le_monad E B) :
   bind (throw e) f = throw e.
 Proof. cbv. reflexivity. Qed.
 
+Lemma catch_empty {E A} (f : E -> le_monad E A) :
+  catch empty f = empty.
+Proof. cbv. reflexivity. Qed.
+
+Lemma catch_pure {E A} (x : A) (f : E -> le_monad E A) :
+  catch (pure x) f = pure x.
+Proof. cbv. reflexivity. Qed.
+
 Lemma catch_throw_l {E A} (e : E) (f : E -> le_monad E A) :
   catch (throw e) f = f e.
 Proof. cbv. destruct (f e) as [m]. reflexivity. Qed.
@@ -246,14 +254,6 @@ Proof.
       reflexivity.
 Qed.
 
-Lemma catch_empty {E A} (h : E -> le_monad E A) :
-  catch empty h = empty.
-Proof. cbv. reflexivity. Qed.
-
-Lemma catch_pure {E A} (x : A) (f : E -> le_monad E A) :
-  catch (pure x) f = pure x.
-Proof. cbv. reflexivity. Qed.
-
 Lemma catch_assoc {E A} (m : le_monad E A) (f g : E -> le_monad E A) :
   catch (catch m f) g = catch m (fun e => catch (f e) g).
 Proof.
@@ -266,4 +266,39 @@ Proof.
     + reflexivity.
     + rewrite -> (IH m').
       reflexivity.
+Qed.
+
+Lemma catch'_empty {E A} (f : E -> le_monad E A) :
+  catch' empty f = empty.
+Proof. cbv. reflexivity. Qed.
+
+Lemma catch'_pure {E A} (x : A) (f : E -> le_monad E A) :
+  catch' (pure x) f = pure x.
+Proof. cbv. reflexivity. Qed.
+
+Lemma catch'_cons {E A} (x : A) (m : le_monad E A) (f : E -> le_monad E A) :
+  catch' (cons x m) f = cons x m.
+Proof. cbv. reflexivity. Qed.
+
+Lemma catch'_throw_l {E A} (e : E) (f : E -> le_monad E A) :
+  catch' (throw e) f = f e.
+Proof. cbv. destruct (f e) as [m]. reflexivity. Qed.
+
+Lemma catch'_throw_r {E A} (m : le_monad E A) :
+  catch' m throw = m.
+Proof.
+  cbv. destruct m as [m]. f_equal.
+  destruct m as [e | m].
+  - reflexivity.
+  - reflexivity.
+Qed.
+
+Lemma catch'_assoc {E A} (m : le_monad E A) (f g : E -> le_monad E A) :
+  catch' (catch' m f) g = catch' m (fun e => catch' (f e) g).
+Proof.
+  cbv. f_equal.
+  destruct m as [m].
+  destruct m as [e | m].
+  - reflexivity.
+  - reflexivity.
 Qed.

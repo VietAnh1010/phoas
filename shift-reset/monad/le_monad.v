@@ -203,6 +203,12 @@ Fixpoint catch {E A} (m : le_monad E A) (f : E -> le_monad E A) : le_monad E A :
         end
     end.
 
+Definition catch' {E A} (m : le_monad E A) (f : E -> le_monad E A) : le_monad E A :=
+  LEMonad match run_le_monad m with
+    | inl e => run_le_monad (f e)
+    | inr m => inr m
+    end.
+
 Fixpoint try {E A} (m : le_monad E A) : le_monad E (E + A) :=
   LEMonad match run_le_monad m with
     | inl e => inr (Cons (inl e) empty)

@@ -1,3 +1,6 @@
+From Stdlib Require Import List.
+Import ListNotations.
+
 Record lc_monad (R A : Type) : Type := LCMonad { run_lc_monad : R -> (A -> R -> R) -> R }.
 Definition t : Type -> Type -> Type := lc_monad.
 
@@ -36,6 +39,14 @@ Definition combine {R A} (m1 m2 : lc_monad R A) : lc_monad R A :=
 
 Definition cons {R A} (x : A) (m : lc_monad R A) : lc_monad R A :=
   LCMonad (fun r k => k x (run_lc_monad m r k)).
+
+Fixpoint of_list {R A} (xs : list A) : lc_monad R A :=
+  LCMonad
+    (fun r k =>
+       match xs with
+       | [] => r
+       | x :: xs' => k x (run_lc_monad (of_list xs') r k)
+       end).
 
 Definition cont {R A} (f : (A -> R) -> R) : lc_monad R A :=
   LCMonad (fun r k => f (fun x => k x r)).

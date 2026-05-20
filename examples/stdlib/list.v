@@ -53,7 +53,7 @@ Example List :=
      let "fold_left" `("f", "z", "xs") :=
        let fix "go" ("acc", "xs") :=
          match "xs" with
-         | Inl _ => "z"
+         | Inl _ => "acc"
          | Inr ("x", "xs'") =>
              let "acc'" := "f" ("acc", "x") in
              "go" ("acc'", "xs'")

@@ -50,7 +50,7 @@ Example reverse_while :=
        let "in" := ref "xs" in
        let "out" := ref (Inl ()) in
        let _ :=
-         while not by "List".`"is_empty" !"in" do
+         while not (by "List".`"is_empty" !"in") do
            let ("x", "xs'") := "List".`"ne_uncons" !"in" in
            "in" <- "xs'";
            "out" <- Inr ("x", !"out")

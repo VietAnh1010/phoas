@@ -14,7 +14,7 @@ Definition map {E S A B} (f : A -> B) (m : es_monad E S A) : es_monad E S B :=
        match m with
        | inl e => (inl e, s)
        | inr x => (inr (f x), s)
-      end).
+       end).
 
 Definition map_const {E S A B} (x : B) (m : es_monad E S A) : es_monad E S B :=
   ESMonad

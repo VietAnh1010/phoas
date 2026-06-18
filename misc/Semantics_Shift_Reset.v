@@ -681,10 +681,10 @@ Module TestProgramSemantics.
 
   Definition factorial_3 : expr :=
     <{ let rec "f" "x" =
-             if {var_of "x"} = 0 then
-               1
-             else
-               {var_of "x"} * {var_of "f"} ({var_of "x"} - 1)
+           if {var_of "x"} = 0 then
+             1
+           else
+             {var_of "x"} * {var_of "f"} ({var_of "x"} - 1)
        in
        {var_of "f"} 3 }>.
   Print factorial_3.
@@ -721,11 +721,11 @@ Module TestProgramSemantics.
   Definition sum_2_ref : expr :=
     <{ let "s" = ref 0 in
        let rec "f" "x" =
-             if {var_of "x"} = 0 then
-               ()
-             else
-               let "_" = {var_of "s"} := !{var_of "s"} + {var_of "x"} in
-               {var_of "f"} ({var_of "x"} - 1)
+           if {var_of "x"} = 0 then
+             ()
+           else
+             let "_" = {var_of "s"} := !{var_of "s"} + {var_of "x"} in
+             {var_of "f"} ({var_of "x"} - 1)
        in
        {var_of "f"} 2; !{var_of "s"} }>.
   Print sum_2_ref.
@@ -892,16 +892,16 @@ Module TestProgramSemantics.
 
   Definition state_monad : expr :=
     <{ let "get" "_" =
-             shift "k" =>
+           shift "k" =>
              fun "s" => {var_of "k"} {var_of "s"} {var_of "s"}
        in
        let "tick" "_" =
-             shift "k" =>
+           shift "k" =>
              fun "s" => {var_of "k"} () ({var_of "s"} + 1)
        in
        let "run_state" "t" =
-             < let "r" = {var_of "t"} () in
-               fun "_" => {var_of "r"} > 0
+           < let "r" = {var_of "t"} () in
+             fun "_" => {var_of "r"} > 0
        in
        let "thunk" "_" = {var_of "tick"} (); {var_of "get"} () in
        {var_of "run_state"} {var_of "thunk"} }>.
@@ -969,7 +969,7 @@ Module TestProgramSemantics.
 
   Definition either : expr :=
     <{ let "either" "a" "b" =
-             shift "k" =>
+           shift "k" =>
              {var_of "k"} {var_of "a"}; {var_of "k"} {var_of "b"}
        in
        let "r" = ref 0 in
@@ -1044,15 +1044,15 @@ Module TestProgramSemantics.
 
   Definition append_with_shift : expr :=
     <{ let rec "append_aux" "xs" =
-             if {var_of "xs"} = null then
-               shift "k" => {var_of "k"}
-             else
-               let "x" = fst {var_of "xs"} in
-               let "xs'" = snd {var_of "xs"} in
-               {var_of "x"}, {var_of "append_aux"} {var_of "xs'"}
+           if {var_of "xs"} = null then
+             shift "k" => {var_of "k"}
+           else
+             let "x" = fst {var_of "xs"} in
+             let "xs'" = snd {var_of "xs"} in
+             {var_of "x"}, {var_of "append_aux"} {var_of "xs'"}
        in
        let "append" "xs" "ys" =
-             < {var_of "append_aux"} {var_of "xs"} > {var_of "ys"}
+           < {var_of "append_aux"} {var_of "xs"} > {var_of "ys"}
        in
        {var_of "append"} (1, (2, null)) (3, (4, null)) }>.
   Print append_with_shift.
@@ -1389,18 +1389,18 @@ Module ClosedProgram.
         closed_heap h1 ->
         closed_expr e ->
         closed_heap h2 /\ closed_val r)
-    with eval_cont_aux_preserves_closedness :
-      (forall (h1 : heap)
-              (e : expr)
-              (x : var)
-              (k : expr)
-              (h2 : heap)
-              (r : val),
-          eval_cont_aux h1 e x k h2 r ->
-          closed_heap h1 ->
-          closed_expr e ->
-          closed_cont x k ->
-          closed_heap h2 /\ closed_val r).
+  with eval_cont_aux_preserves_closedness :
+    (forall (h1 : heap)
+            (e : expr)
+            (x : var)
+            (k : expr)
+            (h2 : heap)
+            (r : val),
+        eval_cont_aux h1 e x k h2 r ->
+        closed_heap h1 ->
+        closed_expr e ->
+        closed_cont x k ->
+        closed_heap h2 /\ closed_val r).
   Proof.
     {
       unfold closed_expr, closed_cont in *.
@@ -1519,18 +1519,18 @@ Module ProgramDeterminism.
                (r' : val),
           eval h1 e h2' r' ->
           h2 = h2' /\ r = r')
-    with eval_cont_aux_is_deterministic :
-      (forall (h1 : heap)
-              (e : expr)
-              (x : var)
-              (k : expr)
-              (h2 : heap)
-              (r : val),
-          eval_cont_aux h1 e x k h2 r ->
-          forall (h2' : heap)
-                 (r' : val),
-            eval_cont_aux h1 e x k h2' r' ->
-            h2 = h2' /\ r = r').
+  with eval_cont_aux_is_deterministic :
+    (forall (h1 : heap)
+            (e : expr)
+            (x : var)
+            (k : expr)
+            (h2 : heap)
+            (r : val),
+        eval_cont_aux h1 e x k h2 r ->
+        forall (h2' : heap)
+               (r' : val),
+          eval_cont_aux h1 e x k h2' r' ->
+          h2 = h2' /\ r = r').
   Proof.
     {
       introv H_eval.

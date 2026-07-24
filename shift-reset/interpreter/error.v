@@ -4,8 +4,8 @@ From shift_reset.core Require Import syntax ident.
 Definition Failure (s : string) : val :=
   VVariant (Ident "Failure") (VString s).
 
-Definition Type_error (s : string) : val :=
-  VVariant (Ident "Type_error") (VString s).
+Definition Type_error (s : string) (v : val) : val :=
+  VVariant (Ident "Type_error") (VRecord (RecordCons (Ident "expected") (VString s) (RecordCons (Ident "got") v RecordNil))).
 
 Definition Name_error (s : string) : val :=
   VVariant (Ident "Name_error") (VString s).

@@ -118,3 +118,22 @@ Definition val_to_closure (v : val) : option closure :=
   | VMKHandle mk t1 t2 e => Some (CMKHandle mk t1 t2 e)
   | _ => None
   end.
+
+Definition type_of_val (v : val) : string :=
+  match v with
+  | VTt => "unit"
+  | VInt _ => "int"
+  | VFloat _ => "float"
+  | VTrue | VFalse => "bool"
+  | VChar _ => "char"
+  | VString _ => "string"
+  | VPair _ _ => "prod"
+  | VTuple _ => "tuple"
+  | VRecord _ => "record"
+  | VInl _ | VInr _ => "sum"
+  | VVariant _ _ => "variant"
+  | VRef _ => "ref"
+  | VArray _ _ => "array"
+  | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _
+  | VMKPure _ | VMKReset _ | VMKReset0 _ | VMKHandle _ _ _ _ => "closure"
+  end.

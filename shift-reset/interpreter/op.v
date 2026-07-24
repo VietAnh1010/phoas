@@ -15,27 +15,27 @@ Definition dispatch_pos (v : val) : iv_monad val :=
   match v with
   | VInt _ => pure v
   | VFloat _ => pure v
-  | _ => throw (Type_error "dispatch_pos")
+  | _ => throw (Type_error "int | float" v)
   end.
 
 Definition dispatch_neg (v : val) : iv_monad val :=
   match v with
   | VInt z => pure (VInt (-z))
   | VFloat q => pure (VFloat (-q))
-  | _ => throw (Type_error "dispatch_neg")
+  | _ => throw (Type_error "int | float" v)
   end.
 
 Definition dispatch_not (v : val) : iv_monad val :=
   match v with
   | VTrue => pure VFalse
   | VFalse => pure VTrue
-  | _ => throw (Type_error "dispatch_not")
+  | _ => throw (Type_error "bool" v)
   end.
 
 Definition dispatch_lnot (v : val) : iv_monad val :=
   match v with
   | VInt z => pure (VInt (Z.lnot z))
-  | _ => throw (Type_error "dispatch_lnot")
+  | _ => throw (Type_error "int" v)
   end.
 
 Definition dispatch_op1 (op : op1) : val -> iv_monad val :=
@@ -50,77 +50,77 @@ Definition dispatch_add (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => pure (VInt (z1 + z2))
   | VFloat q1, VFloat q2 => pure (VFloat (q1 + q2))
-  | _, _ => throw (Type_error "dispatch_add")
+  | _, _ => throw (Type_error "int * int | float * float" (VPair v1 v2))
   end.
 
 Definition dispatch_sub (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => pure (VInt (z1 - z2))
   | VFloat q1, VFloat q2 => pure (VFloat (q1 - q2))
-  | _, _ => throw (Type_error "dispatch_sub")
+  | _, _ => throw (Type_error "int * int | float * float" (VPair v1 v2))
   end.
 
 Definition dispatch_mul (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => pure (VInt (z1 * z2))
   | VFloat q1, VFloat q2 => pure (VFloat (q1 * q2))
-  | _, _ => throw (Type_error "dispatch_mul")
+  | _, _ => throw (Type_error "int * int | float * float" (VPair v1 v2))
   end.
 
 Definition dispatch_div (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 =? 0)%Z then throw Division_by_zero else pure (VInt (z1 / z2))
   | VFloat q1, VFloat q2 => if (q2 =? 0)%Qc then throw Division_by_zero else pure (VFloat (q1 / q2))
-  | _, _ => throw (Type_error "dispatch_div")
+  | _, _ => throw (Type_error "int * int | float * float" (VPair v1 v2))
   end.
 
 Definition dispatch_mod (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 =? 0)%Z then throw Division_by_zero else pure (VInt (z1 mod z2))
-  | _, _ => throw (Type_error "dispatch_mod")
+  | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_pow (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_exponent else pure (VInt (z1 ^ z2))
   | VFloat q, VInt z => if (z <? 0)%Z then throw Negative_exponent else pure (VFloat (q ^ Z.to_nat z))
-  | _, _ => throw (Type_error "dispatch_pow")
+  | _, _ => throw (Type_error "int * int | float * int" (VPair v1 v2))
   end.
 
 Definition dispatch_land (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => pure (VInt (Z.land z1 z2))
-  | _, _ => throw (Type_error "dispatch_land")
+  | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_lor (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => pure (VInt (Z.lor z1 z2))
-  | _, _ => throw (Type_error "dispatch_lor")
+  | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_lxor (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => pure (VInt (Z.lxor z1 z2))
-  | _, _ => throw (Type_error "dispatch_lxor")
+  | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_shl (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftl z1 z2))
-  | _, _ => throw (Type_error "dispatch_shl")
+  | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_shr (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftr z1 z2))
-  | _, _ => throw (Type_error "dispatch_shr")
+  | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_app (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VString s1, VString s2 => pure (VString (s1 ++ s2))
-  | _, _ => throw (Type_error "dispatch_app")
+  | _, _ => throw (Type_error "string * string" (VPair v1 v2))
   end.
 
 Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
@@ -144,7 +144,7 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
   | VInr v1', VInr v2' => compare_val v1' v2'
   | VInl _, VInr _ => pure Lt
   | VInr _, VInl _ => pure Gt
-  | _, _ => throw (Type_error "compare_val")
+  | _, _ => throw (Type_error "'a ord => 'a * 'a" (VPair v1 v2))
   end.
 
 Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
@@ -170,7 +170,7 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
   | VVariant l1 v1', VVariant l2 v2' => if ident_eqb l1 l2 then equal_val v1' v2' else pure false
   | VRef l1, VRef l2 => pure (loc_eqb l1 l2)
   | VArray l1 z1, VArray l2 z2 => pure (loc_eqb l1 l2 &&& (z1 =? z2)%Z)
-  | _, _ => throw (Type_error "equal_val")
+  | _, _ => throw (Type_error "'a eq => 'a * 'a" (VPair v1 v2))
   end
 with equal_tuple (t1 t2 : tuple) : iv_monad bool :=
   match t1, t2 with

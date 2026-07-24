@@ -1,6 +1,6 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
 From shift_reset.lib Require Import float.
-From shift_reset.core Require Import syntax ident record.
+From shift_reset.core Require Import syntax ident pattern record.
 From shift_reset.monad Require Import except.
 From shift_reset.interpreter Require Import error imonad.
 Import ExceptNotations.
@@ -45,7 +45,7 @@ Fixpoint match_pattern (p : pattern) (v : val) (e : env) : iv_monad (option env)
   | PInl _, VInr _ => pure None
   | PInr _, VInl _ => pure None
   | PVariant l1 p', VVariant l2 v' => if ident_eqb l1 l2 then match_pattern p' v' e else pure None
-  | _, _ => throw (Type_error "match_pattern")
+  | _, _ => throw (Type_error (type_of_pattern p) v)
   end
 with match_tuple_pattern (p : tuple_pattern) (t : tuple) (e : env) : iv_monad (option env) :=
   match p, t with

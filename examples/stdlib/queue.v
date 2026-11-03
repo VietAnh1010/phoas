@@ -19,7 +19,7 @@ Example Queue :=
      in
      let "pop" "q" :=
        match !"q".`"first" with
-       | Inl _ => raise `"Empty" ()
+       | Inl _ => raise (`"Empty" ())
        | Inr `{"content"; "next"} =>
            let _ := "q".`"length" <- !"q".`"length" - 1 in
            let "cell" := !"next" in
@@ -30,7 +30,7 @@ Example Queue :=
      in
      let "peek" "q" :=
        match !"q".`"first" with
-       | Inl _ => raise `"Empty" ()
+       | Inl _ => raise (`"Empty" ())
        | Inr `{"content"; .._} => "content"
        end
      in

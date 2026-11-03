@@ -36,19 +36,19 @@ Example PersistentQueue :=
      in
      let "ne_head" `("f", _, _) :=
        match by "Lazy".`"get" "f" with
-       | Inl _ => raise `"Empty" ()
+       | Inl _ => raise (`"Empty" ())
        | Inr ("x", _) => "x"
        end
      in
      let "ne_tail" `("f", "r", "s") :=
        match by "Lazy".`"get" "f" with
-       | Inl _ => raise `"Empty" ()
+       | Inl _ => raise (`"Empty" ())
        | Inr (_, "f") => "exec" `("f", "r", "s")
        end
      in
      let "ne_uncons" `("f", "r", "s") :=
        match by "Lazy".`"get" "f" with
-       | Inl _ => raise `"Empty" ()
+       | Inl _ => raise (`"Empty" ())
        | Inr ("x", "f") => ("x", by "exec" `("f", "r", "s"))
        end
      in

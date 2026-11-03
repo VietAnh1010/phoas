@@ -8,8 +8,8 @@ Local Open Scope Z_scope.
 Local Open Scope string_scope.
 Local Open Scope term_scope.
 
-Example get := <{ fun "r" => perform `"Get" "r" }>.
-Example set := <{ fun "args" => perform `"Set" "args" }>.
+Example get := <{ fun "r" => perform (`"Get" "r") }>.
+Example set := <{ fun "args" => perform (`"Set" "args") }>.
 
 Example atomically :=
   <{ fun "f" =>

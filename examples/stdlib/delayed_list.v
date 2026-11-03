@@ -18,7 +18,7 @@ Example DelayedList :=
            end
      in
      let "take" "args" :=
-       if fst "args" < 0 then raise `"Invalid_argument" {TVString "DelayedList.take"}
+       if fst "args" < 0 then raise (`"Invalid_argument" {TVString "DelayedList.take"})
        else "take_aux" "args"
      in
      let "map" ("f", "xs") :=

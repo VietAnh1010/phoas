@@ -8,8 +8,8 @@ Open Scope Z_scope.
 Open Scope string_scope.
 Open Scope term_scope.
 
-Example fork := <{ fun "f" => perform `"Fork" "f" }>.
-Example yield := <{ fun _ => perform `"Yield" () }>.
+Example fork := <{ fun "f" => perform (`"Fork" "f") }>.
+Example yield := <{ fun _ => perform (`"Yield" ()) }>.
 
 Example run :=
   <{ fun "f" =>

@@ -201,12 +201,12 @@ Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 2))).
 Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 3))).
 
 Example unhandled_exception :=
-  <{ raise `"Segfault" 139 }>.
+  <{ raise (`"Segfault" 139) }>.
 
 Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
      try
-       raise `tag 10;;
+       raise (`tag 10);;
      (fun `"Segfault" "code" =>
         let _ := "r" <- "code" = 10 in
         !"r");
@@ -220,7 +220,7 @@ Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle
-       perform `"Effect0" ();;;
+       perform (`"Effect0" ());;;
      (fun `"Effect1" _ _ => ());
      (fun `"Effect2" _ _ => ()) }>.
 
@@ -287,7 +287,7 @@ Example eval_ltr :=
        | `"Num" "n" => "n"
        | `"Add" `{"lhs"; "rhs"} => by "eval" "lhs" + by "eval" "rhs"
        | `"Mul" `{"lhs"; "rhs"} => by "eval" "lhs" * by "eval" "rhs"
-       | _ => raise `"Failure" "e"
+       | _ => raise (`"Failure" "e")
        end }>.
 
 Example eval_ltr_input1 :=
@@ -306,7 +306,7 @@ Example loop :=
      let "f" _ :=
        let _ := "print" !"clock" in
        let _ := "clock" <- !"clock" + 1 in
-       let "f" := perform `"Foo" () in
+       let "f" := perform (`"Foo" ()) in
        "f" ()
      in
      handle "f" ();;; (fun `"Foo" _ "k" => "k" "f") }>.
@@ -328,12 +328,12 @@ Example send_recv_protocol :=
          let ("k", "v") := "args" in
          (shallow handle "k" "v";;;
           (fun `"Send" "n" "k" => "recv" `("n", "k", ()));
-          (fun `"Recv" _ _ => raise `"Protocol_violation" ()))
+          (fun `"Recv" _ _ => raise (`"Protocol_violation" ())))
        with "recv" "args" :=
          let `("n", "k", "v") := "args" in
          (shallow handle "k" "v";;;
           (fun `"Recv" _ "k" => "send" ("k", "n"));
-          (fun `"Send" _ _ => raise `"Protocol_violation" ()))
+          (fun `"Send" _ _ => raise (`"Protocol_violation" ())))
        in "send" ("k", ()) }>.
 
 Example run_send_recv1 :=
@@ -466,7 +466,7 @@ Example counting_sort_lt_10 xs :=
      (try
         (while true do
            (match !"ref_xs" with
-            | Inl _ => raise `"Exit" ()
+            | Inl _ => raise (`"Exit" ())
             | Inr ("x", "xs'") =>
                 "arr_fs".["x"] <- "arr_fs".["x"] + 1;
                 "ref_xs" <- "xs'"
@@ -493,9 +493,9 @@ Example partition x xs :=
        | Inr ("x", "xs'") =>
            let () :=
              match by compare_int (x, "x") with
-             | `"Lt" () => perform `"Larger" "x"
-             | `"Eq" () => perform `"Equal" "x"
-             | `"Gt" () => perform `"Smaller" "x"
+             | `"Lt" () => perform (`"Larger" "x")
+             | `"Eq" () => perform (`"Equal" "x")
+             | `"Gt" () => perform (`"Smaller" "x")
              end
            in
            "go" "xs'"

@@ -59,7 +59,7 @@ Example breadth_it_dcont :=
 Example breadth_it_effect :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
-       let "f" "args" := perform `"Yield" "args" in
+       let "f" "args" := perform (`"Yield" "args") in
        let "k" := "DelayedTree".`"fold" `("f", (), "t") in
        let fix "go" "k" :=
          shallow handle ("k" (); Inl ());;;
@@ -97,7 +97,7 @@ Example depth_it_dcont :=
 Example depth_it_effect :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
-       let "f" "x" := perform `"Yield" "x" in
+       let "f" "x" := perform (`"Yield" "x") in
        handle ("DelayedTree".`"iter" ("f", "t"); Inl ());;;
        (fun (`"Yield" "x") "k" => Inr ("x", "k")) }>.
 

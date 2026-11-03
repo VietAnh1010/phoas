@@ -55,7 +55,7 @@ Example Map :=
        in
        let "ne_unnode" "m" :=
          match "m" with
-         | Inl _ => raise `"Empty" ()
+         | Inl _ => raise (`"Empty" ())
          | Inr `("l", "k", "v", "r", _) => `("l", "k", "v", "r")
          end
        in

@@ -1064,7 +1064,7 @@ Lemma fold_unfold_interpret_term :
     irh_monad_to_ivh_monad (interpret_term' fuel t e k).
 Proof. reflexivity. Qed.
 
-Create HintDb fold_unfold_interpret_db discriminated.
+Create Rewrite HintDb fold_unfold_interpret_db.
 
 Hint Rewrite
   fold_unfold_interpret_tuple_term_TTupleNil

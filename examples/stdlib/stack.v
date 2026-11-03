@@ -16,7 +16,7 @@ Example Stack :=
      in
      let "pop" "s" :=
        match !"s".`"contents" with
-       | Inl _ => raise `"Empty" ()
+       | Inl _ => raise (`"Empty" ())
        | Inr ("x", "xs") =>
            let _ := "s".`"length" <- !"s".`"length" - 1 in
            let _ := "s".`"contents" <- "xs" in
@@ -25,7 +25,7 @@ Example Stack :=
      in
      let "peek" "s" :=
        match !"s".`"contents" with
-       | Inl _ => raise `"Empty" ()
+       | Inl _ => raise (`"Empty" ())
        | Inr ("x", _) => "x"
        end
      in

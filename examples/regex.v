@@ -9,10 +9,10 @@ Local Open Scope string_scope.
 Local Open Scope term_scope.
 
 Example fail :=
-  <{ fun _ => perform `"Fail" () }>.
+  <{ fun _ => perform (`"Fail" ()) }>.
 
 Example flip :=
-  <{ fun _ => perform `"Flip" () }>.
+  <{ fun _ => perform (`"Flip" ()) }>.
 
 Example ndfa :=
   <{ fix "go" ("r", "l") :=
@@ -44,7 +44,7 @@ Example accept :=
               (let "l" := ndfa "args" in
                "counter" <- !"counter" + 1;
                match "l" with
-               | Inl _ => raise `"Accept" ()
+               | Inl _ => raise (`"Accept" ())
                | Inr _ => {TVString "no"}
                end);;;
             (fun (`"Fail" _) _ => {TVString "no"});

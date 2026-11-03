@@ -124,49 +124,49 @@ Notation "t1 t2" :=
   (TApp t1 t2) (in custom term at level 17, t1 custom term, t2 custom term) : term_scope.
 
 Notation "'if' tv 'then' t1 'else' t2" :=
-  (TIf tv t1 t2) (in custom term at level 69,
+  (TIf tv t1 t2) (in custom term at level 60,
         tv custom term,
         t1 custom term,
-        t2 custom term) : term_scope.
+        t2 custom term at level 68) : term_scope.
 
 Notation "t1 ; t2" :=
   (TSeq t1 t2) (in custom term at level 69, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "'let' p := t1 'in' t2" :=
-  (TLet p t1 t2) (in custom term at level 69,
+  (TLet p t1 t2) (in custom term at level 60,
         p custom pattern' at level 0,
         t1 custom term,
-        t2 custom term,
+        t2 custom term at level 69,
         right associativity) : term_scope.
 
 Notation "'match' tv 'with' t 'end'" :=
-  (TMatch tv t) (in custom term at level 69, tv custom term, t custom match_term) : term_scope.
+  (TMatch tv t) (in custom term at level 0, tv custom term, t custom match_term) : term_scope.
 
 Notation "'let' f p1 .. pn := t1 'in' t2" :=
-  (TLet f (TVFun p1 .. (TVFun pn t1) ..) t2) (in custom term at level 69,
+  (TLet f (TVFun p1 .. (TVFun pn t1) ..) t2) (in custom term at level 60,
         f custom pattern' at level 0,
         p1 custom pattern' at level 0,
         pn custom pattern' at level 0,
         t1 custom term,
-        t2 custom term,
+        t2 custom term at level 69,
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f p := t1 'in' t2" :=
-  (TLetFix f p t1 t2) (in custom term at level 69,
+  (TLetFix f p t1 t2) (in custom term at level 60,
         f constr at level 0,
         p custom pattern' at level 0,
         t1 custom term,
-        t2 custom term,
+        t2 custom term at level 69,
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f p1 p2 .. pn := t1 'in' t2" :=
-  (TLetFix f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) (in custom term at level 69,
+  (TLetFix f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
         pn custom pattern' at level 0,
         t1 custom term,
-        t2 custom term,
+        t2 custom term at level 69,
         right associativity) : term_scope.
 
 Notation "'while' tv 'do' t" :=
@@ -249,22 +249,22 @@ Notation "f p1 p2 .. pn := t" :=
         t custom term) : term_scope.
 
 Notation "'let' 'fix' f p := t1 'with' t2 'in' t3" :=
-  (TLetFixMut (TFixMutCons f p t1 t2) t3) (in custom term at level 69,
+  (TLetFixMut (TFixMutCons f p t1 t2) t3) (in custom term at level 60,
         f constr at level 0,
         p custom pattern' at level 0,
         t1 custom term,
         t2 custom fix_mut_term,
-        t3 custom term) : term_scope.
+        t3 custom term at level 69) : term_scope.
 
 Notation "'let' 'fix' f p1 p2 .. pn := t1 'with' t2 'in' t3" :=
-  (TLetFixMut (TFixMutCons f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) t3) (in custom term at level 69,
+  (TLetFixMut (TFixMutCons f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) t3) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
         pn custom pattern' at level 0,
         t1 custom term,
         t2 custom fix_mut_term,
-        t3 custom term) : term_scope.
+        t3 custom term at level 69) : term_scope.
 
 Notation "'fix' f p := t1 'with' t2 'for' g" :=
   (TVFixMut (TFixMutCons f p t1 t2) g) (in custom term at level 60,
@@ -388,13 +388,13 @@ Notation "'Inr' t" :=
   (TVInr t) (in custom term at level 23, t custom term at level 10) : term_scope.
 
 Notation "'raise' t" :=
-  (TRaise t) (in custom term at level 69, t custom term at level 10) : term_scope.
+  (TRaise t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'try' t1 ;; t2" :=
   (TTry t1 t2) (in custom term at level 69, t1 custom term, t2 custom exn_term) : term_scope.
 
 Notation "'perform' t" :=
-  (TPerform t) (in custom term at level 69, t custom term at level 10) : term_scope.
+  (TPerform t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'handle' t1 ;;; t2" :=
   (THandle t1 TRetNone t2) (in custom term at level 69, t1 custom term, t2 custom eff_term) : term_scope.

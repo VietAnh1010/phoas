@@ -51,7 +51,7 @@ Example Map :=
        let "node" `("l", "k", "v", "r") :=
          let "hl" := "height" "l" in
          let "hr" := "height" "r" in
-         Inr `("l", "k", "v", "r", (by if "hl" > "hr" then "hl" else "hr") + 1)
+         Inr `("l", "k", "v", "r", (by (if "hl" > "hr" then "hl" else "hr")) + 1)
        in
        let "ne_unnode" "m" :=
          match "m" with

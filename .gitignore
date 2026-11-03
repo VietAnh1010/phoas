@@ -7,3 +7,4 @@
 *.rocq.*
 *.cache
 /_opam
+*.local.*

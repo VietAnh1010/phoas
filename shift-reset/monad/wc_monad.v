@@ -13,13 +13,13 @@ Definition map_const {W R A B} (x : B) (m : wc_monad W R A) : wc_monad W R B :=
   WCMonad (fun k => run_wc_monad m (fun _ => k x)).
 
 Module WCMonadNotations.
-  Declare Scope wc_monad_wcope.
-  Delimit Scope wc_monad_wcope with wc_monad.
-  Bind Scope wc_monad_wcope with wc_monad.
+  Declare Scope wc_monad_scope.
+  Delimit Scope wc_monad_scope with wc_monad.
+  Bind Scope wc_monad_scope with wc_monad.
 
-  Notation "f <$> m" := (map f m) (at level 65, right associativity) : wc_monad_wcope.
-  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : wc_monad_wcope.
-  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : wc_monad_wcope.
+  Notation "f <$> m" := (map f m) (at level 65, right associativity) : wc_monad_scope.
+  Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : wc_monad_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 200, x binder, right associativity) : wc_monad_scope.
 End WCMonadNotations.
 
 Module Make (W : Monoid).
@@ -48,11 +48,11 @@ Module Make (W : Monoid).
     WCMonad (fun k => run_wc_monad (f (fun x => WCMonad (fun _ => k x W.empty))) k).
 
   Module Notations.
-    Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : wc_monad_wcope.
-    Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : wc_monad_wcope.
-    Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : wc_monad_wcope.
-    Notation "m >>= f" := (bind m f) (at level 50, left associativity) : wc_monad_wcope.
-    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : wc_monad_wcope.
+    Notation "m1 <*> m2" := (apply m1 m2) (at level 55, left associativity) : wc_monad_scope.
+    Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : wc_monad_scope.
+    Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : wc_monad_scope.
+    Notation "m >>= f" := (bind m f) (at level 50, left associativity) : wc_monad_scope.
+    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 200, x binder, right associativity) : wc_monad_scope.
   End Notations.
 End Make.
 

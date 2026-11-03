@@ -19,7 +19,7 @@ Module WriterNotations.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : writer_scope.
   Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : writer_scope.
-  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : writer_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 200, x binder, right associativity) : writer_scope.
 End WriterNotations.
 
 Module Make (W : Monoid).
@@ -46,7 +46,7 @@ Module Make (W : Monoid).
     Notation "m1 <* m2" := (seq_left m1 m2) (at level 55, left associativity) : writer_scope.
     Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : writer_scope.
     Notation "m >>= f" := (bind m f) (at level 50, left associativity) : writer_scope.
-    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : writer_scope.
+    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 200, x binder, right associativity) : writer_scope.
   End Notations.
 End Make.
 

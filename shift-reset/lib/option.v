@@ -39,6 +39,6 @@ Module OptionNotations.
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : option_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : option_scope.
 
-  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : option_scope.
-  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : option_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 200, x binder, right associativity) : option_scope.
+  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 200, x binder, right associativity) : option_scope.
 End OptionNotations.

@@ -195,6 +195,6 @@ Module LRMonadNotations.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : lr_monad_scope.
   Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : lr_monad_scope.
 
-  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : lr_monad_scope.
-  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : lr_monad_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 200, x binder, right associativity) : lr_monad_scope.
+  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 200, x binder, right associativity) : lr_monad_scope.
 End LRMonadNotations.

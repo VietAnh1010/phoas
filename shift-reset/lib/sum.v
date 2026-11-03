@@ -34,6 +34,6 @@ Module SumNotations.
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : sum_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : sum_scope.
 
-  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : sum_scope.
-  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : sum_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 200, x binder, right associativity) : sum_scope.
+  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 200, x binder, right associativity) : sum_scope.
 End SumNotations.

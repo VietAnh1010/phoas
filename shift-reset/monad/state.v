@@ -58,6 +58,6 @@ Module StateNotations.
   Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : state_scope.
   Notation "m >>= f" := (bind m f) (at level 50, left associativity) : state_scope.
 
-  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : state_scope.
-  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : state_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 200, x binder, right associativity) : state_scope.
+  Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 200, x binder, right associativity) : state_scope.
 End StateNotations.

@@ -29,7 +29,7 @@ Module EWMonadNotations.
 
   Notation "f <$> m" := (map f m) (at level 65, right associativity) : ew_monad_scope.
   Notation "x <$ m" := (map_const x m) (at level 65, right associativity) : ew_monad_scope.
-  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 100, x binder, right associativity) : ew_monad_scope.
+  Notation "let+ x := m 'in' k" := (map (fun x => k) m) (at level 200, x binder, right associativity) : ew_monad_scope.
 End EWMonadNotations.
 
 Module Make (W : Monoid).
@@ -123,7 +123,7 @@ Module Make (W : Monoid).
     Notation "m1 *> m2" := (seq_right m1 m2) (at level 55, left associativity) : ew_monad_scope.
     Notation "m >>= f" := (bind m f) (at level 50, left associativity) : ew_monad_scope.
     Notation "m1 <|> m2" := (combine m1 m2) (at level 55, left associativity) : ew_monad_scope.
-    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 100, x binder, right associativity) : ew_monad_scope.
+    Notation "let* x := m 'in' k" := (bind m (fun x => k)) (at level 200, x binder, right associativity) : ew_monad_scope.
   End Notations.
 End Make.
 

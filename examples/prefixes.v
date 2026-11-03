@@ -24,18 +24,18 @@ Example prefixes_cont :=
 Example prefixes_dcont :=
   <{ fun "xs" =>
        let fix "go" "xs" :=
-         control0
+         control
            (fun "k" =>
               let "p" := "k" (Inl ()) in
               let "ps" :=
                 match "xs" with
                 | Inl _ => Inl ()
-                | Inr ("x", "xs'") => prompt0 let "r" := "go" "xs'" in "k" (Inr ("x", "r"))
+                | Inr ("x", "xs'") => prompt let "r" := "go" "xs'" in "k" (Inr ("x", "r"))
                 end
               in
               Inr ("p", "ps"))
        in
-       prompt0 "go" "xs" }>.
+       prompt "go" "xs" }>.
 
 Definition eval_prefixes (candidate : val_term) (fuel : nat) (xs : list Z) :=
   deep_eval_term_to_list val_to_list_int fuel <{ candidate {list_int_to_val_term xs} }>.

@@ -51,10 +51,10 @@ Example breadth_it_dcont :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
        let "f" `("x", "t1", "t2") :=
-         control0 (fun "k" => Inr ("x", fun _ => prompt0 ("k" (); "t1" (); "t2" (); Inl ())))
+         control (fun "k" => Inr ("x", fun _ => prompt ("k" (); "t1" (); "t2" (); Inl ())))
        in
        let "k" := "DelayedTree".`"fold" `("f", (), "t") in
-       prompt0 ("k" (); Inl ()) }>.
+       prompt ("k" (); Inl ()) }>.
 
 Example breadth_it_effect :=
   <{ fun "t" _ =>
@@ -91,8 +91,8 @@ Example depth_it_stack :=
 Example depth_it_dcont :=
   <{ fun "t" _ =>
        let "DelayedTree" := DelayedTree in
-       let "f" "x" := shift0 (fun "k" => Inr ("x", "k")) in
-       reset0 ("DelayedTree".`"iter" ("f", "t"); Inl ()) }>.
+       let "f" "x" := shift (fun "k" => Inr ("x", "k")) in
+       reset ("DelayedTree".`"iter" ("f", "t"); Inl ()) }>.
 
 Example depth_it_effect :=
   <{ fun "t" _ =>

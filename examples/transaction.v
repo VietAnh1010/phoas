@@ -8,8 +8,8 @@ Local Open Scope Z_scope.
 Local Open Scope string_scope.
 Local Open Scope term_scope.
 
-Example get := <{ fun "r" => perform effect "Get" "r" }>.
-Example set := <{ fun "args" => perform effect "Set" "args" }>.
+Example get := <{ fun "r" => perform `"Get" "r" }>.
+Example set := <{ fun "args" => perform `"Set" "args" }>.
 
 Example atomically :=
   <{ fun "f" =>
@@ -19,8 +19,8 @@ Example atomically :=
                (let "x" := "f" () in
                 fun _ => "x");;
              (fun "e" => fun "rb" => "rb" (); raise "e"));;;
-          (fun '("Get" "r"), "k" => "k" !"r");
-          (fun '("Set" "p"), "k" => fun "rb" =>
+          (fun (`"Get" "r") "k" => "k" !"r");
+          (fun (`"Set" "p") "k" => fun "rb" =>
              let ("r", "v") := "p" in
              let "old_v" := !"r" in
              "r" <- "v";
@@ -45,11 +45,11 @@ Example ex1 :=
                   let "v" := get "r" in
                   "print" "v";
                   let "v" := get "r" in
-                  raise (exception "Result" "v");
+                  raise (`"Result" "v");
                   let "v" := get "r" in
                   "print" "v";
                   set ("r", 30)));;
-          (fun '("Result" "v") =>
+          (fun `"Result" "v" =>
              "print" "v";
              let "v" := get "r" in
              "print" "v"));

@@ -20,7 +20,6 @@ Definition VClosure (c : closure) : val :=
   | CFixMut t f e => VFixMut t f e
   | CMKPure mk => VMKPure mk
   | CMKReset mk => VMKReset mk
-  | CMKReset0 mk => VMKReset0 mk
   | CMKHandle mk t1 t2 e => VMKHandle mk t1 t2 e
   end.
 
@@ -114,7 +113,6 @@ Definition val_to_closure (v : val) : option closure :=
   | VFixMut t f e => Some (CFixMut t f e)
   | VMKPure mk => Some (CMKPure mk)
   | VMKReset mk => Some (CMKReset mk)
-  | VMKReset0 mk => Some (CMKReset0 mk)
   | VMKHandle mk t1 t2 e => Some (CMKHandle mk t1 t2 e)
   | _ => None
   end.
@@ -135,5 +133,5 @@ Definition type_of_val (v : val) : string :=
   | VRef _ => "ref"
   | VArray _ _ => "array"
   | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _
-  | VMKPure _ | VMKReset _ | VMKReset0 _ | VMKHandle _ _ _ _ => "closure"
+  | VMKPure _ | VMKReset _ | VMKHandle _ _ _ _ => "closure"
   end.

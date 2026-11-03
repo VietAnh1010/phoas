@@ -625,22 +625,6 @@ Lemma fold_unfold_unwind_reset_IRControl :
     throw (IRControl (MKReset mk k) f).
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_unwind_reset_IRShift0 :
-  forall (k : kont)
-         (mk : metakont)
-         (f : val -> kont -> irh_monad val),
-    unwind_reset k (IRShift0 mk f) =
-    throw (IRShift0 (MKReset mk k) f).
-Proof. reflexivity. Qed.
-
-Lemma fold_unfold_unwind_reset_IRControl0 :
-  forall (k : kont)
-         (mk : metakont)
-         (f : val -> kont -> irh_monad val),
-    unwind_reset k (IRControl0 mk f) =
-    throw (IRControl0 (MKReset mk k) f).
-Proof. reflexivity. Qed.
-
 Lemma fold_unfold_unwind_reset_IRRaise :
   forall (k : kont)
          (v : val),
@@ -670,22 +654,6 @@ Lemma fold_unfold_unwind_prompt_IRControl :
          (f : val -> irh_monad val),
     unwind_prompt k (IRControl mk f) =
     catch (f (VMKPure mk)) (unwind_prompt k).
-Proof. reflexivity. Qed.
-
-Lemma fold_unfold_unwind_prompt_IRShift0 :
-  forall (k : kont)
-         (mk : metakont)
-         (f : val -> kont -> irh_monad val),
-    unwind_prompt k (IRShift0 mk f) =
-    throw (IRShift0 (MKPrompt mk k) f).
-Proof. reflexivity. Qed.
-
-Lemma fold_unfold_unwind_prompt_IRControl0 :
-  forall (k : kont)
-         (mk : metakont)
-         (f : val -> kont -> irh_monad val),
-    unwind_prompt k (IRControl0 mk f) =
-    throw (IRControl0 (MKPrompt mk k) f).
 Proof. reflexivity. Qed.
 
 Lemma fold_unfold_unwind_prompt_IRRaise :
@@ -804,24 +772,6 @@ Lemma fold_unfold_invoke_metakont_MKPrompt :
     catch (invoke_metakont self mk' v) (unwind_prompt k) >>= invoke_kont self k.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_invoke_metakont_MKReset0 :
-  forall (self : interpreter)
-         (mk' : metakont)
-         (k : kont)
-         (v : val),
-    invoke_metakont self (MKReset0 mk' k) v =
-    catch (invoke_metakont self mk' v) (unwind_reset0 k) >>= invoke_kont self k.
-Proof. reflexivity. Qed.
-
-Lemma fold_unfold_invoke_metakont_MKPrompt0 :
-  forall (self : interpreter)
-         (mk' : metakont)
-         (k : kont)
-         (v : val),
-    invoke_metakont self (MKPrompt0 mk' k) v =
-    catch (invoke_metakont self mk' v) (unwind_prompt0 k) >>= invoke_kont self k.
-Proof. reflexivity. Qed.
-
 Lemma fold_unfold_invoke_metakont_MKTry :
   forall (self : interpreter)
          (mk' : metakont)
@@ -887,7 +837,6 @@ Lemma fold_unfold_interpret_term'_aux_TApp :
     | CFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
     | CMKPure mk => invoke_metakont_app self mk k v2
     | CMKReset mk => catch (invoke_metakont self mk v2) (unwind_reset k)
-    | CMKReset0 mk => catch (invoke_metakont self mk v2) (unwind_reset0 k)
     | CMKHandle mk t1 t2 e => try (invoke_metakont self mk v2) >>= unwind_handle self t1 t2 e k
     end.
 Proof. reflexivity. Qed.
@@ -1019,26 +968,6 @@ Lemma fold_unfold_interpret_term'_aux_TControl :
     throw (IRControl (MKPure k) (fun u => interpret_term'_aux self t' (with_binder b u e) KNil)).
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_interpret_term'_aux_TShift0 :
-  forall (self : interpreter)
-         (b : binder)
-         (t' : term)
-         (e : env)
-         (k : kont),
-    interpret_term'_aux self (TShift0 b t') e k =
-    throw (IRShift0 (MKPure k) (fun u => interpret_term'_aux self t' (with_binder b u e))).
-Proof. reflexivity. Qed.
-
-Lemma fold_unfold_interpret_term'_aux_TControl0 :
-  forall (self : interpreter)
-         (b : binder)
-         (t' : term)
-         (e : env)
-         (k : kont),
-    interpret_term'_aux self (TControl0 b t') e k =
-    throw (IRControl0 (MKPure k) (fun u => interpret_term'_aux self t' (with_binder b u e))).
-Proof. reflexivity. Qed.
-
 Lemma fold_unfold_interpret_term'_aux_TReset :
   forall (self : interpreter)
          (t' : term)
@@ -1055,24 +984,6 @@ Lemma fold_unfold_interpret_term'_aux_TPrompt :
          (k : kont),
     interpret_term'_aux self (TPrompt t') e k =
     catch (interpret_term'_aux self t' e KNil) (unwind_prompt k).
-Proof. reflexivity. Qed.
-
-Lemma fold_unfold_interpret_term'_aux_TReset0 :
-  forall (self : interpreter)
-         (t' : term)
-         (e : env)
-         (k : kont),
-    interpret_term'_aux self (TReset0 t') e k =
-    catch (interpret_term'_aux self t' e KNil) (unwind_reset0 k).
-Proof. reflexivity. Qed.
-
-Lemma fold_unfold_interpret_term'_aux_TPrompt0 :
-  forall (self : interpreter)
-         (t' : term)
-         (e : env)
-         (k : kont),
-    interpret_term'_aux self (TPrompt0 t') e k =
-    catch (interpret_term'_aux self t' e KNil) (unwind_prompt0 k).
 Proof. reflexivity. Qed.
 
 Lemma fold_unfold_interpret_term'_aux_TRaise :
@@ -1222,12 +1133,8 @@ Hint Rewrite
   fold_unfold_interpret_term'_aux_TLetFixMut
   fold_unfold_interpret_term'_aux_TShift
   fold_unfold_interpret_term'_aux_TControl
-  fold_unfold_interpret_term'_aux_TShift0
-  fold_unfold_interpret_term'_aux_TControl0
   fold_unfold_interpret_term'_aux_TReset
   fold_unfold_interpret_term'_aux_TPrompt
-  fold_unfold_interpret_term'_aux_TReset0
-  fold_unfold_interpret_term'_aux_TPrompt0
   fold_unfold_interpret_term'_aux_TRaise
   fold_unfold_interpret_term'_aux_TTry
   fold_unfold_interpret_term'_aux_TPerform

@@ -260,8 +260,6 @@ Fixpoint unwind_reset (k : kont) (r : irequest) : irh_monad val :=
   match r with
   | IRShift mk f => catch (f (VMKReset mk)) (unwind_reset k)
   | IRControl mk f => throw (IRControl (MKReset mk k) f)
-  | IRShift0 mk f => throw (IRShift0 (MKReset mk k) f)
-  | IRControl0 mk f => throw (IRControl0 (MKReset mk k) f)
   | IRRaise _ => throw r
   | IRPerform mk v => throw (IRPerform (MKReset mk k) v)
   end.
@@ -270,38 +268,14 @@ Fixpoint unwind_prompt (k : kont) (r : irequest) : irh_monad val :=
   match r with
   | IRShift mk f => throw (IRShift (MKPrompt mk k) f)
   | IRControl mk f => catch (f (VMKPure mk)) (unwind_prompt k)
-  | IRShift0 mk f => throw (IRShift0 (MKPrompt mk k) f)
-  | IRControl0 mk f => throw (IRControl0 (MKPrompt mk k) f)
   | IRRaise _ => throw r
   | IRPerform mk v => throw (IRPerform (MKPrompt mk k) v)
-  end.
-
-Definition unwind_reset0 (k : kont) (r : irequest) : irh_monad val :=
-  match r with
-  | IRShift mk f => throw (IRShift (MKReset0 mk k) f)
-  | IRControl mk f => throw (IRControl (MKReset0 mk k) f)
-  | IRShift0 mk f => f (VMKReset0 mk) k
-  | IRControl0 mk f => throw (IRControl0 (MKReset0 mk k) f)
-  | IRRaise _ => throw r
-  | IRPerform mk v => throw (IRPerform (MKReset0 mk k) v)
-  end.
-
-Definition unwind_prompt0 (k : kont) (r : irequest) : irh_monad val :=
-  match r with
-  | IRShift mk f => throw (IRShift (MKPrompt0 mk k) f)
-  | IRControl mk f => throw (IRControl (MKPrompt0 mk k) f)
-  | IRShift0 mk f => throw (IRShift0 (MKPrompt0 mk k) f)
-  | IRControl0 mk f => f (VMKPure mk) k
-  | IRRaise _ => throw r
-  | IRPerform mk v => throw (IRPerform (MKPrompt0 mk k) v)
   end.
 
 Definition unwind_try (self : interpreter) (t : exn_term) (e : env) (k : kont) (r : irequest) : irh_monad val :=
   match r with
   | IRShift mk f => throw (IRShift (MKTry mk t e k) f)
   | IRControl mk f => throw (IRControl (MKTry mk t e k) f)
-  | IRShift0 mk f => throw (IRShift0 (MKTry mk t e k) f)
-  | IRControl0 mk f => throw (IRControl0 (MKTry mk t e k) f)
   | IRRaise v => interpret_exn_term self t e k v
   | IRPerform mk v => throw (IRPerform (MKTry mk t e k) v)
   end.
@@ -313,8 +287,6 @@ Definition unwind_handle (self : interpreter) (t1 : ret_term) (t2 : eff_term) (e
       match r with
       | IRShift mk f => throw (IRShift (MKHandle mk t1 t2 e k) f)
       | IRControl mk f => throw (IRControl (MKHandle mk t1 t2 e k) f)
-      | IRShift0 mk f => throw (IRShift0 (MKHandle mk t1 t2 e k) f)
-      | IRControl0 mk f => throw (IRControl0 (MKHandle mk t1 t2 e k) f)
       | IRRaise _ => throw r
       | IRPerform mk v => interpret_eff_term self t2 e k v (VMKHandle mk t1 t2 e) (MKHandle mk t1 t2 e k)
       end
@@ -327,8 +299,6 @@ Definition unwind_shallow_handle (self : interpreter) (t1 : ret_term) (t2 : eff_
       match r with
       | IRShift mk f => throw (IRShift (MKShallowHandle mk t1 t2 e k) f)
       | IRControl mk f => throw (IRControl (MKShallowHandle mk t1 t2 e k) f)
-      | IRShift0 mk f => throw (IRShift0 (MKShallowHandle mk t1 t2 e k) f)
-      | IRControl0 mk f => throw (IRControl0 (MKShallowHandle mk t1 t2 e k) f)
       | IRRaise _ => throw r
       | IRPerform mk v => interpret_eff_term self t2 e k v (VMKPure mk) (MKShallowHandle mk t1 t2 e k)
       end
@@ -359,8 +329,6 @@ Fixpoint invoke_metakont (self : interpreter) (mk : metakont) (v : val) : irh_mo
   | MKPure k => invoke_kont self k v
   | MKReset mk' k => catch (invoke_metakont self mk' v) (unwind_reset k) >>= invoke_kont self k
   | MKPrompt mk' k => catch (invoke_metakont self mk' v) (unwind_prompt k) >>= invoke_kont self k
-  | MKReset0 mk' k => catch (invoke_metakont self mk' v) (unwind_reset0 k) >>= invoke_kont self k
-  | MKPrompt0 mk' k => catch (invoke_metakont self mk' v) (unwind_prompt0 k) >>= invoke_kont self k
   | MKTry mk' t e k => catch (invoke_metakont self mk' v) (unwind_try self t e k) >>= invoke_kont self k
   | MKHandle mk' t1 t2 e k =>
       let* m := try (invoke_metakont self mk' v) in
@@ -375,8 +343,6 @@ Definition invoke_metakont_app (self : interpreter) (mk : metakont) (k : kont) (
   | MKPure k' => invoke_kont_app self k' k v
   | MKReset mk' k' => catch (invoke_metakont self mk' v) (unwind_reset (KApp k' k)) >>= invoke_kont_app self k' k
   | MKPrompt mk' k' => catch (invoke_metakont self mk' v) (unwind_prompt (KApp k' k)) >>= invoke_kont_app self k' k
-  | MKReset0 mk' k' => catch (invoke_metakont self mk' v) (unwind_reset0 (KApp k' k)) >>= invoke_kont_app self k' k
-  | MKPrompt0 mk' k' => catch (invoke_metakont self mk' v) (unwind_prompt0 (KApp k' k)) >>= invoke_kont_app self k' k
   | MKTry mk' t e k' => catch (invoke_metakont self mk' v) (unwind_try self t e (KApp k' k)) >>= invoke_kont_app self k' k
   | MKHandle mk' t1 t2 e k' =>
       let* m := try (invoke_metakont self mk' v) in
@@ -404,7 +370,6 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
         | CFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
         | CMKPure mk => invoke_metakont_app self mk k v2
         | CMKReset mk => catch (invoke_metakont self mk v2) (unwind_reset k)
-        | CMKReset0 mk => catch (invoke_metakont self mk v2) (unwind_reset0 k)
         | CMKHandle mk t1 t2 e => try (invoke_metakont self mk v2) >>= unwind_handle self t1 t2 e k
         end
     | TSeq t1 t2 =>
@@ -446,12 +411,8 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
     | TLetFixMut t1 t2 => self' t2 (with_fix_mut_term t1 e) k
     | TShift b t' => throw (IRShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
     | TControl b t' => throw (IRControl (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
-    | TShift0 b t' => throw (IRShift0 (MKPure k) (fun u => self' t' (with_binder b u e)))
-    | TControl0 b t' => throw (IRControl0 (MKPure k) (fun u => self' t' (with_binder b u e)))
     | TReset t' => catch (self' t' e KNil) (unwind_reset k)
     | TPrompt t' => catch (self' t' e KNil) (unwind_prompt k)
-    | TReset0 t' => catch (self' t' e KNil) (unwind_reset0 k)
-    | TPrompt0 t' => catch (self' t' e KNil) (unwind_prompt0 k)
     | TRaise tv =>
         let* v := interpret_val_term' self' tv e in
         throw (IRRaise v)

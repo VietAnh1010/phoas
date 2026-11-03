@@ -491,14 +491,22 @@ Example partition x xs :=
        match "xs" with
        | Inl _ => Inl ()
        | Inr ("x", "xs'") =>
-           match by compare_int (x, "x") with
-           | `"Lt" _ => let "r" := "go" "xs'" in Inr ("x", "r")
-           | `"Eq" _ => shift0 (fun "k" => let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in Inr ("x", "r"))
-           | `"Gt" _ => shift0 (fun "k" => shift0 (fun "k'" => let "r" := reset0 let "r" := reset0 let "r" := "go" "xs'" in "k" "r" in "k'" "r"
-                                                               in Inr ("x", "r")))
-           end
+           let () :=
+             match by compare_int (x, "x") with
+             | `"Lt" () => perform `"Larger" "x"
+             | `"Eq" () => perform `"Equal" "x"
+             | `"Gt" () => perform `"Smaller" "x"
+             end
+           in
+           "go" "xs'"
        end
-     in reset0 reset0 "go" xs }>.
+     in
+     handle
+       (handle
+          (handle ("go" xs);;;
+           (fun (`"Larger" "x") "k" => let "r" := "k" () in Inr ("x", "r")));;;
+        (fun (`"Equal" "x") "k" => let "r" := "k" () in Inr ("x", "r")));;;
+     (fun (`"Smaller" "x") "k" => let "r" := "k" () in Inr ("x", "r")) }>.
 
 Compute (eval_term_to_list_int 20 <{ {partition 1 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
 Compute (eval_term_to_list_int 20 <{ {partition 2 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).

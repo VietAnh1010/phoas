@@ -9,8 +9,6 @@ Local Unset Case Analysis Schemes.
 Inductive irequest : Type :=
 | IRShift : metakont -> (val -> es_monad irequest iheap val) -> irequest
 | IRControl : metakont -> (val -> es_monad irequest iheap val) -> irequest
-| IRShift0 : metakont -> (val -> kont -> es_monad irequest iheap val) -> irequest
-| IRControl0 : metakont -> (val -> kont -> es_monad irequest iheap val) -> irequest
 | IRRaise : val -> irequest
 | IRPerform : metakont -> val -> irequest.
 
@@ -18,8 +16,6 @@ Definition irequest_to_val (r : irequest) : val :=
   match r with
   | IRShift _ _ => Undelimited_shift
   | IRControl _ _ => Undelimited_control
-  | IRShift0 _ _ => Undelimited_shift0
-  | IRControl0 _ _ => Undelimited_control0
   | IRRaise v => v
   | IRPerform _ v => Unhandled_effect v
   end.

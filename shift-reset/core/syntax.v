@@ -75,12 +75,8 @@ Inductive term : Type :=
 | TLetFixMut : fix_mut_term -> term -> term
 | TShift : binder -> term -> term
 | TControl : binder -> term -> term
-| TShift0 : binder -> term -> term
-| TControl0 : binder -> term -> term
 | TReset : term -> term
 | TPrompt : term -> term
-| TReset0 : term -> term
-| TPrompt0 : term -> term
 | TRaise : val_term -> term
 | TTry : term -> exn_term -> term
 | TPerform : val_term -> term
@@ -170,7 +166,6 @@ Inductive val : Type :=
 | VArray : loc -> Z -> val
 | VMKPure : metakont -> val
 | VMKReset : metakont -> val
-| VMKReset0 : metakont -> val
 | VMKHandle : metakont -> ret_term -> eff_term -> env -> val
 with kont : Type :=
 | KNil : kont
@@ -181,8 +176,6 @@ with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> kont -> metakont
 | MKPrompt : metakont -> kont -> metakont
-| MKReset0 : metakont -> kont -> metakont
-| MKPrompt0 : metakont -> kont -> metakont
 | MKTry : metakont -> exn_term -> env -> kont -> metakont
 | MKHandle : metakont -> ret_term -> eff_term -> env -> kont -> metakont
 | MKShallowHandle : metakont -> ret_term -> eff_term -> env -> kont -> metakont
@@ -202,7 +195,6 @@ Inductive closure : Type :=
 | CFixMut : fix_mut_term -> ident -> env -> closure
 | CMKPure : metakont -> closure
 | CMKReset : metakont -> closure
-| CMKReset0 : metakont -> closure
 | CMKHandle : metakont -> ret_term -> eff_term -> env -> closure.
 
 Inductive variant : Type :=

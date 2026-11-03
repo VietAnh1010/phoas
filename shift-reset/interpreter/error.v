@@ -40,11 +40,5 @@ Definition Undelimited_shift : val :=
 Definition Undelimited_control : val :=
   VVariant (Ident "Undelimited_control") VTt.
 
-Definition Undelimited_shift0 : val :=
-  VVariant (Ident "Undelimited_shift0") VTt.
-
-Definition Undelimited_control0 : val :=
-  VVariant (Ident "Undelimited_control0") VTt.
-
 Definition Out_of_fuel : val :=
   VVariant (Ident "Out_of_fuel") VTt.

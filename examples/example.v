@@ -53,12 +53,12 @@ Example either :=
 
 Example ex2 :=
   <{ let "result" := ref false in
-     reset
-       (let "either1" := either true in
-        let "p" := "either1" false in
-        let "q" := "either1" false in
-        if ("p" || "q") && ("p" || not "q") && (not "p" || not "q")
-        then "result" <- true else ());
+     (reset
+        (let "either1" := either true in
+         let "p" := "either1" false in
+         let "q" := "either1" false in
+         if ("p" || "q") && ("p" || not "q") && (not "p" || not "q")
+         then "result" <- true else ()));
      let "answer" := !"result" || "crash" in
      {ref_free "result"}; "answer" }>.
 
@@ -269,9 +269,9 @@ Example collatz k :=
   <{ let fix "collatz_len" "n" :=
        if "n" = 1 then 1 else
          (by
-           if "n" mod 2 = 0
-           then "collatz_len" ("n" / 2)
-           else "collatz_len" (3 * "n" + 1)) + 1
+           (if "n" mod 2 = 0
+            then "collatz_len" ("n" / 2)
+            else "collatz_len" (3 * "n" + 1))) + 1
      in
      let "max_len" := ref 0 in
      let "n_of_max_len" := ref 0 in

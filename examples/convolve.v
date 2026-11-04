@@ -42,7 +42,7 @@ Example convolve_dcont :=
              "go" "r"
          end
        in
-       (by prompt "go" "ys") "xs" }>.
+       (by (prompt "go" "ys")) "xs" }>.
 
 Example convolve :=
   <{ fun ("xs", "ys") =>

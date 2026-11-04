@@ -160,21 +160,21 @@ Notation "'let' 'fix' f p1 p2 .. pn := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'while' tv 'do' t" :=
-  (TWhile tv t) (in custom term at level 69, tv custom term, t custom term) : term_scope.
+  (TWhile tv t) (in custom term at level 60, tv custom term, t custom term at level 68) : term_scope.
 
 Notation "'for' b 'from' tv1 'upto' tv2 'do' t" :=
-  (TFor b tv1 Upto tv2 t) (in custom term at level 69,
+  (TFor b tv1 Upto tv2 t) (in custom term at level 60,
         b custom binder' at level 0,
         tv1 custom term,
         tv2 custom term,
-        t custom term) : term_scope.
+        t custom term at level 68) : term_scope.
 
 Notation "'for' b 'from' tv1 'downto' tv2 'do' t" :=
-  (TFor b tv1 Downto tv2 t) (in custom term at level 69,
+  (TFor b tv1 Downto tv2 t) (in custom term at level 60,
         b custom binder' at level 0,
         tv1 custom term,
         tv2 custom term,
-        t custom term) : term_scope.
+        t custom term at level 68) : term_scope.
 
 Notation "'shift' ( 'fun' k => t )" :=
   (TShift k t) (in custom term at level 0, k custom binder' at level 0, t custom term) : term_scope.

@@ -363,7 +363,7 @@ Notation "t1 && t2" :=
   (TVAnd t1 t2) (in custom term at level 51, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 || t2" :=
-  (TVOr t1 t2) (in custom term at level 51, t1 custom term, t2 custom term, right associativity) : term_scope.
+  (TVOr t1 t2) (in custom term at level 52, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 <- t2" :=
   (TVSet t1 t2) (in custom term at level 66, t1 custom term, t2 custom term, right associativity) : term_scope.

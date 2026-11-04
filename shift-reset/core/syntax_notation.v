@@ -117,7 +117,7 @@ Notation "'if' tv 'then' t1 'else' t2" :=
   (TIf tv t1 t2) (in custom term at level 60,
         tv custom term,
         t1 custom term,
-        t2 custom term at level 68) : term_scope.
+        t2 custom term at level 69) : term_scope.
 
 Notation "t1 ; t2" :=
   (TSeq t1 t2) (in custom term at level 69, t1 custom term, t2 custom term, right associativity) : term_scope.

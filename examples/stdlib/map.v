@@ -19,7 +19,7 @@ Example Map :=
            match "m" with
            | Inl _ => false
            | Inr `("l", "k'", _, "r", _) =>
-               match by "K".`"compare" ("k", "k'") with
+               match by ("K".`"compare" ("k", "k'")) with
                | `"Lt" _ => "go" "l"
                | `"Eq" _ => true
                | `"Gt" _ => "go" "r"
@@ -33,7 +33,7 @@ Example Map :=
            match "m" with
            | Inl _ => Inl ()
            | Inr `("l", "k'", "v", "r", _) =>
-               match by "K".`"compare" ("k", "k'") with
+               match by ("K".`"compare" ("k", "k'")) with
                | `"Lt" _ => "go" "l"
                | `"Eq" _ => Inr "v"
                | `"Gt" _ => "go" "r"
@@ -51,7 +51,7 @@ Example Map :=
        let "node" `("l", "k", "v", "r") :=
          let "hl" := "height" "l" in
          let "hr" := "height" "r" in
-         Inr `("l", "k", "v", "r", (by (if "hl" > "hr" then "hl" else "hr")) + 1)
+         Inr `("l", "k", "v", "r", by (if "hl" > "hr" then "hl" else "hr") + 1)
        in
        let "ne_unnode" "m" :=
          match "m" with
@@ -65,7 +65,7 @@ Example Map :=
          let "hr" := "height" "r" in
          if "hl" > "hr" + 2 then
            let `("ll", "lk", "lv", "lr") := "ne_unnode" "l" in
-           if by "height" "ll" >= by "height" "lr" then
+           if by ("height" "ll") >= by ("height" "lr") then
              let "lr'" := "node" `("lr", "k", "v", "r") in
              "node" `("ll", "lk", "lv", "lr'")
            else
@@ -76,7 +76,7 @@ Example Map :=
          else
            if "hr" > "hl" + 2 then
              let `("rl", "rk", "rv", "rr") := "ne_unnode" "r" in
-             if by "height" "rr" >= by "height" "rl" then
+             if by ("height" "rr") >= by ("height" "rl") then
                let "rl'" := "node" `("l", "k", "v", "rl") in
                "node" `("rl'", "rk", "rv", "rr")
              else
@@ -98,10 +98,10 @@ Example Map :=
            match "m" with
            | Inl _ => "singleton" ("k", "v")
            | Inr `("l", "k'", "v'", "r", "h") =>
-               match by "K".`"compare" ("k", "k'") with
-               | `"Lt" _ => "balance" `(by "go" "l", "k'", "v'", "r")
+               match by ("K".`"compare" ("k", "k'")) with
+               | `"Lt" _ => "balance" `(by ("go" "l"), "k'", "v'", "r")
                | `"Eq" _ => Inr `("l", "k", "v", "r", "h")
-               | `"Gt" _ => "balance" `("l", "k'", "v'", by "go" "r")
+               | `"Gt" _ => "balance" `("l", "k'", "v'", by ("go" "r"))
                end
            end
          in
@@ -112,7 +112,7 @@ Example Map :=
          | Inl _ => (("k", "v"), "r")
          | Inr `("ll", "lk", "lv", "lr", _) =>
              let ("b", "l'") := "min_binding_remove_aux" `("ll", "lk", "lv", "lr") in
-             ("b", by "balance" `("l'", "k", "v", "r"))
+             ("b", by ("balance" `("l'", "k", "v", "r")))
          end
        in
        let "min_binding_remove" "m" :=
@@ -140,10 +140,10 @@ Example Map :=
            match "m" with
            | Inl _ => Inl ()
            | Inr `("l", "k'", "v", "r", _) =>
-               match by "K".`"compare" ("k", "k'") with
-               | `"Lt" _ => "balance" `(by "go" "l", "k'", "v", "r")
+               match by ("K".`"compare" ("k", "k'")) with
+               | `"Lt" _ => "balance" `(by ("go" "l"), "k'", "v", "r")
                | `"Eq" _ => "link" ("l", "r")
-               | `"Gt" _ => "balance" `("l", "k'", "v", by "go" "r")
+               | `"Gt" _ => "balance" `("l", "k'", "v", by ("go" "r"))
                end
            end
          in
@@ -176,19 +176,19 @@ Example Map :=
        let fix "bindings_append" ("m", "bs") :=
          match "m" with
          | Inl _ => "bs"
-         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by "bindings_append" ("r", "bs")))
+         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by ("bindings_append" ("r", "bs"))))
          end
        in
        let fix "bindings" "m" :=
          match "m" with
          | Inl _ => Inl ()
-         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by "bindings" "r"))
+         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by ("bindings" "r")))
          end
        in
        let fix "cardinal" "m" :=
          match "m" with
          | Inl _ => 0
-         | Inr `("l", _, _, "r", _) => by "cardinal" "l" + 1 + by "cardinal" "r"
+         | Inr `("l", _, _, "r", _) => by ("cardinal" "l") + 1 + by ("cardinal" "r")
          end
        in
        let "map" ("f", "m") :=

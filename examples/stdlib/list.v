@@ -107,7 +107,7 @@ Example List :=
        let fix "go" "xs" :=
          match "xs" with
          | Inl _ => "ys"
-         | Inr ("x", "xs'") => Inr ("x", by "go" "xs'")
+         | Inr ("x", "xs'") => Inr ("x", by ("go" "xs'"))
          end
        in
        "go" "xs"
@@ -144,7 +144,7 @@ Example List :=
      in
      let fix "zip" "args" :=
        match "args" with
-       | Inr ("x", "xs"), Inr ("y", "ys") => Inr (("x", "y"), by "zip" ("xs", "ys"))
+       | Inr ("x", "xs"), Inr ("y", "ys") => Inr (("x", "y"), by ("zip" ("xs", "ys")))
        | _ => Inl ()
        end
      in

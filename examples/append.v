@@ -20,10 +20,10 @@ Example append_dcont_aux :=
              Inr ("x", "r")
          end
        in
-       reset "go" "xs" }>.
+       reset ("go" "xs") }>.
 
 Example append_dcont :=
-  <{ fun ("xs", "ys") => (by append_dcont_aux "xs") "ys" }>.
+  <{ fun ("xs", "ys") => by (append_dcont_aux "xs") "ys" }>.
 
 Example append :=
   <{ (by List).`"append" }>.

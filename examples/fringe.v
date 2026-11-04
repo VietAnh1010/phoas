@@ -37,17 +37,17 @@ Example ephemeral_it :=
        fun () => !"r" () }>.
 
 Definition eval_persistent_it (fuel : nat) (t : val_term) :=
-  eval_term_to_list_int fuel <{ (by DelayedList).`"to_list" (by persistent_it t) }>.
+  eval_term_to_list_int fuel <{ (by DelayedList).`"to_list" (by (persistent_it t)) }>.
 
 Definition eval_ephemeral_it (fuel : nat) (t : val_term) :=
   eval_term_to_list_int fuel
   <{ let fix "to_list" "it" :=
-       match by "it" () with
+       match by ("it" ()) with
        | Inl _ => Inl ()
-       | Inr "x" => Inr ("x", by "to_list" "it")
+       | Inr "x" => Inr ("x", by ("to_list" "it"))
        end
      in
-     "to_list" (by ephemeral_it t) }>.
+     "to_list" (by (ephemeral_it t)) }>.
 
 Time Compute (eval_persistent_it 100 (level 5)).
 Time Compute (eval_ephemeral_it 100 (level 5)).

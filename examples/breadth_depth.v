@@ -34,9 +34,9 @@ Example breadth_it_queue :=
        let "q" := "Queue".`"create" () in
        let _ := "Queue".`"push" ("t", "q") in
        let fix "go" _ :=
-         if by "Queue".`"is_empty" "q" then Inl ()
+         if by ("Queue".`"is_empty" "q") then Inl ()
          else
-           let "t" := (by "Queue".`"pop" "q") () in
+           let "t" := by ("Queue".`"pop" "q") () in
            match "t" with
            | Inl _ => "go" ()
            | Inr `("x", "t1", "t2") =>
@@ -76,9 +76,9 @@ Example depth_it_stack :=
        let "s" := "Stack".`"create" () in
        let _ := "Stack".`"push" ("t", "s") in
        let fix "go" _ :=
-         if by "Stack".`"is_empty" "s" then Inl ()
+         if by ("Stack".`"is_empty" "s") then Inl ()
          else
-           let "t" := (by "Stack".`"pop" "s") () in
+           let "t" := by ("Stack".`"pop" "s") () in
            match "t" with
            | Inl _ => "go" ()
            | Inr `("x", "t1", "t2") =>

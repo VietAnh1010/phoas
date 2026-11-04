@@ -38,9 +38,9 @@ Compute (eval_term 1 cmp3).
 Example ex1 :=
   <{ let "f" :=
        reset
-         let "x" := 6 * 9 in
-         let "y" := shift (fun "k" => "k") in
-         "x" * "y"
+         (let "x" := 6 * 9 in
+          let "y" := shift (fun "k" => "k") in
+          "x" * "y")
      in
      "f" 10 }>.
 
@@ -80,9 +80,9 @@ Example choice :=
 
 Example sum xs :=
   <{ let "result" := ref 0 in
-     reset let "x" := choice xs in "result" <- "x" + !"result";
-                                   let "answer" := !"result" in
-                                   {ref_free "result"}; "answer" }>.
+     reset (let "x" := choice xs in "result" <- "x" + !"result";
+                                    let "answer" := !"result" in
+                                    {ref_free "result"}; "answer") }>.
 
 Compute (eval_term 3 (sum (list_int_to_val_term []))).
 Compute (eval_term 4 (sum (list_int_to_val_term [1]))).
@@ -268,10 +268,9 @@ Compute (eval_term 4 basic_exn_eff).
 Example collatz k :=
   <{ let fix "collatz_len" "n" :=
        if "n" = 1 then 1 else
-         (by
-           (if "n" mod 2 = 0
-            then "collatz_len" ("n" / 2)
-            else "collatz_len" (3 * "n" + 1))) + 1
+         by (if "n" mod 2 = 0
+             then "collatz_len" ("n" / 2)
+             else "collatz_len" (3 * "n" + 1)) + 1
      in
      let "max_len" := ref 0 in
      let "n_of_max_len" := ref 0 in
@@ -291,8 +290,8 @@ Example eval_ltr :=
   <{ fix "eval" "e" :=
        match "e" with
        | `"Num" "n" => "n"
-       | `"Add" `{"lhs"; "rhs"} => by "eval" "lhs" + by "eval" "rhs"
-       | `"Mul" `{"lhs"; "rhs"} => by "eval" "lhs" * by "eval" "rhs"
+       | `"Add" `{"lhs"; "rhs"} => by ("eval" "lhs") + by ("eval" "rhs")
+       | `"Mul" `{"lhs"; "rhs"} => by ("eval" "lhs") * by ("eval" "rhs")
        | _ => raise (`"Failure" "e")
        end }>.
 
@@ -504,7 +503,7 @@ Example partition x xs :=
        | Inl _ => Inl ()
        | Inr ("x", "xs'") =>
            let () :=
-             match by compare_int (x, "x") with
+             match by (compare_int (x, "x")) with
              | `"Lt" () => perform (`"Larger" "x")
              | `"Eq" () => perform (`"Equal" "x")
              | `"Gt" () => perform (`"Smaller" "x")

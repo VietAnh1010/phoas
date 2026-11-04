@@ -22,8 +22,8 @@ Example do_toss :=
 Example toss :=
   <{ fun "x" =>
        reset
-         let "r" := do_toss "x" in
-         if "r" then 1 else 0 }>.
+         (let "r" := do_toss "x" in
+          if "r" then 1 else 0) }>.
 
 Example run_toss x :=
   <{ let "x" := ref x in
@@ -46,8 +46,8 @@ Example do_toss_n :=
 Example toss_n :=
   <{ fun "args" =>
        reset
-         let "r" := do_toss_n "args" in
-         if "r" then 1 else 0 }>.
+         (let "r" := do_toss_n "args" in
+          if "r" then 1 else 0) }>.
 
 Example run_toss_n n x :=
   <{ let "x" := ref x in

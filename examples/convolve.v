@@ -17,7 +17,7 @@ Example convolve_cont :=
              "go" ("ys'", fun "xs" =>
                             match "xs" with
                             | Inl _ => Inl ()
-                            | Inr ("x", "xs'") => Inr (("x", "y"), by "k" "xs'")
+                            | Inr ("x", "xs'") => Inr (("x", "y"), by ("k" "xs'"))
                             end)
          end
        in
@@ -36,13 +36,13 @@ Example convolve_dcont :=
                     fun "xs" =>
                       match "xs" with
                       | Inl _ => Inl ()
-                      | Inr ("x", "xs'") => Inr (("x", "y"), by "k" "xs'")
+                      | Inr ("x", "xs'") => Inr (("x", "y"), by ("k" "xs'"))
                       end)
              in
              "go" "r"
          end
        in
-       (by (prompt "go" "ys")) "xs" }>.
+       by (prompt ("go" "ys")) "xs" }>.
 
 Example convolve :=
   <{ fun ("xs", "ys") =>
@@ -57,7 +57,7 @@ Example convolve :=
              end
          end
        in
-       snd (by "go" "xs") }>.
+       snd (by ("go" "xs")) }>.
 
 Definition eval_convolve (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
   eval_term_to_list_prod_int_int fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.

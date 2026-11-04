@@ -17,8 +17,8 @@ Example run :=
        let "q" := "Queue".`"create" () in
        let "enq" "k" := "Queue".`"push" ("k", "q") in
        let "deq" _ :=
-         if by "Queue".`"is_empty" "q" then ()
-         else (by "Queue".`"pop" "q") ()
+         if by ("Queue".`"is_empty" "q") then ()
+         else by ("Queue".`"pop" "q") ()
        in
        let fix "go" "f" :=
          handle

@@ -17,7 +17,7 @@ Example is_palindrome_cont :=
              let (Inr ("y", "ys'")) := "ys" in
              match "xs'" with
              | Inl _ => "k" "ys'"
-             | Inr (_, "xs''") => "go" `("xs''", "ys'", fun (Inr ("y'", "ys_b")) => "y" = "y'" && by "k" "ys_b")
+             | Inr (_, "xs''") => "go" `("xs''", "ys'", fun (Inr ("y'", "ys_b")) => "y" = "y'" && by ("k" "ys_b"))
              end
          end
        in

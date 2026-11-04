@@ -10,7 +10,7 @@ Example DelayedTree :=
          let "t" := "t" () in
          match "t" with
          | Inl _ => "z"
-         | Inr `("x", "t1", "t2") => "f" `("x", by "go" "t1", by "go" "t2")
+         | Inr `("x", "t1", "t2") => "f" `("x", by ("go" "t1"), by ("go" "t2"))
          end
        in
        "go" "t"
@@ -32,7 +32,7 @@ Example DelayedTree :=
          | Inl _ => Inl ()
          | Inr `("x", "t1", "t2") =>
              let "y" := "f" "x" in
-             Inr `("y", by "go" "t1", by "go" "t2")
+             Inr `("y", by ("go" "t1"), by ("go" "t2"))
          end
        in
        "go" "t"

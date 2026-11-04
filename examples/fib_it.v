@@ -19,7 +19,7 @@ Example fib_it_dcont :=
          shift (fun "k" => Inr ("a", "k"));
          "go" ("b", "a" + "b")
        in
-       reset "go" (0, 1) }>.
+       reset ("go" (0, 1)) }>.
 
 Example eval_fib (candidate : val_term) (fuel : nat) (n : Z) :=
   eval_term_to_list_int fuel

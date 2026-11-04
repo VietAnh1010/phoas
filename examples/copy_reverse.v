@@ -16,17 +16,17 @@ Example copy_dcont :=
          match "xs" with
          | Inl _ => Inl ()
          | Inr ("x", "xs'") =>
-             let "r" := shift (fun "k" => Inr ("x", by "k" "xs'")) in
+             let "r" := shift (fun "k" => Inr ("x", by ("k" "xs'"))) in
              "go" "r"
          end
        in
-       reset "go" "xs" }>.
+       reset ("go" "xs") }>.
 
 Example copy :=
   <{ fix "go" "xs" :=
        match "xs" with
        | Inl _ => Inl ()
-       | Inr ("x", "xs'") => Inr ("x", by "go" "xs'")
+       | Inr ("x", "xs'") => Inr ("x", by ("go" "xs'"))
        end }>.
 
 Example reverse_dcont :=
@@ -39,7 +39,7 @@ Example reverse_dcont :=
              "go" "r"
          end
        in
-       prompt "go" "xs" }>.
+       prompt ("go" "xs") }>.
 
 Example reverse :=
   <{ (by List).`"reverse" }>.
@@ -50,7 +50,7 @@ Example reverse_while :=
        let "in" := ref "xs" in
        let "out" := ref (Inl ()) in
        let _ :=
-         while not (by "List".`"is_empty" !"in") do
+         while not (by ("List".`"is_empty" !"in")) do
            let ("x", "xs'") := "List".`"ne_uncons" !"in" in
            "in" <- "xs'";
            "out" <- Inr ("x", !"out")
@@ -67,7 +67,7 @@ Example reverse_taba :=
              ("xs_b", Inr ("x", "r"))
          end
        in
-       snd (by "go" "xs") }>.
+       snd (by ("go" "xs")) }>.
 
 Definition eval_fun (candidate : val_term) (fuel : nat) (xs : list Z) :=
   eval_term_to_list_int fuel <{ candidate {list_int_to_val_term xs} }>.

@@ -9,7 +9,7 @@ Local Open Scope term_scope.
 Example fib_exponential :=
   <{ fix "go" "n" :=
        if "n" <= 1 then "n"
-       else by "go" ("n" - 2) + by "go" ("n" - 1) }>.
+       else by ("go" ("n" - 2)) + by ("go" ("n" - 1)) }>.
 
 Example fib_linear :=
   <{ fun "n" =>
@@ -19,7 +19,7 @@ Example fib_linear :=
            let ("a", "b") := "go" ("n" - 1) in
            ("b", "a" + "b")
        in
-       fst (by "go" "n") }>.
+       fst (by ("go" "n")) }>.
 
 Example fib_logarithmic :=
   <{ fun "n" =>
@@ -32,7 +32,7 @@ Example fib_logarithmic :=
            let "d" := "x" + "b" * "b" in
            if "n" mod 2 = 0 then ("c", "d") else ("d", "c" + "d")
        in
-       fst (by "go" "n") }>.
+       fst (by ("go" "n")) }>.
 
 Example eval_fib (candidate : val_term) (fuel : nat) (n : Z) :=
   eval_term fuel <{ candidate n }>.

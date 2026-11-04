@@ -6,11 +6,11 @@ Local Open Scope Z_scope.
 Local Open Scope string_scope.
 Local Open Scope term_scope.
 
-Example get := <{ fun _ => shift (fun "k" => fun "s" => (by "k" "s") "s") }>.
-Example put := <{ fun "s" => shift (fun "k" => fun _ => (by "k" ()) "s") }>.
+Example get := <{ fun _ => shift (fun "k" => fun "s" => by ("k" "s") "s") }>.
+Example put := <{ fun "s" => shift (fun "k" => fun _ => by ("k" ()) "s") }>.
 
 Example eval_state :=
-  <{ fun ("m", "s") => (by (reset let "v" := "m" () in fun "s" => ("v", "s"))) "s" }>.
+  <{ fun ("m", "s") => by (reset (let "v" := "m" () in fun "s" => ("v", "s"))) "s" }>.
 
 Example ex1 :=
   <{ fun _ =>

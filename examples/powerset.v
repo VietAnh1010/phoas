@@ -15,8 +15,8 @@ Example powerset_filter :=
        let "f" "_" := shift (fun "k" => "k" true; "k" false) in
        let _ :=
          reset
-           let "s" := "List".`"filter" ("f", "xs") in
-           "r" <- Inr ("s", !"r")
+           (let "s" := "List".`"filter" ("f", "xs") in
+            "r" <- Inr ("s", !"r"))
        in
        !"r" }>.
 
@@ -30,8 +30,8 @@ Example powerset_fold_right :=
        in
        let _ :=
          reset
-           let "s" := "List".`"fold_right" `("f", Inl (), "xs") in
-           "r" <- Inr ("s", !"r")
+           (let "s" := "List".`"fold_right" `("f", Inl (), "xs") in
+            "r" <- Inr ("s", !"r"))
        in
        !"r" }>.
 
@@ -45,8 +45,8 @@ Example powerset_fold_left :=
        in
        let _ :=
          reset
-           let "s" := "List".`"fold_left" `("f", Inl (), "xs") in
-           "r" <- Inr ("s", !"r")
+           (let "s" := "List".`"fold_left" `("f", Inl (), "xs") in
+            "r" <- Inr ("s", !"r"))
        in
        !"r" }>.
 

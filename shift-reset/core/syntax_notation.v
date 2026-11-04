@@ -392,7 +392,7 @@ Notation "'handle' t1 'with' t2 'end'" :=
 Notation "'handle' t1 'with' '|' 'return' p => t2 t3 'end'" :=
   (THandle t1 (TRetSome p t2) t3) (in custom term at level 0,
         t1 custom term at level 10,
-        p custom pattern' at level 0,
+        p custom pattern' at level 69,
         t2 custom term,
         t3 custom eff_term) : term_scope.
 
@@ -402,7 +402,7 @@ Notation "'shallow' 'handle' t1 'with' t2 'end'" :=
 Notation "'shallow' 'handle' t1 'with' '|' 'return' p => t2 t3 'end'" :=
   (TShallowHandle t1 (TRetSome p t2) t3) (in custom term at level 0,
         t1 custom term at level 10,
-        p custom pattern' at level 0,
+        p custom pattern' at level 69,
         t2 custom term,
         t3 custom eff_term) : term_scope.
 

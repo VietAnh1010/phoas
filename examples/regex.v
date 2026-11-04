@@ -46,10 +46,14 @@ Example accept :=
                match "l" with
                | Inl _ => raise (`"Accept" ())
                | Inr _ => {TVString "no"}
-               end);;;
-            (fun (`"Fail" _) _ => {TVString "no"});
-            (fun (`"Flip" _) "k" => "k" true; "k" false));;
-         (fun `"Accept" _ => {TVString "yes"})
+               end)
+            with
+            | (`"Fail" _) _ => {TVString "no"}
+            | (`"Flip" _) "k" => "k" true; "k" false
+            end)
+         with
+         | `"Accept" _ => {TVString "yes"}
+         end
        in
        "answer", !"counter" }>.
 

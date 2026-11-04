@@ -22,9 +22,13 @@ Example run :=
        in
        let fix "go" "f" :=
          handle
-           (let _ := try "f" ();; (fun _ => ()) in
-            "deq" ());;;
-         (fun (`"Yield" _) "k" => "enq" "k"; "deq" ());
-         (fun (`"Fork" "f") "k" => "enq" "k"; "go" "f")
+           (let _ := try ("f" ()) with
+                     | _ => ()
+                     end in
+            "deq" ())
+         with
+         | (`"Yield" _) "k" => "enq" "k"; "deq" ()
+         | (`"Fork" "f") "k" => "enq" "k"; "go" "f"
+         end
        in
        "go" "f" }>.

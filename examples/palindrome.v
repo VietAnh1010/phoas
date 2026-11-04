@@ -38,7 +38,9 @@ Example is_palindrome_exception :=
              end
          end
        in
-       try "go" ("xs", "xs"); true;; (fun false => false) }>.
+       try ("go" ("xs", "xs"); true) with
+       | false => false
+       end }>.
 
 Definition eval_is_palindrome (candidate : val_term) (fuel : nat) (xs : list Z) :=
   eval_term fuel <{ candidate {list_int_to_val_term xs} }>.

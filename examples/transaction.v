@@ -17,15 +17,19 @@ Example atomically :=
          (handle
             (try
                (let "x" := "f" () in
-                fun _ => "x");;
-             (fun "e" => fun "rb" => "rb" (); raise "e"));;;
-          (fun (`"Get" "r") "k" => "k" !"r");
-          (fun (`"Set" "p") "k" => fun "rb" =>
-             let ("r", "v") := "p" in
-             let "old_v" := !"r" in
-             "r" <- "v";
-             let "k" := "k" () in
-             "k" (fun _ => "r" <- "old_v"; "rb" ())))
+                fun _ => "x")
+             with
+             | "e" => fun "rb" => "rb" (); raise "e"
+             end)
+          with
+          | (`"Get" "r") "k" => "k" !"r"
+          | (`"Set" "p") "k" => fun "rb" =>
+                                  let ("r", "v") := "p" in
+                                  let "old_v" := !"r" in
+                                  "r" <- "v";
+                                  let "k" := "k" () in
+                                  "k" (fun _ => "r" <- "old_v"; "rb" ())
+          end)
        in
        "k" (fun _ => ()) }>.
 
@@ -48,11 +52,13 @@ Example ex1 :=
                   raise (`"Result" "v");
                   let "v" := get "r" in
                   "print" "v";
-                  set ("r", 30)));;
-          (fun `"Result" "v" =>
-             "print" "v";
-             let "v" := get "r" in
-             "print" "v"));
+                  set ("r", 30)))
+          with
+          | `"Result" "v" =>
+              "print" "v";
+              let "v" := get "r" in
+              "print" "v"
+          end);
      !"stdout" }>.
 
 Compute (eval_term_to_list_int 100 <{ ex1 }>).

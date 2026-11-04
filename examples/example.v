@@ -81,8 +81,8 @@ Example choice :=
 Example sum xs :=
   <{ let "result" := ref 0 in
      reset let "x" := choice xs in "result" <- "x" + !"result";
-     let "answer" := !"result" in
-     {ref_free "result"}; "answer" }>.
+                                   let "answer" := !"result" in
+                                   {ref_free "result"}; "answer" }>.
 
 Compute (eval_term 3 (sum (list_int_to_val_term []))).
 Compute (eval_term 4 (sum (list_int_to_val_term [1]))).
@@ -205,13 +205,13 @@ Example unhandled_exception :=
 
 Example handle_exception (tag : string) :=
   <{ let "r" := ref false in
-     try
-       raise (`tag 10);;
-     (fun `"Segfault" "code" =>
-        let _ := "r" <- "code" = 10 in
-        !"r");
-     (fun `"StackOverflow" _ => false);
-     (fun "exn" => raise "exn") }>.
+     try (raise (`tag 10)) with
+     | `"Segfault" "code" =>
+         let _ := "r" <- "code" = 10 in
+         !"r"
+     | `"StackOverflow" _ => false
+     | "exn" => raise "exn"
+     end }>.
 
 Compute (eval_term 1 unhandled_exception).
 Compute (eval_term 1 (handle_exception "Segfault")).
@@ -219,10 +219,10 @@ Compute (eval_term 1 (handle_exception "StackOverflow")).
 Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
-  <{ handle
-       perform (`"Effect0" ());;;
-     (fun `"Effect1" _ _ => ());
-     (fun `"Effect2" _ _ => ()) }>.
+  <{ handle (perform (`"Effect0" ())) with
+     | (`"Effect1" _) _ => ()
+     | (`"Effect2" _) _ => ()
+     end }>.
 
 Compute (eval_term 1 unhandled_effect).
 
@@ -243,18 +243,24 @@ Example basic_exn_eff :=
                 perform "eff1";
                 "print" "eff1";
                 raise "exn";
-                "print" "exn");;
-             (fun `"RuntimeException" "x" => "print" "x");
-             (fun `"Exception" "x" => "print" (`"Exception" "x")));;;
-          (fun `"Effect1" "x" "k" => "print" "x"; "k" ());
-          (fun `"Effect2" "x" _ => "print" (`"Effect2" "x")));
+                "print" "exn")
+             with
+             | `"RuntimeException" "x" => "print" "x"
+             | `"Exception" "x" => "print" (`"Exception" "x")
+             end)
+          with
+          | (`"Effect1" "x") "k" => "print" "x"; "k" ()
+          | (`"Effect2" "x") _ => "print" (`"Effect2" "x")
+          end);
          let "eff2" := `"Effect2" 2 in
          perform "eff2";
          "print" "eff2";
          let "final_msg" := 69 in
-         "print" "final_msg");;;
-      (fun `"Effect0" "x" "k" => "print" "x"; "k" ());
-      (fun `"Effect2" "x" "k" => "print" (`"Effect2" "x"); "k" ()));
+         "print" "final_msg")
+      with
+      | (`"Effect0" "x") "k" => "print" "x"; "k" ()
+      | (`"Effect2" "x") "k" => "print" (`"Effect2" "x"); "k" ()
+      end);
      !"stdout" }>.
 
 Compute (eval_term 4 basic_exn_eff).
@@ -309,7 +315,9 @@ Example loop :=
        let "f" := perform (`"Foo" ()) in
        "f" ()
      in
-     handle "f" ();;; (fun `"Foo" _ "k" => "k" "f") }>.
+     handle ("f" ()) with
+     | (`"Foo" _) "k" => "k" "f"
+     end }>.
 
 Compute (run_term 10 loop).
 
@@ -326,14 +334,16 @@ Example send_recv_protocol :=
   <{ fun "k" =>
        let fix "send" "args" :=
          let ("k", "v") := "args" in
-         (shallow handle "k" "v";;;
-          (fun `"Send" "n" "k" => "recv" `("n", "k", ()));
-          (fun `"Recv" _ _ => raise (`"Protocol_violation" ())))
+         (shallow handle ("k" "v") with
+          | (`"Send" "n") "k" => "recv" `("n", "k", ())
+          | (`"Recv" _) _ => raise (`"Protocol_violation" ())
+          end)
        with "recv" "args" :=
          let `("n", "k", "v") := "args" in
-         (shallow handle "k" "v";;;
-          (fun `"Recv" _ "k" => "send" ("k", "n"));
-          (fun `"Send" _ _ => raise (`"Protocol_violation" ())))
+         (shallow handle ("k" "v") with
+          | (`"Recv" _) "k" => "send" ("k", "n")
+          | (`"Send" _) _ => raise (`"Protocol_violation" ())
+          end)
        in "send" ("k", ()) }>.
 
 Example run_send_recv1 :=
@@ -470,8 +480,10 @@ Example counting_sort_lt_10 xs :=
             | Inr ("x", "xs'") =>
                 "arr_fs".["x"] <- "arr_fs".["x"] + 1;
                 "ref_xs" <- "xs'"
-            end));;
-      (fun `"Exit" _ => ()));
+            end))
+      with
+      | `"Exit" _ => ()
+      end);
      (for "i" from 9 downto 0 do
         (for _ from ("arr_fs".["i"]) downto 1 do
            "ref_xs" <- Inr ("i", !"ref_xs")));
@@ -503,10 +515,15 @@ Example partition x xs :=
      in
      handle
        (handle
-          (handle ("go" xs);;;
-           (fun (`"Larger" "x") "k" => let "r" := "k" () in Inr ("x", "r")));;;
-        (fun (`"Equal" "x") "k" => let "r" := "k" () in Inr ("x", "r")));;;
-     (fun (`"Smaller" "x") "k" => let "r" := "k" () in Inr ("x", "r")) }>.
+          (handle ("go" xs) with
+           | (`"Larger" "x") "k" => let "r" := "k" () in Inr ("x", "r")
+           end)
+        with
+        | (`"Equal" "x") "k" => let "r" := "k" () in Inr ("x", "r")
+        end)
+     with
+     | (`"Smaller" "x") "k" => let "r" := "k" () in Inr ("x", "r")
+     end }>.
 
 Compute (eval_term_to_list_int 20 <{ {partition 1 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
 Compute (eval_term_to_list_int 20 <{ {partition 2 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).

@@ -96,15 +96,15 @@ Notation "| p => t1 t2" :=
         t2 custom exn_term,
         right associativity) : term_scope.
 
-Notation "| p k => t" :=
+Notation "| p , k => t" :=
   (TEffLast p k t) (in custom eff_term at level 69,
-        p custom pattern' at level 0,
+        p custom pattern' at level 64,
         k custom binder' at level 0,
         t custom term) : term_scope.
 
-Notation "| p k => t1 t2" :=
+Notation "| p , k => t1 t2" :=
   (TEffCons p k t1 t2) (in custom eff_term at level 69,
-        p custom pattern' at level 0,
+        p custom pattern' at level 64,
         k custom binder' at level 0,
         t1 custom term,
         t2 custom eff_term,

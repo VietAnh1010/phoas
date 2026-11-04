@@ -63,7 +63,7 @@ Example breadth_it_effect :=
        let "k" := "DelayedTree".`"fold" `("f", (), "t") in
        let fix "go" "k" :=
          shallow handle ("k" (); Inl ()) with
-         | (`"Yield" `("x", "t1", "t2")) "k" =>
+         | `"Yield" `("x", "t1", "t2"), "k" =>
              let "it" _ := "go" (fun _ => "k" (); "t1" (); "t2" (); Inl ()) in
              Inr ("x", "it")
          end
@@ -100,7 +100,7 @@ Example depth_it_effect :=
        let "DelayedTree" := DelayedTree in
        let "f" "x" := perform (`"Yield" "x") in
        handle ("DelayedTree".`"iter" ("f", "t"); Inl ()) with
-       | (`"Yield" "x") "k" => Inr ("x", "k")
+       | `"Yield" "x", "k" => Inr ("x", "k")
        end }>.
 
 Definition eval_it {A} (f : val -> option A) (candidate : val_term) (fuel : nat) (n : Z) (t : val_term) :=

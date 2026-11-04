@@ -27,8 +27,8 @@ Example run :=
                      end in
             "deq" ())
          with
-         | (`"Yield" _) "k" => "enq" "k"; "deq" ()
-         | (`"Fork" "f") "k" => "enq" "k"; "go" "f"
+         | `"Yield" _, "k" => "enq" "k"; "deq" ()
+         | `"Fork" "f", "k" => "enq" "k"; "go" "f"
          end
        in
        "go" "f" }>.

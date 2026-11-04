@@ -48,8 +48,8 @@ Example accept :=
                | Inr _ => {TVString "no"}
                end)
             with
-            | (`"Fail" _) _ => {TVString "no"}
-            | (`"Flip" _) "k" => "k" true; "k" false
+            | `"Fail" _, _ => {TVString "no"}
+            | `"Flip" _, "k" => "k" true; "k" false
             end)
          with
          | `"Accept" _ => {TVString "yes"}

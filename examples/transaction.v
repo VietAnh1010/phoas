@@ -22,13 +22,13 @@ Example atomically :=
              | "e" => fun "rb" => "rb" (); raise "e"
              end)
           with
-          | (`"Get" "r") "k" => "k" !"r"
-          | (`"Set" "p") "k" => fun "rb" =>
-                                  let ("r", "v") := "p" in
-                                  let "old_v" := !"r" in
-                                  "r" <- "v";
-                                  let "k" := "k" () in
-                                  "k" (fun _ => "r" <- "old_v"; "rb" ())
+          | `"Get" "r", "k" => "k" !"r"
+          | `"Set" "p", "k" => fun "rb" =>
+                                 let ("r", "v") := "p" in
+                                 let "old_v" := !"r" in
+                                 "r" <- "v";
+                                 let "k" := "k" () in
+                                 "k" (fun _ => "r" <- "old_v"; "rb" ())
           end)
        in
        "k" (fun _ => ()) }>.

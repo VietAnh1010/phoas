@@ -220,8 +220,8 @@ Compute (eval_term 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle (perform (`"Effect0" ())) with
-     | (`"Effect1" _) _ => ()
-     | (`"Effect2" _) _ => ()
+     | `"Effect1" _, _ => ()
+     | `"Effect2" _, _ => ()
      end }>.
 
 Compute (eval_term 1 unhandled_effect).
@@ -249,8 +249,8 @@ Example basic_exn_eff :=
              | `"Exception" "x" => "print" (`"Exception" "x")
              end)
           with
-          | (`"Effect1" "x") "k" => "print" "x"; "k" ()
-          | (`"Effect2" "x") _ => "print" (`"Effect2" "x")
+          | `"Effect1" "x", "k" => "print" "x"; "k" ()
+          | `"Effect2" "x", _ => "print" (`"Effect2" "x")
           end);
          let "eff2" := `"Effect2" 2 in
          perform "eff2";
@@ -258,8 +258,8 @@ Example basic_exn_eff :=
          let "final_msg" := 69 in
          "print" "final_msg")
       with
-      | (`"Effect0" "x") "k" => "print" "x"; "k" ()
-      | (`"Effect2" "x") "k" => "print" (`"Effect2" "x"); "k" ()
+      | `"Effect0" "x", "k" => "print" "x"; "k" ()
+      | `"Effect2" "x", "k" => "print" (`"Effect2" "x"); "k" ()
       end);
      !"stdout" }>.
 
@@ -316,7 +316,7 @@ Example loop :=
        "f" ()
      in
      handle ("f" ()) with
-     | (`"Foo" _) "k" => "k" "f"
+     | `"Foo" _, "k" => "k" "f"
      end }>.
 
 Compute (run_term 10 loop).
@@ -335,14 +335,14 @@ Example send_recv_protocol :=
        let fix "send" "args" :=
          let ("k", "v") := "args" in
          (shallow handle ("k" "v") with
-          | (`"Send" "n") "k" => "recv" `("n", "k", ())
-          | (`"Recv" _) _ => raise (`"Protocol_violation" ())
+          | `"Send" "n", "k" => "recv" `("n", "k", ())
+          | `"Recv" _, _ => raise (`"Protocol_violation" ())
           end)
        with "recv" "args" :=
          let `("n", "k", "v") := "args" in
          (shallow handle ("k" "v") with
-          | (`"Recv" _) "k" => "send" ("k", "n")
-          | (`"Send" _) _ => raise (`"Protocol_violation" ())
+          | `"Recv" _, "k" => "send" ("k", "n")
+          | `"Send" _, _ => raise (`"Protocol_violation" ())
           end)
        in "send" ("k", ()) }>.
 
@@ -516,13 +516,13 @@ Example partition x xs :=
      handle
        (handle
           (handle ("go" xs) with
-           | (`"Larger" "x") "k" => let "r" := "k" () in Inr ("x", "r")
+           | `"Larger" "x", "k" => let "r" := "k" () in Inr ("x", "r")
            end)
         with
-        | (`"Equal" "x") "k" => let "r" := "k" () in Inr ("x", "r")
+        | `"Equal" "x", "k" => let "r" := "k" () in Inr ("x", "r")
         end)
      with
-     | (`"Smaller" "x") "k" => let "r" := "k" () in Inr ("x", "r")
+     | `"Smaller" "x", "k" => let "r" := "k" () in Inr ("x", "r")
      end }>.
 
 Compute (eval_term_to_list_int 20 <{ {partition 1 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).

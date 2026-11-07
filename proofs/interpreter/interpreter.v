@@ -42,25 +42,25 @@ Lemma fold_unfold_interpret_record_term_TRecordRest :
     iv_monad_to_ivh_monad (unwrap_vrecord v).
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_interpret_record_term_TRecordCons0 :
+Lemma fold_unfold_interpret_record_term_TRecordConsPun :
   forall (self : val_interpreter)
          (l : ident)
          (t' : record_term)
          (e : env),
-    interpret_record_term self (TRecordCons0 l t') e =
+    interpret_record_term self (TRecordConsPun l t') e =
     match env_find l e with
     | None => throw (Name_error (ident_car l))
     | Some v => RecordCons l v <$> interpret_record_term self t' e
     end.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_interpret_record_term_TRecordCons1 :
+Lemma fold_unfold_interpret_record_term_TRecordCons :
   forall (self : val_interpreter)
          (l : ident)
          (t1 : val_term)
          (t2 : record_term)
          (e : env),
-    interpret_record_term self (TRecordCons1 l t1 t2) e =
+    interpret_record_term self (TRecordCons l t1 t2) e =
     let* v := self t1 e in
     RecordCons l v <$> interpret_record_term self t2 e.
 Proof. reflexivity. Qed.
@@ -679,24 +679,24 @@ Lemma fold_unfold_invoke_kont_app_KNil :
     pure v.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_invoke_kont_app_KCons0 :
+Lemma fold_unfold_invoke_kont_app_KConsSeq :
   forall (self : interpreter)
          (t : term)
          (e : env)
          (k1' k2 : kont)
          (v : val),
-    invoke_kont_app self (KCons0 t e k1') k2 v =
+    invoke_kont_app self (KConsSeq t e k1') k2 v =
     self t e (KApp k1' k2) >>= invoke_kont_app self k1' k2.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_invoke_kont_app_KCons1 :
+Lemma fold_unfold_invoke_kont_app_KConsLet :
   forall (self : interpreter)
          (p : pattern)
          (t : term)
          (e : env)
          (k1' k2 : kont)
          (v : val),
-    invoke_kont_app self (KCons1 p t e k1') k2 v =
+    invoke_kont_app self (KConsLet p t e k1') k2 v =
     let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
     self t e' (KApp k1' k2) >>= invoke_kont_app self k1' k2.
 Proof. reflexivity. Qed.
@@ -716,24 +716,24 @@ Lemma fold_unfold_invoke_kont_KNil :
     pure v.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_invoke_kont_KCons0 :
+Lemma fold_unfold_invoke_kont_KConsSeq :
   forall (self : interpreter)
          (t : term)
          (e : env)
          (k' : kont)
          (v : val),
-    invoke_kont self (KCons0 t e k') v =
+    invoke_kont self (KConsSeq t e k') v =
     self t e k' >>= invoke_kont self k'.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_invoke_kont_KCons1 :
+Lemma fold_unfold_invoke_kont_KConsLet :
   forall (self : interpreter)
          (p : pattern)
          (t : term)
          (e : env)
          (k' : kont)
          (v : val),
-    invoke_kont self (KCons1 p t e k') v =
+    invoke_kont self (KConsLet p t e k') v =
     let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
     self t e' k' >>= invoke_kont self k'.
 Proof. reflexivity. Qed.
@@ -847,7 +847,7 @@ Lemma fold_unfold_interpret_term'_aux_TSeq :
          (e : env)
          (k : kont),
     interpret_term'_aux self (TSeq t1 t2) e k =
-    let* _ := interpret_term'_aux self t1 e (KCons0 t2 e k) in
+    let* _ := interpret_term'_aux self t1 e (KConsSeq t2 e k) in
     interpret_term'_aux self t2 e k.
 Proof. reflexivity. Qed.
 
@@ -858,7 +858,7 @@ Lemma fold_unfold_interpret_term'_aux_TLet :
          (e : env)
          (k : kont),
     interpret_term'_aux self (TLet p t1 t2) e k =
-    let* v := interpret_term'_aux self t1 e (KCons1 p t2 e k) in
+    let* v := interpret_term'_aux self t1 e (KConsLet p t2 e k) in
     let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
     interpret_term'_aux self t2 e' k.
 Proof. reflexivity. Qed.
@@ -895,7 +895,7 @@ Lemma fold_unfold_interpret_term'_aux_TWhile :
     let* v := interpret_val_term' (interpret_term'_aux self) tv e in
     let* b := iv_monad_to_irh_monad (unwrap_vbool v) in
     if b then
-      let* _ := interpret_term'_aux self t' e (KCons0 (TWhile tv t') e k) in
+      let* _ := interpret_term'_aux self t' e (KConsSeq (TWhile tv t') e k) in
       self (TWhile tv t') e k
     else pure VTt.
 Proof. reflexivity. Qed.
@@ -921,7 +921,7 @@ Lemma fold_unfold_interpret_term'_aux_TFor :
       | O => pure VTt
       | S n' =>
           let i' := f i in
-          let* _ := interpret_term'_aux self t' (with_binder b (VInt i) e) (KCons0 (TFor b (TVInt i') d tv t') e k) in
+          let* _ := interpret_term'_aux self t' (with_binder b (VInt i) e) (KConsSeq (TFor b (TVInt i') d tv t') e k) in
           go n' i'
       end
     in go (Z.to_nat (z + 1)) i1.
@@ -1071,8 +1071,8 @@ Hint Rewrite
   fold_unfold_interpret_tuple_term_TTupleCons
   fold_unfold_interpret_record_term_TRecordNil
   fold_unfold_interpret_record_term_TRecordRest
-  fold_unfold_interpret_record_term_TRecordCons0
-  fold_unfold_interpret_record_term_TRecordCons1
+  fold_unfold_interpret_record_term_TRecordConsPun
+  fold_unfold_interpret_record_term_TRecordCons
   fold_unfold_interpret_array_term_TArrayNil
   fold_unfold_interpret_array_term_TArrayCons
   fold_unfold_interpret_val_term_TVVar

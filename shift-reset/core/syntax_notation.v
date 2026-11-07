@@ -57,16 +57,16 @@ Notation "'..' p" :=
   (PRecordRest p) (in custom record_pattern at level 1, p custom pattern' at level 65) : term_scope.
 
 Notation "l" :=
-  (PRecordCons0 l PRecordNil) (in custom record_pattern at level 1, l constr at level 0) : term_scope.
+  (PRecordConsPun l PRecordNil) (in custom record_pattern at level 1, l constr at level 0) : term_scope.
 
 Notation "l ; p" :=
-  (PRecordCons0 l p) (in custom record_pattern at level 1, l constr at level 0, p custom record_pattern at level 1) : term_scope.
+  (PRecordConsPun l p) (in custom record_pattern at level 1, l constr at level 0, p custom record_pattern at level 1) : term_scope.
 
 Notation "l := p" :=
-  (PRecordCons1 l p PRecordNil) (in custom record_pattern at level 1, l constr at level 0, p custom pattern' at level 65) : term_scope.
+  (PRecordCons l p PRecordNil) (in custom record_pattern at level 1, l constr at level 0, p custom pattern' at level 65) : term_scope.
 
 Notation "l := p1 ; p2" :=
-  (PRecordCons1 l p1 p2) (in custom record_pattern at level 1,
+  (PRecordCons l p1 p2) (in custom record_pattern at level 1,
         l constr at level 0,
         p1 custom pattern' at level 65,
         p2 custom record_pattern at level 1) : term_scope.
@@ -418,16 +418,16 @@ Notation "`( t1 , .. , tn )" :=
         tn custom term at level 64) : term_scope.
 
 Notation "l" :=
-  (TRecordCons0 l TRecordNil) (in custom record_term at level 1, l constr at level 0) : term_scope.
+  (TRecordConsPun l TRecordNil) (in custom record_term at level 1, l constr at level 0) : term_scope.
 
 Notation "l ; t" :=
-  (TRecordCons0 l t) (in custom record_term at level 1, l constr at level 0, t custom record_term at level 1) : term_scope.
+  (TRecordConsPun l t) (in custom record_term at level 1, l constr at level 0, t custom record_term at level 1) : term_scope.
 
 Notation "l := t" :=
-  (TRecordCons1 l t TRecordNil) (in custom record_term at level 1, l constr at level 0, t custom term at level 65) : term_scope.
+  (TRecordCons l t TRecordNil) (in custom record_term at level 1, l constr at level 0, t custom term at level 65) : term_scope.
 
 Notation "l := t1 ; t2" :=
-  (TRecordCons1 l t1 t2) (in custom record_term at level 1,
+  (TRecordCons l t1 t2) (in custom record_term at level 1,
         l constr at level 0,
         t1 custom term at level 65,
         t2 custom record_term at level 1) : term_scope.

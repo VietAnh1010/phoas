@@ -26,12 +26,12 @@ Fixpoint interpret_record_term (self : val_interpreter) (t : record_term) (e : e
   | TRecordRest t' =>
       let* v := self t' e in
       iv_monad_to_ivh_monad (unwrap_vrecord v)
-  | TRecordCons0 l t' =>
+  | TRecordConsPun l t' =>
       match env_find l e with
       | None => throw (Name_error (ident_car l))
       | Some v => RecordCons l v <$> interpret_record_term self t' e
       end
-  | TRecordCons1 l t1 t2 =>
+  | TRecordCons l t1 t2 =>
       let* v := self t1 e in
       RecordCons l v <$> interpret_record_term self t2 e
   end.
@@ -307,8 +307,8 @@ Definition unwind_shallow_handle (self : interpreter) (t1 : ret_term) (t2 : eff_
 Fixpoint invoke_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) : irh_monad val :=
   match k1 with
   | KNil => pure v
-  | KCons0 t e k1' => self t e (KApp k1' k2) >>= invoke_kont_app self k1' k2
-  | KCons1 p t e k1' =>
+  | KConsSeq t e k1' => self t e (KApp k1' k2) >>= invoke_kont_app self k1' k2
+  | KConsLet p t e k1' =>
       let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
       self t e' (KApp k1' k2) >>= invoke_kont_app self k1' k2
   | KApp k11 k12 => invoke_kont_app self k11 (KApp k12 k2) v >>= invoke_kont_app self k12 k2
@@ -317,8 +317,8 @@ Fixpoint invoke_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) 
 Fixpoint invoke_kont (self : interpreter) (k : kont) (v : val) : irh_monad val :=
   match k with
   | KNil => pure v
-  | KCons0 t e k' => self t e k' >>= invoke_kont self k'
-  | KCons1 p t e k' =>
+  | KConsSeq t e k' => self t e k' >>= invoke_kont self k'
+  | KConsLet p t e k' =>
       let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
       self t e' k' >>= invoke_kont self k'
   | KApp k1 k2 => invoke_kont_app self k1 k2 v >>= invoke_kont self k2
@@ -373,10 +373,10 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
         | CMKHandle mk t1 t2 e => try (invoke_metakont self mk v2) >>= unwind_handle self t1 t2 e k
         end
     | TSeq t1 t2 =>
-        let* _ := self' t1 e (KCons0 t2 e k) in
+        let* _ := self' t1 e (KConsSeq t2 e k) in
         self' t2 e k
     | TLet p t1 t2 =>
-        let* v := self' t1 e (KCons1 p t2 e k) in
+        let* v := self' t1 e (KConsLet p t2 e k) in
         let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
         self' t2 e' k
     | TMatch tv t' => interpret_val_term' self' tv e >>= interpret_match_term self' t' e k
@@ -388,7 +388,7 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
         let* v := interpret_val_term' self' tv e in
         let* b := iv_monad_to_irh_monad (unwrap_vbool v) in
         if b then
-          let* _ := self' t' e (KCons0 t e k) in
+          let* _ := self' t' e (KConsSeq t e k) in
           self t e k
         else pure VTt
     | TFor b tv1 d tv2 t' =>
@@ -403,7 +403,7 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
           | O => pure VTt
           | S n' =>
               let i' := f i in
-              let* _ := self' t' (with_binder b (VInt i) e) (KCons0 (TFor b (TVInt i') d tv t') e k) in
+              let* _ := self' t' (with_binder b (VInt i) e) (KConsSeq (TFor b (TVInt i') d tv t') e k) in
               go n' i'
           end
         in go (Z.to_nat (z + 1)) i1

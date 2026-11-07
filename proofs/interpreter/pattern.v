@@ -200,12 +200,12 @@ Lemma fold_unfold_match_record_pattern_PRecordRest :
     match_pattern p' (VRecord r) e.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_match_record_pattern_PRecordCons0 :
+Lemma fold_unfold_match_record_pattern_PRecordConsPun :
   forall (l : ident)
          (p' : record_pattern)
          (r : record)
          (e : env),
-    match_record_pattern (PRecordCons0 l p') r e =
+    match_record_pattern (PRecordConsPun l p') r e =
     let (o, r') := record_find_remove l r in
     match o with
     | None => throw (Match_failure "match_record_pattern")
@@ -213,13 +213,13 @@ Lemma fold_unfold_match_record_pattern_PRecordCons0 :
     end.
 Proof. reflexivity. Qed.
 
-Lemma fold_unfold_match_record_pattern_PRecordCons1 :
+Lemma fold_unfold_match_record_pattern_PRecordCons :
   forall (l : ident)
          (p1 : pattern)
          (p2 : record_pattern)
          (r : record)
          (e : env),
-    match_record_pattern (PRecordCons1 l p1 p2) r e =
+    match_record_pattern (PRecordCons l p1 p2) r e =
     let (o, r') := record_find_remove l r in
     match o with
     | None => throw (Match_failure "match_record_pattern")

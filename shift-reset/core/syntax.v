@@ -29,8 +29,8 @@ with tuple_pattern : Type :=
 with record_pattern : Type :=
 | PRecordNil : record_pattern
 | PRecordRest : pattern -> record_pattern
-| PRecordCons0 : ident -> record_pattern -> record_pattern
-| PRecordCons1 : ident -> pattern -> record_pattern -> record_pattern.
+| PRecordConsPun : ident -> record_pattern -> record_pattern
+| PRecordCons : ident -> pattern -> record_pattern -> record_pattern.
 
 Inductive op1 : Type :=
 | Op1Pos : op1
@@ -139,8 +139,8 @@ with tuple_term : Type :=
 with record_term : Type :=
 | TRecordNil : record_term
 | TRecordRest : val_term -> record_term
-| TRecordCons0 : ident -> record_term -> record_term
-| TRecordCons1 : ident -> val_term -> record_term -> record_term
+| TRecordConsPun : ident -> record_term -> record_term
+| TRecordCons : ident -> val_term -> record_term -> record_term
 with array_term : Type :=
 | TArrayNil : array_term
 | TArrayCons : val_term -> array_term -> array_term.
@@ -169,8 +169,8 @@ Inductive val : Type :=
 | VMKHandle : metakont -> ret_term -> eff_term -> env -> val
 with kont : Type :=
 | KNil : kont
-| KCons0 : term -> env -> kont -> kont
-| KCons1 : pattern -> term -> env -> kont -> kont
+| KConsSeq : term -> env -> kont -> kont
+| KConsLet : pattern -> term -> env -> kont -> kont
 | KApp : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont

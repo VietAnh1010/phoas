@@ -38,12 +38,20 @@ Definition dispatch_lnot (v : val) : iv_monad val :=
   | _ => throw (Type_error "int" v)
   end.
 
+Definition dispatch_length (v : val) : iv_monad val :=
+  match v with
+  | VString s => pure (VInt (Z.of_nat (String.length s)))
+  | VArray _ z => pure (VInt z)
+  | _ => throw (Type_error "array | string" v)
+  end.
+
 Definition dispatch_op1 (op : op1) : val -> iv_monad val :=
   match op with
   | Op1Pos => dispatch_pos
   | Op1Neg => dispatch_neg
   | Op1Not => dispatch_not
   | Op1Lnot => dispatch_lnot
+  | Op1Length => dispatch_length
   end.
 
 Definition dispatch_add (v1 v2 : val) : iv_monad val :=

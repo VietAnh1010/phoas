@@ -39,7 +39,8 @@ Inductive op1 : Type :=
 | Op1Pos : op1
 | Op1Neg : op1
 | Op1Not : op1
-| Op1Lnot : op1.
+| Op1Lnot : op1
+| Op1Length : op1.
 
 Inductive op2 : Type :=
 | Op2Add : op2

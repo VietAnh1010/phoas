@@ -293,6 +293,9 @@ Notation "- t" :=
 Notation "'not' t" :=
   (Op1Not t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
+Notation "'length' t" :=
+  (Op1Length t) (in custom term at level 17, t custom term at level 10) : term_scope.
+
 Notation "'lnot' t" :=
   (Op1Lnot t) (in custom term at level 17, t custom term at level 10) : term_scope.
 

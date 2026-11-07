@@ -131,16 +131,28 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
     | TVGetAt t1 t2 =>
         let* v1 := self' t1 e in
         let* v2 := self' t2 e in
-        let* '(Array l z) := iv_monad_to_ivh_monad (unwrap_varray v1) in
-        let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
-        if (i <? 0) ||| (z <=? i) then
-          throw (Invalid_argument "index out of bounds")
-        else
-          let* h := get in
-          match iheap_read (loc_add l i) h with
-          | None => throw (Memory_error "array_get_at")
-          | Some v => pure v
-          end
+        match v1 with
+        | VArray l z =>
+            let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
+            if (i <? 0) ||| (z <=? i) then
+              throw (Invalid_argument "index out of bounds")
+            else
+              let* h := get in
+              match iheap_read (loc_add l i) h with
+              | None => throw (Memory_error "array_get_at")
+              | Some v => pure v
+              end
+        | VString s =>
+            let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
+            if i <? 0 then
+              throw (Invalid_argument "index out of bounds")
+            else
+              match String.get (Z.to_nat i) s with
+              | None => throw (Invalid_argument "index out of bounds")
+              | Some a => pure (VChar a)
+              end
+        | _ => throw (Type_error "array | string" v1)
+        end
     | TVSetAt t1 t2 t3 =>
         let* v1 := self' t1 e in
         let* v2 := self' t2 e in

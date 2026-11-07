@@ -36,9 +36,11 @@ Notation "'false'" := PFalse (in custom pattern' at level 0) : term_scope.
 Notation "p1 , p2" :=
   (PPair p1 p2) (in custom pattern' at level 65, p1 custom pattern', p2 custom pattern', left associativity) : term_scope.
 
-Notation "`( p1 , .. , pn )" :=
-  (PTuple (PTupleCons p1 .. (PTupleCons pn PTupleNil) ..)) (in custom pattern' at level 0,
+Notation "`( p1 , p2 , p3 , .. , pn )" :=
+  (PTuple (PTupleCons p1 (PTupleCons p2 (PTupleCons p3 .. (PTupleCons pn PTupleNil) ..)))) (in custom pattern' at level 0,
         p1 custom pattern' at level 64,
+        p2 custom pattern' at level 64,
+        p3 custom pattern' at level 64,
         pn custom pattern' at level 64) : term_scope.
 
 Notation "`{ p }" :=
@@ -415,9 +417,11 @@ Notation "` l" :=
 Notation "` l t" :=
   (TVVariant (TVariantSome l t)) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
 
-Notation "`( t1 , .. , tn )" :=
-  (TVTuple (TTupleCons t1 .. (TTupleCons tn TTupleNil) ..)) (in custom term at level 0,
+Notation "`( t1 , t2 , t3 , .. , tn )" :=
+  (TVTuple (TTupleCons t1 (TTupleCons t2 (TTupleCons t3 .. (TTupleCons tn TTupleNil) ..)))) (in custom term at level 0,
         t1 custom term at level 64,
+        t2 custom term at level 64,
+        t3 custom term at level 64,
         tn custom term at level 64) : term_scope.
 
 Notation "l" :=

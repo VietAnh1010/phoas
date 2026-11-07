@@ -13,9 +13,6 @@ Definition Name_error (s : string) : val :=
 Definition Memory_error (s : string) : val :=
   VVariant (VariantSome (Ident "Memory_error") (VString s)).
 
-Definition Assert_failure (s : string) : val :=
-  VVariant (VariantSome (Ident "Assert_failure") (VString s)).
-
 Definition Match_failure (s : string) : val :=
   VVariant (VariantSome (Ident "Match_failure") (VString s)).
 

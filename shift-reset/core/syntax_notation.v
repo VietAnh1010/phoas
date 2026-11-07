@@ -284,9 +284,6 @@ Notation "'false'" := TVFalse (in custom term at level 0) : term_scope.
 Notation "! t" :=
   (TVGet t) (in custom term at level 2, t custom term at level 10) : term_scope.
 
-Notation "+ t" :=
-  (Op1Pos t) (in custom term at level 23, t custom term at level 10) : term_scope.
-
 Notation "- t" :=
   (Op1Neg t) (in custom term at level 23, t custom term at level 10) : term_scope.
 
@@ -307,9 +304,6 @@ Notation "'snd' t" :=
 
 Notation "'ref' t" :=
   (TVRef t) (in custom term at level 17, t custom term at level 10) : term_scope.
-
-Notation "'assert' t" :=
-  (TVAssert t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "t1 + t2" :=
   (Op2Add t1 t2) (in custom term at level 40, t1 custom term, t2 custom term, left associativity) : term_scope.

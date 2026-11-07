@@ -11,13 +11,6 @@ Local Open Scope except_scope.
 Local Open Scope string_scope.
 Local Open Scope lazy_bool_scope.
 
-Definition dispatch_pos (v : val) : iv_monad val :=
-  match v with
-  | VInt _ => pure v
-  | VFloat _ => pure v
-  | _ => throw (Type_error "int | float" v)
-  end.
-
 Definition dispatch_neg (v : val) : iv_monad val :=
   match v with
   | VInt z => pure (VInt (-z))
@@ -47,7 +40,6 @@ Definition dispatch_length (v : val) : iv_monad val :=
 
 Definition dispatch_op1 (op : op1) : val -> iv_monad val :=
   match op with
-  | Op1Pos => dispatch_pos
   | Op1Neg => dispatch_neg
   | Op1Not => dispatch_not
   | Op1Lnot => dispatch_lnot

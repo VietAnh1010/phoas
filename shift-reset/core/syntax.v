@@ -36,7 +36,6 @@ with variant_pattern : Type :=
 | PVariantSome : ident -> pattern -> variant_pattern.
 
 Inductive op1 : Type :=
-| Op1Pos : op1
 | Op1Neg : op1
 | Op1Not : op1
 | Op1Lnot : op1
@@ -116,7 +115,6 @@ with val_term : Type :=
 | TVSet : val_term -> val_term -> val_term
 | TVGetAt : val_term -> val_term -> val_term
 | TVSetAt : val_term -> val_term -> val_term -> val_term
-| TVAssert : val_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
 | TVBuiltin1 : ident -> val_term -> val_term

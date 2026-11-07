@@ -167,10 +167,6 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
           | None => throw (Memory_error "array_set_at")
           | Some h' => VTt <$ put h'
           end
-    | TVAssert t' =>
-        let* v := self' t' e in
-        let* b := iv_monad_to_ivh_monad (unwrap_vbool v) in
-        if b then pure VTt else throw (Assert_failure "")
     | TVOp1 op t' =>
         let* v := self' t' e in
         iv_monad_to_ivh_monad (op.dispatch_op1 op v)

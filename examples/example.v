@@ -46,8 +46,6 @@ Example ex1 :=
 
 Compute (eval_term 2 ex1).
 
-Definition ref_free := TVBuiltin1 "ref_free".
-
 Example either :=
   <{ fun "x" "y" => shift (fun "k" => "k" "x"; "k" "y") }>.
 
@@ -60,7 +58,7 @@ Example ex2 :=
          if ("p" || "q") && ("p" || not "q") && (not "p" || not "q")
          then "result" <- true else ()));
      let "answer" := !"result" || "crash" in
-     {ref_free "result"}; "answer" }>.
+     %"ref_free" "result"; "answer" }>.
 
 Compute (eval_term 5 ex2).
 
@@ -82,7 +80,7 @@ Example sum xs :=
   <{ let "result" := ref 0 in
      reset (let "x" := choice xs in "result" <- "x" + !"result";
                                     let "answer" := !"result" in
-                                    {ref_free "result"}; "answer") }>.
+                                    %"ref_free" "result"; "answer") }>.
 
 Compute (eval_term 3 (sum (list_int_to_val_term []))).
 Compute (eval_term 4 (sum (list_int_to_val_term [1]))).
@@ -467,7 +465,7 @@ Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 2 5)).
 Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 3 5)).
 Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 4 5)).
 
-Example array_make := TVBuiltin2 "array_make".
+Example array_make := <{ %"array_make" }>.
 
 Example counting_sort_lt_10 xs :=
   <{ let "ref_xs" := ref xs in

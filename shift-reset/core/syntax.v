@@ -118,8 +118,7 @@ with val_term : Type :=
 | TVSetAt : val_term -> val_term -> val_term -> val_term
 | TVOp1 : op1 -> val_term -> val_term
 | TVOp2 : op2 -> val_term -> val_term -> val_term
-| TVBuiltin1 : ident -> val_term -> val_term
-| TVBuiltin2 : ident -> val_term -> val_term -> val_term
+| TVPrim : ident -> val_term
 | TVBy : term -> val_term
 with match_term : Type :=
 | TMatchNil : match_term
@@ -162,6 +161,7 @@ Inductive val : Type :=
 | VFun : pattern -> term -> env -> val
 | VFix : ident -> pattern -> term -> env -> val
 | VFixMut : fix_mut_term -> ident -> env -> val
+| VPrim : ident -> val
 | VPair : val -> val -> val
 | VTuple : tuple -> val
 | VRecord : record -> val
@@ -198,13 +198,14 @@ with variant : Type :=
 | VariantNone : ident -> variant
 | VariantSome : ident -> val -> variant.
 
-Inductive closure : Type :=
-| CFun : pattern -> term -> env -> closure
-| CFix : ident -> pattern -> term -> env -> closure
-| CFixMut : fix_mut_term -> ident -> env -> closure
-| CMKPure : metakont -> closure
-| CMKReset : metakont -> closure
-| CMKHandle : metakont -> ret_term -> eff_term -> env -> closure.
+Inductive applicable : Type :=
+| AFun : pattern -> term -> env -> applicable
+| AFix : ident -> pattern -> term -> env -> applicable
+| AFixMut : fix_mut_term -> ident -> env -> applicable
+| APrim : ident -> applicable
+| AMKPure : metakont -> applicable
+| AMKReset : metakont -> applicable
+| AMKHandle : metakont -> ret_term -> eff_term -> env -> applicable.
 
 Inductive array : Type :=
 | Array : loc -> Z -> array.

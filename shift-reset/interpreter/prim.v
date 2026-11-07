@@ -38,26 +38,14 @@ Definition ref_free (v : val) : ivh_monad val :=
 Definition int_to_string (v : val) : ivh_monad val :=
   let+ z := iv_monad_to_ivh_monad (unwrap_vint v) in VString (Z_to_string z).
 
-Definition builtin1_registry : list (ident * (val -> ivh_monad val)) :=
-  [(Ident "int_to_string", int_to_string);
-   (Ident "string_length", string_length);
-   (Ident "array_length", array_length);
-   (Ident "tuple_length", tuple_length);
-   (Ident "ref_free", ref_free);
-   (Ident "array_free", array_free)].
-
-Definition dispatch_builtin1 (l : ident) : iv_monad (val -> ivh_monad val) :=
-  match list.assoc ident_eqb l builtin1_registry with
-  | Some f => except.pure f
-  | None => except.throw (Name_error (ident_car l))
-  end.
-
-Definition array_make (v1 v2 : val) : ivh_monad val :=
+Definition array_make (v : val) : ivh_monad val :=
+  let* '(v1, v2) := iv_monad_to_ivh_monad (unwrap_vprod v) in
   let* z := iv_monad_to_ivh_monad (unwrap_vint v1) in
   if z <? 0 then throw (Invalid_argument "array_make")
   else state (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
 
-Definition string_get (v1 v2 : val) : ivh_monad val :=
+Definition string_get (v : val) : ivh_monad val :=
+  let* '(v1, v2) := iv_monad_to_ivh_monad (unwrap_vprod v) in
   let* s := iv_monad_to_ivh_monad (unwrap_vstring v1) in
   let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
   if i <? 0 then
@@ -68,7 +56,8 @@ Definition string_get (v1 v2 : val) : ivh_monad val :=
     | None => throw (Invalid_argument "index out of bounds")
     end.
 
-Definition tuple_get (v1 v2 : val) : ivh_monad val :=
+Definition tuple_get (v : val) : ivh_monad val :=
+  let* '(v1, v2) := iv_monad_to_ivh_monad (unwrap_vprod v) in
   let* t := iv_monad_to_ivh_monad (unwrap_vtuple v1) in
   let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
   if i <? 0 then
@@ -79,13 +68,21 @@ Definition tuple_get (v1 v2 : val) : ivh_monad val :=
     | None => throw (Invalid_argument "index out of bounds")
     end.
 
-Definition builtin2_registry : list (ident * (val -> val -> ivh_monad val)) :=
-  [(Ident "array_make", array_make);
+Definition prim : Type := val -> ivh_monad val.
+
+Definition prim_registry : list (ident * prim) :=
+  [(Ident "int_to_string", int_to_string);
+   (Ident "string_length", string_length);
+   (Ident "array_length", array_length);
+   (Ident "tuple_length", tuple_length);
+   (Ident "ref_free", ref_free);
+   (Ident "array_free", array_free);
+   (Ident "array_make", array_make);
    (Ident "string_get", string_get);
    (Ident "tuple_get", tuple_get)].
 
-Definition dispatch_builtin2 (l : ident) : iv_monad (val -> val -> ivh_monad val) :=
-  match list.assoc ident_eqb l builtin2_registry with
+Definition dispatch_prim (l : ident) : iv_monad prim :=
+  match list.assoc ident_eqb l prim_registry with
   | Some f => except.pure f
   | None => except.throw (Name_error (ident_car l))
   end.

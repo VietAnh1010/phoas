@@ -81,11 +81,11 @@ Hint Resolve tuple_eq_dec : eq_dec_db.
 Hint Resolve record_eq_dec : eq_dec_db.
 Hint Resolve variant_eq_dec : eq_dec_db.
 
-Lemma closure_eq_dec : forall (c1 c2 : closure), {c1 = c2} + {c1 <> c2}.
+Lemma applicable_eq_dec : forall (a1 a2 : applicable), {a1 = a2} + {a1 <> a2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
 Lemma array_eq_dec : forall (a1 a2 : array), {a1 = a2} + {a1 <> a2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Hint Resolve closure_eq_dec : eq_dec_db.
+Hint Resolve applicable_eq_dec : eq_dec_db.
 Hint Resolve array_eq_dec : eq_dec_db.

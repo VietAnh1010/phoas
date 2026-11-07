@@ -48,5 +48,5 @@ Definition unwrap_vrecord : val -> iv_monad record :=
 Definition unwrap_varray : val -> iv_monad array :=
   unwrap_val val_to_array "array".
 
-Definition unwrap_vclosure : val -> iv_monad closure :=
-  unwrap_val val_to_closure "closure".
+Definition unwrap_vapplicable : val -> iv_monad applicable :=
+  unwrap_val val_to_applicable "applicable".

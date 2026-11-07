@@ -1,7 +1,7 @@
 From Stdlib Require Import Bool List String ZArith.
 From shift_reset.core Require Import syntax env ident loc record tuple.
 From shift_reset.monad Require Import es_monad.
-From shift_reset.interpreter Require builtin op.
+From shift_reset.interpreter Require op prim.
 From shift_reset.interpreter Require Import array error iheap imonad pattern unwrap.
 Import ESMonadNotations ListNotations.
 
@@ -189,13 +189,7 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
         let* v1 := self' t1 e in
         let* v2 := self' t2 e in
         iv_monad_to_ivh_monad (op.dispatch_op2 op v1 v2)
-    | TVBuiltin1 l t' =>
-        let* f := iv_monad_to_ivh_monad (builtin.dispatch_builtin1 l) in
-        self' t' e >>= f
-    | TVBuiltin2 l t1 t2 =>
-        let* f := iv_monad_to_ivh_monad (builtin.dispatch_builtin2 l) in
-        let* v := self' t1 e in
-        self' t2 e >>= f v
+    | TVPrim l => pure (VPrim l)
     | TVBy t' => irh_monad_to_ivh_monad (self t' e KNil)
     end.
 
@@ -388,18 +382,21 @@ Definition interpret_term'_aux (self : interpreter) : term -> env -> kont -> irh
     | TApp tv1 tv2 =>
         let* v1 := interpret_val_term' self' tv1 e in
         let* v2 := interpret_val_term' self' tv2 e in
-        let* c := iv_monad_to_irh_monad (unwrap_vclosure v1) in
-        match c with
-        | CFun p t' e =>
+        let* a := iv_monad_to_irh_monad (unwrap_vapplicable v1) in
+        match a with
+        | AFun p t' e =>
             let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v2 e) in
             self t' e' k
-        | CFix f p t' e =>
+        | AFix f p t' e =>
             let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v2 (ECons f v1 e)) in
             self t' e' k
-        | CFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
-        | CMKPure mk => invoke_metakont_app self mk k v2
-        | CMKReset mk => catch (invoke_metakont self mk v2) (unwind_reset k)
-        | CMKHandle mk t1 t2 e => try (invoke_metakont self mk v2) >>= unwind_handle self t1 t2 e k
+        | AFixMut t' f e => interpret_fix_mut_term self t' (with_fix_mut_term t' e) k f v2
+        | APrim l =>
+            let* f := iv_monad_to_irh_monad (prim.dispatch_prim l) in
+            ivh_monad_to_irh_monad (f v2)
+        | AMKPure mk => invoke_metakont_app self mk k v2
+        | AMKReset mk => catch (invoke_metakont self mk v2) (unwind_reset k)
+        | AMKHandle mk t1 t2 e => try (invoke_metakont self mk v2) >>= unwind_handle self t1 t2 e k
         end
     | TSeq t1 t2 =>
         let* _ := self' t1 e (KConsSeq t2 e k) in

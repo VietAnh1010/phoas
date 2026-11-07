@@ -13,14 +13,15 @@ Definition VSum (s : val + val) : val :=
   | inr v => VInr v
   end.
 
-Definition VClosure (c : closure) : val :=
-  match c with
-  | CFun p t e => VFun p t e
-  | CFix f p t e => VFix f p t e
-  | CFixMut t f e => VFixMut t f e
-  | CMKPure mk => VMKPure mk
-  | CMKReset mk => VMKReset mk
-  | CMKHandle mk t1 t2 e => VMKHandle mk t1 t2 e
+Definition VApplicable (a : applicable) : val :=
+  match a with
+  | AFun p t e => VFun p t e
+  | AFix f p t e => VFix f p t e
+  | AFixMut t f e => VFixMut t f e
+  | APrim l => VPrim l
+  | AMKPure mk => VMKPure mk
+  | AMKReset mk => VMKReset mk
+  | AMKHandle mk t1 t2 e => VMKHandle mk t1 t2 e
   end.
 
 Definition val_to_unit (v : val) : option unit :=
@@ -103,14 +104,15 @@ Definition val_to_array (v : val) : option array :=
   | _ => None
   end.
 
-Definition val_to_closure (v : val) : option closure :=
+Definition val_to_applicable (v : val) : option applicable :=
   match v with
-  | VFun p t e => Some (CFun p t e)
-  | VFix f p t e => Some (CFix f p t e)
-  | VFixMut t f e => Some (CFixMut t f e)
-  | VMKPure mk => Some (CMKPure mk)
-  | VMKReset mk => Some (CMKReset mk)
-  | VMKHandle mk t1 t2 e => Some (CMKHandle mk t1 t2 e)
+  | VFun p t e => Some (AFun p t e)
+  | VFix f p t e => Some (AFix f p t e)
+  | VFixMut t f e => Some (AFixMut t f e)
+  | VPrim l => Some (APrim l)
+  | VMKPure mk => Some (AMKPure mk)
+  | VMKReset mk => Some (AMKReset mk)
+  | VMKHandle mk t1 t2 e => Some (AMKHandle mk t1 t2 e)
   | _ => None
   end.
 
@@ -129,6 +131,6 @@ Definition type_of_val (v : val) : string :=
   | VVariant _ => "variant"
   | VRef _ => "ref"
   | VArray _ _ => "array"
-  | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _
-  | VMKPure _ | VMKReset _ | VMKHandle _ _ _ _ => "closure"
+  | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _ | VPrim _
+  | VMKPure _ | VMKReset _ | VMKHandle _ _ _ _ => "applicable"
   end.

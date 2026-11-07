@@ -42,6 +42,16 @@ Definition interpret_variant_term (self : val_interpreter) (t : variant_term) (e
   | TVariantSome l t' => VariantSome l <$> self t' e
   end.
 
+Fixpoint update_record (r1 r2 : record) : ivh_monad record :=
+  match r2 with
+  | RecordNil => pure r1
+  | RecordCons l v r2' =>
+      match record_replace l v r1 with
+      | None => throw (Name_error (ident_car l))
+      | Some r1' => update_record r1' r2'
+      end
+  end.
+
 Fixpoint interpret_array_term (self : val_interpreter) (t : array_term) (e : env) : ivh_monad (nat * list val) :=
   match t with
   | TArrayNil => pure (O, [])
@@ -102,6 +112,11 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
         | None => throw (Name_error (ident_car l))
         | Some v' => pure v'
         end
+    | TVUpdateRecord t1 t2 =>
+        let* v := self' t1 e in
+        let* r1 := iv_monad_to_ivh_monad (unwrap_vrecord v) in
+        let* r2 := interpret_record_term self' t2 e in
+        VRecord <$> update_record r1 r2
     | TVInl t' => VInl <$> self' t' e
     | TVInr t' => VInr <$> self' t' e
     | TVVariant t' => VVariant <$> interpret_variant_term self' t' e

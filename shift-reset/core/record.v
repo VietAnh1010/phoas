@@ -19,3 +19,11 @@ Fixpoint record_find_remove (l : ident) (r : record) : option val * record :=
       if ident_eqb l l' then (Some v, r')
       else let (o, r') := record_find_remove l r' in (o, RecordCons l' v r')
   end.
+
+Fixpoint record_replace (l : ident) (v : val) (r : record) : option record :=
+  match r with
+  | RecordNil => None
+  | RecordCons l' v' r' =>
+      if ident_eqb l l' then Some (RecordCons l' v r')
+      else option_map (RecordCons l' v') (record_replace l v r')
+  end.

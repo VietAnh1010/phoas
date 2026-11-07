@@ -447,6 +447,9 @@ Notation "t .# i" :=
 Notation "t .` l" :=
   (TVProjRecord t l) (in custom term at level 1, t custom term, l constr at level 0, left associativity) : term_scope.
 
+Notation "t .`{ r }" :=
+  (TVUpdateRecord t r) (in custom term at level 1, t custom term, r custom record_term at level 1, left associativity) : term_scope.
+
 Notation "t1 .[ t2 ]" :=
   (TVGetAt t1 t2) (in custom term at level 1, t1 custom term, t2 custom term at level 65, left associativity) : term_scope.
 

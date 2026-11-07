@@ -106,6 +106,7 @@ with val_term : Type :=
 | TVRecord : record_term -> val_term
 | TVProjTuple : val_term -> nat -> val_term
 | TVProjRecord : val_term -> ident -> val_term
+| TVUpdateRecord : val_term -> record_term -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
 | TVVariant : variant_term -> val_term

@@ -36,6 +36,12 @@ Fixpoint interpret_record_term (self : val_interpreter) (t : record_term) (e : e
       RecordCons l v <$> interpret_record_term self t2 e
   end.
 
+Definition interpret_variant_term (self : val_interpreter) (t : variant_term) (e : env) : ivh_monad variant :=
+  match t with
+  | TVariantNone l => pure (VariantNone l)
+  | TVariantSome l t' => VariantSome l <$> self t' e
+  end.
+
 Fixpoint interpret_array_term (self : val_interpreter) (t : array_term) (e : env) : ivh_monad (nat * list val) :=
   match t with
   | TArrayNil => pure (O, [])
@@ -98,7 +104,7 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
         end
     | TVInl t' => VInl <$> self' t' e
     | TVInr t' => VInr <$> self' t' e
-    | TVVariant l t' => VVariant l <$> self' t' e
+    | TVVariant t' => VVariant <$> interpret_variant_term self' t' e
     | TVRef t' =>
         let* v := self' t' e in
         state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))

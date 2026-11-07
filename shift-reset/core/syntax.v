@@ -22,7 +22,7 @@ Inductive pattern : Type :=
 | PRecord : record_pattern -> pattern
 | PInl : pattern -> pattern
 | PInr : pattern -> pattern
-| PVariant : ident -> pattern -> pattern
+| PVariant : variant_pattern -> pattern
 with tuple_pattern : Type :=
 | PTupleNil : tuple_pattern
 | PTupleCons : pattern -> tuple_pattern -> tuple_pattern
@@ -30,7 +30,10 @@ with record_pattern : Type :=
 | PRecordNil : record_pattern
 | PRecordRest : pattern -> record_pattern
 | PRecordConsPun : ident -> record_pattern -> record_pattern
-| PRecordCons : ident -> pattern -> record_pattern -> record_pattern.
+| PRecordCons : ident -> pattern -> record_pattern -> record_pattern
+with variant_pattern : Type :=
+| PVariantNone : ident -> variant_pattern
+| PVariantSome : ident -> pattern -> variant_pattern.
 
 Inductive op1 : Type :=
 | Op1Pos : op1
@@ -105,7 +108,7 @@ with val_term : Type :=
 | TVProjRecord : val_term -> ident -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
-| TVVariant : ident -> val_term -> val_term
+| TVVariant : variant_term -> val_term
 | TVRef : val_term -> val_term
 | TVArray : array_term -> val_term
 | TVGet : val_term -> val_term
@@ -141,6 +144,9 @@ with record_term : Type :=
 | TRecordRest : val_term -> record_term
 | TRecordConsPun : ident -> record_term -> record_term
 | TRecordCons : ident -> val_term -> record_term -> record_term
+with variant_term : Type :=
+| TVariantNone : ident -> variant_term
+| TVariantSome : ident -> val_term -> variant_term
 with array_term : Type :=
 | TArrayNil : array_term
 | TArrayCons : val_term -> array_term -> array_term.
@@ -161,7 +167,7 @@ Inductive val : Type :=
 | VRecord : record -> val
 | VInl : val -> val
 | VInr : val -> val
-| VVariant : ident -> val -> val
+| VVariant : variant -> val
 | VRef : loc -> val
 | VArray : loc -> Z -> val
 | VMKPure : metakont -> val
@@ -187,7 +193,10 @@ with tuple : Type :=
 | TupleCons : val -> tuple -> tuple
 with record : Type :=
 | RecordNil : record
-| RecordCons : ident -> val -> record -> record.
+| RecordCons : ident -> val -> record -> record
+with variant : Type :=
+| VariantNone : ident -> variant
+| VariantSome : ident -> val -> variant.
 
 Inductive closure : Type :=
 | CFun : pattern -> term -> env -> closure
@@ -196,9 +205,6 @@ Inductive closure : Type :=
 | CMKPure : metakont -> closure
 | CMKReset : metakont -> closure
 | CMKHandle : metakont -> ret_term -> eff_term -> env -> closure.
-
-Inductive variant : Type :=
-| Variant : ident -> val -> variant.
 
 Inductive array : Type :=
 | Array : loc -> Z -> array.

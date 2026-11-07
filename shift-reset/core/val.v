@@ -23,9 +23,6 @@ Definition VClosure (c : closure) : val :=
   | CMKHandle mk t1 t2 e => VMKHandle mk t1 t2 e
   end.
 
-Definition VVariant' (v : variant) : val :=
-  let (l, v) := v in VVariant l v.
-
 Definition val_to_unit (v : val) : option unit :=
   match v with
   | VTt => Some tt
@@ -84,7 +81,7 @@ Definition val_to_sum (v : val) : option (val + val) :=
 
 Definition val_to_variant (v : val) : option variant :=
   match v with
-  | VVariant l v' => Some (Variant l v')
+  | VVariant v' => Some v'
   | _ => None
   end.
 
@@ -129,7 +126,7 @@ Definition type_of_val (v : val) : string :=
   | VTuple _ => "tuple"
   | VRecord _ => "record"
   | VInl _ | VInr _ => "sum"
-  | VVariant _ _ => "variant"
+  | VVariant _ => "variant"
   | VRef _ => "ref"
   | VArray _ _ => "array"
   | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _

@@ -50,8 +50,11 @@ Notation "'Inl' p" :=
 Notation "'Inr' p" :=
   (PInr p) (in custom pattern' at level 23, p custom pattern' at level 10) : term_scope.
 
+Notation "` l" :=
+  (PVariant (PVariantNone l)) (in custom pattern' at level 23, l constr at level 0) : term_scope.
+
 Notation "` l p" :=
-  (PVariant l p) (in custom pattern' at level 23, l constr at level 0, p custom pattern' at level 0) : term_scope.
+  (PVariant (PVariantSome l p)) (in custom pattern' at level 23, l constr at level 0, p custom pattern' at level 0) : term_scope.
 
 Notation "'..' p" :=
   (PRecordRest p) (in custom record_pattern at level 1, p custom pattern' at level 65) : term_scope.
@@ -409,8 +412,11 @@ Notation "'shallow' 'handle' t1 'with' '|' 'return' p => t2 t3 'end'" :=
 Notation "'by' t" :=
   (TVBy t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
+Notation "` l" :=
+  (TVVariant (TVariantNone l)) (in custom term at level 17, l constr at level 0) : term_scope.
+
 Notation "` l t" :=
-  (TVVariant l t) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
+  (TVVariant (TVariantSome l t)) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
 
 Notation "`( t1 , .. , tn )" :=
   (TVTuple (TTupleCons t1 .. (TTupleCons tn TTupleNil) ..)) (in custom term at level 0,

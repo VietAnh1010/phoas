@@ -21,6 +21,7 @@ Notation "( p )" := p (in custom pattern', p at level 99) : term_scope.
 Notation "{ p }" := p (in custom pattern', p constr) : term_scope.
 Notation "p" := p (in custom pattern' at level 0, p constr at level 0) : term_scope.
 Notation "'_'" := PAny (in custom pattern' at level 0) : term_scope.
+Notation "''' s" := (PString s) (in custom pattern' at level 1, s constr at level 0, format "''' s") : term_scope.
 
 Notation "p 'as' x" :=
   (PAlias p x) (in custom pattern' at level 67, p custom pattern', x constr at level 0) : term_scope.
@@ -474,6 +475,9 @@ Notation "t .`{ r }" :=
 
 Notation "% l" :=
   (EPrim l) (in custom term at level 1, l constr at level 0) : term_scope.
+
+Notation "''' s" :=
+  (EString s) (in custom term at level 1, s constr at level 0, format "''' s") : term_scope.
 
 Notation "t1 .[ t2 ]" :=
   (EGetAt t1 t2) (in custom term at level 1, t1 custom term, t2 custom term at level 65, left associativity) : term_scope.

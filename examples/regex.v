@@ -45,14 +45,14 @@ Example accept :=
                "counter" <- !"counter" + 1;
                match "l" with
                | [] => raise (`"Accept" ())
-               | _ :: _ => {EString "no"}
+               | _ :: _ => '"no"
                end)
             with
-            | `"Fail" _, _ => {EString "no"}
+            | `"Fail" _, _ => '"no"
             | `"Flip" _, "k" => "k" true; "k" false
             end)
          with
-         | `"Accept" _ => {EString "yes"}
+         | `"Accept" _ => '"yes"
          end
        in
        "answer", !"counter" }>.
@@ -86,8 +86,8 @@ Module Tests.
   Example regex_1 := Concat (Char 67) (Char 69).
   Example list_1_1 := [0].
   Example list_1_2 := [67; 69].
-  Compute (eq_refl : test_accept 1000 regex_1 list_1_1 <{ {EString "no"}, 0 }>).
-  Compute (eq_refl : test_accept 1000 regex_1 list_1_2 <{ {EString "yes"}, 1 }>).
+  Compute (eq_refl : test_accept 1000 regex_1 list_1_1 <{ '"no", 0 }>).
+  Compute (eq_refl : test_accept 1000 regex_1 list_1_2 <{ '"yes", 1 }>).
 
   Example regex_2 := Star (Concat (Char 7) (Char 12)).
   Example list_2_1 : list Z := [].

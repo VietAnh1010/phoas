@@ -31,62 +31,62 @@ with tuple_pattern : Type :=
 with record_pattern : Type :=
 | PRecordNil : record_pattern
 | PRecordRest : pattern -> record_pattern
-| PRecordConsPun : ident -> record_pattern -> record_pattern
 | PRecordCons : ident -> pattern -> record_pattern -> record_pattern
+| PRecordConsPun : ident -> record_pattern -> record_pattern
 with variant_pattern : Type :=
 | PVariantNone : ident -> variant_pattern
 | PVariantSome : ident -> pattern -> variant_pattern.
 
-Inductive op1 : Type :=
-| Op1Neg : op1
-| Op1Not : op1
-| Op1Lnot : op1
-| Op1Length : op1.
+Inductive un_op : Type :=
+| UnOpNeg : un_op
+| UnOpNot : un_op
+| UnOpLnot : un_op
+| UnOpLength : un_op.
 
-Inductive op2 : Type :=
-| Op2Add : op2
-| Op2Sub : op2
-| Op2Mul : op2
-| Op2Div : op2
-| Op2Mod : op2
-| Op2Pow : op2
-| Op2Land : op2
-| Op2Lor : op2
-| Op2Lxor : op2
-| Op2Shl : op2
-| Op2Shr : op2
-| Op2App : op2
-| Op2Lt : op2
-| Op2Le : op2
-| Op2Gt : op2
-| Op2Ge : op2
-| Op2Eq : op2
-| Op2Neq : op2.
+Inductive bin_op : Type :=
+| BinOpAdd : bin_op
+| BinOpSub : bin_op
+| BinOpMul : bin_op
+| BinOpDiv : bin_op
+| BinOpMod : bin_op
+| BinOpPow : bin_op
+| BinOpLand : bin_op
+| BinOpLor : bin_op
+| BinOpLxor : bin_op
+| BinOpShl : bin_op
+| BinOpShr : bin_op
+| BinOpApp : bin_op
+| BinOpLt : bin_op
+| BinOpLe : bin_op
+| BinOpGt : bin_op
+| BinOpGe : bin_op
+| BinOpEq : bin_op
+| BinOpNeq : bin_op.
 
 Inductive for_direction : Type :=
 | Upto : for_direction
 | Downto : for_direction.
 
 Inductive comp : Type :=
-| TVal : expr -> comp
+| CReturn : expr -> comp
 | CApp : expr -> expr -> comp
 | CSeq : comp -> comp -> comp
 | CLet : pattern -> comp -> comp -> comp
-| CMatch : expr -> match_term -> comp
+| CMatch : expr -> cases -> comp
 | CIf : expr -> comp -> comp -> comp
 | CWhile : expr -> comp -> comp
 | CFor : binder -> expr -> for_direction -> expr -> comp -> comp
 | CLetFix : ident -> pattern -> comp -> comp -> comp
-| CLetFixMut : fix_mut_term -> comp -> comp
+| CLetFixMut : fix_mut_defs -> comp -> comp
 | CShift : binder -> comp -> comp
 | CControl : binder -> comp -> comp
 | CReset : comp -> comp
 | CPrompt : comp -> comp
 | CRaise : expr -> comp
-| CTry : comp -> exn_term -> comp
+| CTry : comp -> cases -> comp
 | CPerform : expr -> comp
-| CHandle : comp -> ret_term -> eff_term -> comp
-| CShallowHandle : comp -> ret_term -> eff_term -> comp
+| CHandle : comp -> handle_cases -> comp
+| CShallowHandle : comp -> handle_cases -> comp
 with expr : Type :=
 | EVar : ident -> expr
 | ETt : expr
@@ -100,7 +100,7 @@ with expr : Type :=
 | EOr : expr -> expr -> expr
 | EFun : pattern -> comp -> expr
 | EFix : ident -> pattern -> comp -> expr
-| EFixMut : fix_mut_term -> ident -> expr
+| EFixMut : fix_mut_defs -> ident -> expr
 | EPair : expr -> expr -> expr
 | EFst : expr -> expr
 | ESnd : expr -> expr
@@ -120,39 +120,41 @@ with expr : Type :=
 | ESet : expr -> expr -> expr
 | EGetAt : expr -> expr -> expr
 | ESetAt : expr -> expr -> expr -> expr
-| EOp1 : op1 -> expr -> expr
-| EOp2 : op2 -> expr -> expr -> expr
+| EUnOp : un_op -> expr -> expr
+| EBinOp : bin_op -> expr -> expr -> expr
 | EPrim : ident -> expr
 | EBy : comp -> expr
-with match_term : Type :=
-| TMatchNil : match_term
-| TMatchCons : pattern -> comp -> match_term -> match_term
-with fix_mut_term : Type :=
-| TFixMutLast : ident -> pattern -> comp -> fix_mut_term
-| TFixMutCons : ident -> pattern -> comp -> fix_mut_term -> fix_mut_term
-with ret_term : Type :=
-| TRetNone : ret_term
-| TRetSome : pattern -> comp -> ret_term
-with exn_term : Type :=
-| TExnLast : pattern -> comp -> exn_term
-| TExnCons : pattern -> comp -> exn_term -> exn_term
-with eff_term : Type :=
-| TEffLast : pattern -> binder -> comp -> eff_term
-| TEffCons : pattern -> binder -> comp -> eff_term -> eff_term
+with cases : Type :=
+| CasesNil : cases
+| CasesCons : pattern -> comp -> cases -> cases
+with handle_cases : Type :=
+| HandleCases : return_case -> effect_cases -> handle_cases
+with effect_cases : Type :=
+| EffectCasesNil : effect_cases
+| EffectCasesCons : pattern -> binder -> comp -> effect_cases -> effect_cases
+with return_case : Type :=
+| ReturnCaseNone : return_case
+| ReturnCaseSome : pattern -> comp -> return_case
+with fix_mut_defs : Type :=
+| FixMutLast : ident -> pattern -> comp -> fix_mut_defs
+| FixMutCons : ident -> pattern -> comp -> fix_mut_defs -> fix_mut_defs
 with tuple_expr : Type :=
 | ETupleNil : tuple_expr
 | ETupleCons : expr -> tuple_expr -> tuple_expr
 with record_expr : Type :=
 | ERecordNil : record_expr
 | ERecordRest : expr -> record_expr
-| ERecordConsPun : ident -> record_expr -> record_expr
 | ERecordCons : ident -> expr -> record_expr -> record_expr
+| ERecordConsPun : ident -> record_expr -> record_expr
 with variant_expr : Type :=
 | EVariantNone : ident -> variant_expr
 | EVariantSome : ident -> expr -> variant_expr
 with array_expr : Type :=
 | EArrayNil : array_expr
 | EArrayCons : expr -> array_expr -> array_expr.
+
+Definition match_cases : Type := cases.
+Definition try_cases : Type := cases.
 
 Inductive val : Type :=
 | VTt : val
@@ -164,7 +166,7 @@ Inductive val : Type :=
 | VString : string -> val
 | VFun : pattern -> comp -> env -> val
 | VFix : ident -> pattern -> comp -> env -> val
-| VFixMut : fix_mut_term -> ident -> env -> val
+| VFixMut : fix_mut_defs -> ident -> env -> val
 | VPrim : ident -> val
 | VPair : val -> val -> val
 | VTuple : tuple -> val
@@ -178,7 +180,7 @@ Inductive val : Type :=
 | VArray : loc -> Z -> val
 | VMKPure : metakont -> val
 | VMKReset : metakont -> val
-| VMKHandle : metakont -> ret_term -> eff_term -> env -> val
+| VMKHandle : metakont -> handle_cases -> env -> val
 with kont : Type :=
 | KNil : kont
 | KConsSeq : comp -> env -> kont -> kont
@@ -188,9 +190,9 @@ with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> kont -> metakont
 | MKPrompt : metakont -> kont -> metakont
-| MKTry : metakont -> exn_term -> env -> kont -> metakont
-| MKHandle : metakont -> ret_term -> eff_term -> env -> kont -> metakont
-| MKShallowHandle : metakont -> ret_term -> eff_term -> env -> kont -> metakont
+| MKTry : metakont -> cases -> env -> kont -> metakont
+| MKHandle : metakont -> handle_cases -> env -> kont -> metakont
+| MKShallowHandle : metakont -> handle_cases -> env -> kont -> metakont
 with env : Type :=
 | EnvNil : env
 | EnvCons : ident -> val -> env -> env
@@ -207,11 +209,11 @@ with variant : Type :=
 Inductive applicable : Type :=
 | AFun : pattern -> comp -> env -> applicable
 | AFix : ident -> pattern -> comp -> env -> applicable
-| AFixMut : fix_mut_term -> ident -> env -> applicable
+| AFixMut : fix_mut_defs -> ident -> env -> applicable
 | APrim : ident -> applicable
 | AMKPure : metakont -> applicable
 | AMKReset : metakont -> applicable
-| AMKHandle : metakont -> ret_term -> eff_term -> env -> applicable.
+| AMKHandle : metakont -> handle_cases -> env -> applicable.
 
 Inductive array : Type :=
 | Array : loc -> Z -> array.

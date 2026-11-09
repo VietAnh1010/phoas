@@ -27,42 +27,42 @@ Hint Resolve tuple_pattern_eq_dec : eq_dec_db.
 Hint Resolve record_pattern_eq_dec : eq_dec_db.
 Hint Resolve variant_pattern_eq_dec : eq_dec_db.
 
-Lemma op1_eq_dec : forall (op1 op2 : op1), {op1 = op2} + {op1 <> op2}.
+Lemma un_op_eq_dec : forall (op1 op2 : un_op), {op1 = op2} + {op1 <> op2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Lemma op2_eq_dec : forall (op1 op2 : op2), {op1 = op2} + {op1 <> op2}.
+Lemma bin_op_eq_dec : forall (op1 op2 : bin_op), {op1 = op2} + {op1 <> op2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
 Lemma for_direction_eq_dec : forall (d1 d2 : for_direction), {d1 = d2} + {d1 <> d2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
 
-Hint Resolve op1_eq_dec : eq_dec_db.
-Hint Resolve op2_eq_dec : eq_dec_db.
+Hint Resolve un_op_eq_dec : eq_dec_db.
+Hint Resolve bin_op_eq_dec : eq_dec_db.
 Hint Resolve for_direction_eq_dec : eq_dec_db.
 
 Lemma comp_eq_dec : forall (t1 t2 : comp), {t1 = t2} + {t1 <> t2}
 with expr_eq_dec : forall (t1 t2 : expr), {t1 = t2} + {t1 <> t2}
-with ret_term_eq_dec : forall (t1 t2 : ret_term), {t1 = t2} + {t1 <> t2}
-with exn_term_eq_dec : forall (t1 t2 : exn_term), {t1 = t2} + {t1 <> t2}
-with eff_term_eq_dec : forall (t1 t2 : eff_term), {t1 = t2} + {t1 <> t2}
-with match_term_eq_dec : forall (t1 t2 : match_term), {t1 = t2} + {t1 <> t2}
+with cases_eq_dec : forall (t1 t2 : cases), {t1 = t2} + {t1 <> t2}
+with handle_cases_eq_dec : forall (t1 t2 : handle_cases), {t1 = t2} + {t1 <> t2}
+with effect_cases_eq_dec : forall (t1 t2 : effect_cases), {t1 = t2} + {t1 <> t2}
+with return_case_eq_dec : forall (t1 t2 : return_case), {t1 = t2} + {t1 <> t2}
+with fix_mut_defs_eq_dec : forall (t1 t2 : fix_mut_defs), {t1 = t2} + {t1 <> t2}
 with tuple_expr_eq_dec : forall (t1 t2 : tuple_expr), {t1 = t2} + {t1 <> t2}
 with record_expr_eq_dec : forall (t1 t2 : record_expr), {t1 = t2} + {t1 <> t2}
 with variant_expr_eq_dec : forall (t1 t2 : variant_expr), {t1 = t2} + {t1 <> t2}
-with fix_mut_term_eq_dec : forall (t1 t2 : fix_mut_term), {t1 = t2} + {t1 <> t2}
 with array_expr_eq_dec : forall (t1 t2 : array_expr), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve comp_eq_dec : eq_dec_db.
 Hint Resolve expr_eq_dec : eq_dec_db.
-Hint Resolve ret_term_eq_dec : eq_dec_db.
-Hint Resolve exn_term_eq_dec : eq_dec_db.
-Hint Resolve eff_term_eq_dec : eq_dec_db.
-Hint Resolve match_term_eq_dec : eq_dec_db.
+Hint Resolve cases_eq_dec : eq_dec_db.
+Hint Resolve handle_cases_eq_dec : eq_dec_db.
+Hint Resolve effect_cases_eq_dec : eq_dec_db.
+Hint Resolve return_case_eq_dec : eq_dec_db.
+Hint Resolve fix_mut_defs_eq_dec : eq_dec_db.
 Hint Resolve tuple_expr_eq_dec : eq_dec_db.
 Hint Resolve record_expr_eq_dec : eq_dec_db.
 Hint Resolve variant_expr_eq_dec : eq_dec_db.
-Hint Resolve fix_mut_term_eq_dec : eq_dec_db.
 
 Lemma val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}

@@ -21,7 +21,7 @@ Definition VApplicable (a : applicable) : val :=
   | APrim l => VPrim l
   | AMKPure mk => VMKPure mk
   | AMKReset mk => VMKReset mk
-  | AMKHandle mk t1 t2 e => VMKHandle mk t1 t2 e
+  | AMKHandle mk h e => VMKHandle mk h e
   end.
 
 Definition val_to_unit (v : val) : option unit :=
@@ -112,7 +112,7 @@ Definition val_to_applicable (v : val) : option applicable :=
   | VPrim l => Some (APrim l)
   | VMKPure mk => Some (AMKPure mk)
   | VMKReset mk => Some (AMKReset mk)
-  | VMKHandle mk t1 t2 e => Some (AMKHandle mk t1 t2 e)
+  | VMKHandle mk h e => Some (AMKHandle mk h e)
   | _ => None
   end.
 
@@ -133,5 +133,5 @@ Definition type_of_val (v : val) : string :=
   | VRef _ => "ref"
   | VArray _ _ => "array"
   | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _ | VPrim _
-  | VMKPure _ | VMKReset _ | VMKHandle _ _ _ _ => "applicable"
+  | VMKPure _ | VMKReset _ | VMKHandle _ _ _ => "applicable"
   end.

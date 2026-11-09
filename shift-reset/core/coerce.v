@@ -11,6 +11,6 @@ Coercion EVar : ident >-> expr.
 Coercion EInt : Z >-> expr.
 Coercion EFloat : Qc >-> expr.
 Coercion EChar : ascii >-> expr.
-Coercion EOp1 : op1 >-> Funclass.
-Coercion EOp2 : op2 >-> Funclass.
-Coercion TVal : expr >-> comp.
+Coercion EUnOp : un_op >-> Funclass.
+Coercion EBinOp : bin_op >-> Funclass.
+Coercion CReturn : expr >-> comp.

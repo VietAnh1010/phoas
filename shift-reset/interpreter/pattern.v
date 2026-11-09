@@ -75,12 +75,6 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : iv_monad
       | RecordCons _ _ _ => throw (Match_failure "match_record_pattern")
       end
   | PRecordRest p' => match_pattern p' (VRecord r) e
-  | PRecordConsPun l p' =>
-      let (o, r') := record_find_remove l r in
-      match o with
-      | None => throw (Match_failure "match_record_pattern")
-      | Some v => match_record_pattern p' r' (EnvCons l v e)
-      end
   | PRecordCons l p1 p2 =>
       let (o, r') := record_find_remove l r in
       match o with
@@ -91,6 +85,12 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : iv_monad
           | None => pure None
           | Some e' => match_record_pattern p2 r' e'
           end
+      end
+  | PRecordConsPun l p' =>
+      let (o, r') := record_find_remove l r in
+      match o with
+      | None => throw (Match_failure "match_record_pattern")
+      | Some v => match_record_pattern p' r' (EnvCons l v e)
       end
   end
 with match_variant_pattern (p : variant_pattern) (v : variant) (e : env) : iv_monad (option env) :=

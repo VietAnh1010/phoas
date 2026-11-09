@@ -38,12 +38,12 @@ Definition dispatch_length (v : val) : iv_monad val :=
   | _ => throw (Type_error "array | string" v)
   end.
 
-Definition dispatch_op1 (op : op1) : val -> iv_monad val :=
+Definition dispatch_un_op (op : un_op) : val -> iv_monad val :=
   match op with
-  | Op1Neg => dispatch_neg
-  | Op1Not => dispatch_not
-  | Op1Lnot => dispatch_lnot
-  | Op1Length => dispatch_length
+  | UnOpNeg => dispatch_neg
+  | UnOpNot => dispatch_not
+  | UnOpLnot => dispatch_lnot
+  | UnOpLength => dispatch_length
   end.
 
 Definition dispatch_add (v1 v2 : val) : iv_monad val :=
@@ -250,24 +250,24 @@ Definition dispatch_eq (v1 v2 : val) : iv_monad val :=
 Definition dispatch_neq (v1 v2 : val) : iv_monad val :=
   let+ b := equal_val v1 v2 in VBool (negb b).
 
-Definition dispatch_op2 (op : op2) : val -> val -> iv_monad val :=
+Definition dispatch_bin_op (op : bin_op) : val -> val -> iv_monad val :=
   match op with
-  | Op2Add => dispatch_add
-  | Op2Sub => dispatch_sub
-  | Op2Mul => dispatch_mul
-  | Op2Div => dispatch_div
-  | Op2Mod => dispatch_mod
-  | Op2Pow => dispatch_pow
-  | Op2Land => dispatch_land
-  | Op2Lor => dispatch_lor
-  | Op2Lxor => dispatch_lxor
-  | Op2Shl => dispatch_shl
-  | Op2Shr => dispatch_shr
-  | Op2App => dispatch_app
-  | Op2Lt => dispatch_lt
-  | Op2Le => dispatch_le
-  | Op2Gt => dispatch_gt
-  | Op2Ge => dispatch_ge
-  | Op2Eq => dispatch_eq
-  | Op2Neq => dispatch_neq
+  | BinOpAdd => dispatch_add
+  | BinOpSub => dispatch_sub
+  | BinOpMul => dispatch_mul
+  | BinOpDiv => dispatch_div
+  | BinOpMod => dispatch_mod
+  | BinOpPow => dispatch_pow
+  | BinOpLand => dispatch_land
+  | BinOpLor => dispatch_lor
+  | BinOpLxor => dispatch_lxor
+  | BinOpShl => dispatch_shl
+  | BinOpShr => dispatch_shr
+  | BinOpApp => dispatch_app
+  | BinOpLt => dispatch_lt
+  | BinOpLe => dispatch_le
+  | BinOpGt => dispatch_gt
+  | BinOpGe => dispatch_ge
+  | BinOpEq => dispatch_eq
+  | BinOpNeq => dispatch_neq
   end.

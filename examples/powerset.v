@@ -11,42 +11,42 @@ Local Open Scope term_scope.
 Example powerset_filter :=
   <{ fun "xs" =>
        let "List" := List in
-       let "r" := ref (Inl ()) in
+       let "r" := ref [] in
        let "f" "_" := shift (fun "k" => "k" true; "k" false) in
        let _ :=
          reset
            (let "s" := "List".`"filter" ("f", "xs") in
-            "r" <- Inr ("s", !"r"))
+            "r" <- "s" :: !"r")
        in
        !"r" }>.
 
 Example powerset_fold_right :=
   <{ fun "xs" =>
        let "List" := List in
-       let "r" := ref (Inl ()) in
+       let "r" := ref [] in
        let "f" ("x", "s") :=
          let "b" := shift (fun "k" => "k" true; "k" false) in
-         if "b" then Inr ("x", "s") else "s"
+         if "b" then "x" :: "s" else "s"
        in
        let _ :=
          reset
-           (let "s" := "List".`"fold_right" `("f", Inl (), "xs") in
-            "r" <- Inr ("s", !"r"))
+           (let "s" := "List".`"fold_right" `("f", [], "xs") in
+            "r" <- "s" :: !"r")
        in
        !"r" }>.
 
 Example powerset_fold_left :=
   <{ fun "xs" =>
        let "List" := List in
-       let "r" := ref (Inl ()) in
+       let "r" := ref [] in
        let "f" ("s", "x") :=
          let "b" := shift (fun "k" => "k" true; "k" false) in
-         if "b" then Inr ("x", "s") else "s"
+         if "b" then "x" :: "s" else "s"
        in
        let _ :=
          reset
-           (let "s" := "List".`"fold_left" `("f", Inl (), "xs") in
-            "r" <- Inr ("s", !"r"))
+           (let "s" := "List".`"fold_left" `("f", [], "xs") in
+            "r" <- "s" :: !"r")
        in
        !"r" }>.
 

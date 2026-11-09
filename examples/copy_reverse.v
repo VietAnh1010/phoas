@@ -14,9 +14,9 @@ Example copy_dcont :=
   <{ fun "xs" =>
        let fix "go" "xs" :=
          match "xs" with
-         | Inl _ => Inl ()
-         | Inr ("x", "xs'") =>
-             let "r" := shift (fun "k" => Inr ("x", by ("k" "xs'"))) in
+         | [] => []
+         | "x" :: "xs'" =>
+             let "r" := shift (fun "k" => "x" :: by ("k" "xs'")) in
              "go" "r"
          end
        in
@@ -25,17 +25,17 @@ Example copy_dcont :=
 Example copy :=
   <{ fix "go" "xs" :=
        match "xs" with
-       | Inl _ => Inl ()
-       | Inr ("x", "xs'") => Inr ("x", by ("go" "xs'"))
+       | [] => []
+       | "x" :: "xs'" => "x" :: by ("go" "xs'")
        end }>.
 
 Example reverse_dcont :=
   <{ fun "xs" =>
        let fix "go" "xs" :=
          match "xs" with
-         | Inl _ => Inl ()
-         | Inr ("x", "xs'") =>
-             let "r" := control (fun "k" => let "r" := "k" "xs'" in Inr ("x", "r")) in
+         | [] => []
+         | "x" :: "xs'" =>
+             let "r" := control (fun "k" => let "r" := "k" "xs'" in "x" :: "r") in
              "go" "r"
          end
        in
@@ -48,12 +48,12 @@ Example reverse_while :=
   <{ fun "xs" =>
        let "List" := List in
        let "in" := ref "xs" in
-       let "out" := ref (Inl ()) in
+       let "out" := ref [] in
        let _ :=
          while not (by ("List".`"is_empty" !"in")) do
            let ("x", "xs'") := "List".`"ne_uncons" !"in" in
            "in" <- "xs'";
-           "out" <- Inr ("x", !"out")
+           "out" <- "x" :: !"out"
        in
        !"out" }>.
 
@@ -61,10 +61,10 @@ Example reverse_taba :=
   <{ fun "xs" =>
        let fix "go" "xs_t" :=
          match "xs_t" with
-         | Inl _ => ("xs", Inl ())
-         | Inr (_, "xs_t'") =>
-             let (Inr ("x", "xs_b"), "r") := "go" "xs_t'" in
-             ("xs_b", Inr ("x", "r"))
+         | [] => ("xs", [])
+         | _ :: "xs_t'" =>
+             let ("x" :: "xs_b", "r") := "go" "xs_t'" in
+             ("xs_b", "x" :: "r")
          end
        in
        snd (by ("go" "xs")) }>.

@@ -12,12 +12,12 @@ Example is_palindrome_cont :=
   <{ fun "xs" =>
        let fix "go" `("xs", "ys", "k") :=
          match "xs" with
-         | Inl _ => "k" "ys"
-         | Inr (_, "xs'") =>
-             let (Inr ("y", "ys'")) := "ys" in
+         | [] => "k" "ys"
+         | _ :: "xs'" =>
+             let ("y" :: "ys'") := "ys" in
              match "xs'" with
-             | Inl _ => "k" "ys'"
-             | Inr (_, "xs''") => "go" `("xs''", "ys'", fun (Inr ("y'", "ys_b")) => "y" = "y'" && by ("k" "ys_b"))
+             | [] => "k" "ys'"
+             | _ :: "xs''" => "go" `("xs''", "ys'", fun ("y'" :: "ys_b") => "y" = "y'" && by ("k" "ys_b"))
              end
          end
        in
@@ -27,13 +27,13 @@ Example is_palindrome_exception :=
   <{ fun "xs" =>
        let fix "go" ("xs", "ys") :=
          match "xs" with
-         | Inl _ => "ys"
-         | Inr (_, "xs'") =>
-             let (Inr ("y", "ys'")) := "ys" in
+         | [] => "ys"
+         | _ :: "xs'" =>
+             let ("y" :: "ys'") := "ys" in
              match "xs'" with
-             | Inl _ => "ys'"
-             | Inr (_, "xs''") =>
-                 let (Inr ("y'", "ys_b")) := "go" ("xs''", "ys'") in
+             | [] => "ys'"
+             | _ :: "xs''" =>
+                 let ("y'" :: "ys_b") := "go" ("xs''", "ys'") in
                  if "y" = "y'" then "ys_b" else raise false
              end
          end

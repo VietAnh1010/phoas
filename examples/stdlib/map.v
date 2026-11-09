@@ -176,13 +176,13 @@ Example Map :=
        let fix "bindings_append" ("m", "bs") :=
          match "m" with
          | Inl _ => "bs"
-         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by ("bindings_append" ("r", "bs"))))
+         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", ("k", "v") :: by ("bindings_append" ("r", "bs")))
          end
        in
        let fix "bindings" "m" :=
          match "m" with
-         | Inl _ => Inl ()
-         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", Inr (("k", "v"), by ("bindings" "r")))
+         | Inl _ => []
+         | Inr `("l", "k", "v", "r", _) => "bindings_append" ("l", ("k", "v") :: by ("bindings" "r"))
          end
        in
        let fix "cardinal" "m" :=

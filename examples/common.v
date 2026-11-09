@@ -18,8 +18,8 @@ Definition range (s e : Z) : list Z :=
 
 Fixpoint list_to_val_term {A} (f : A -> val_term) (xs : list A) : val_term :=
   match xs with
-  | [] => <{ Inl () }>
-  | x :: xs' => <{ Inr ({f x}, {list_to_val_term f xs'}) }>
+  | [] => <{ [] }>
+  | x :: xs' => <{ {f x} :: {list_to_val_term f xs'} }>
   end.
 
 Definition list_int_to_val_term : list Z -> val_term :=
@@ -27,8 +27,8 @@ Definition list_int_to_val_term : list Z -> val_term :=
 
 Fixpoint deep_val_to_list {A} (f : val -> option A) (v : val) : option (list A) :=
   match v with
-  | VInl VTt => Some []
-  | VInr (VPair v1 v2) =>
+  | VNil => Some []
+  | VCons v1 v2 =>
       let* x := f v1 in
       cons x <$> deep_val_to_list f v2
   | _ => None

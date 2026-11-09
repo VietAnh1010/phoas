@@ -14,10 +14,10 @@ Example append_dcont_aux :=
   <{ fun "xs" =>
        let fix "go" "xs" :=
          match "xs" with
-         | Inl _ => shift (fun "k" => "k")
-         | Inr ("x", "xs'") =>
+         | [] => shift (fun "k" => "k")
+         | "x" :: "xs'" =>
              let "r" := "go" "xs'" in
-             Inr ("x", "r")
+             "x" :: "r"
          end
        in
        reset ("go" "xs") }>.

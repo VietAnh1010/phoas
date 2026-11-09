@@ -68,9 +68,8 @@ Example choice :=
          (fun "k" =>
             let fix "go" "xs" :=
               match "xs" with
-              | Inl _ => ()
-              | Inr "xs" =>
-                  let ("x", "xs'") := "xs" in
+              | [] => ()
+              | "x" :: "xs'" =>
                   "k" "x";
                   "go" "xs'"
               end
@@ -153,7 +152,7 @@ Example bfs :=
            control
              (fun "k" =>
                 let "xs" := "k" () in
-                Inr ("x", "xs"))
+                "x" :: "xs")
        | `"Node" "p" =>
            let `("l", "x", "r") := "p" in
            control
@@ -161,11 +160,11 @@ Example bfs :=
                 let "xs" := "k" () in
                 "bfs" "l";
                 "bfs" "r";
-                Inr ("x", "xs"))
+                "x" :: "xs")
        end }>.
 
 Example bfs1 t :=
-  <{ prompt (bfs t; Inl ()) }>.
+  <{ prompt (bfs t; []) }>.
 
 Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 0))).
 Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 1))).
@@ -179,7 +178,7 @@ Example dfs :=
            shift
              (fun "k" =>
                 let "xs" := "k" () in
-                Inr ("x", "xs"))
+                "x" :: "xs")
        | `"Node" "p" =>
            let `("l", "x", "r") := "p" in
            shift
@@ -187,11 +186,11 @@ Example dfs :=
                 let "xs" := "k" () in
                 "dfs" "l";
                 "dfs" "r";
-                Inr ("x", "xs"))
+                "x" :: "xs")
        end }>.
 
 Example dfs1 t :=
-  <{ reset (dfs t; Inl ()) }>.
+  <{ reset (dfs t; []) }>.
 
 Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 0))).
 Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 1))).
@@ -473,8 +472,8 @@ Example counting_sort_lt_10 xs :=
      (try
         (while true do
            (match !"ref_xs" with
-            | Inl _ => raise (`"Exit" ())
-            | Inr ("x", "xs'") =>
+            | [] => raise (`"Exit" ())
+            | "x" :: "xs'" =>
                 "arr_fs".["x"] <- "arr_fs".["x"] + 1;
                 "ref_xs" <- "xs'"
             end))
@@ -483,7 +482,7 @@ Example counting_sort_lt_10 xs :=
       end);
      (for "i" from 9 downto 0 do
         (for _ from ("arr_fs".["i"]) downto 1 do
-           "ref_xs" <- Inr ("i", !"ref_xs")));
+           "ref_xs" <- "i" :: !"ref_xs"));
      !"ref_xs" }>.
 
 Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term []))).
@@ -498,8 +497,8 @@ Example compare_int :=
 Example partition x xs :=
   <{ let fix "go" "xs" :=
        match "xs" with
-       | Inl _ => Inl ()
-       | Inr ("x", "xs'") =>
+       | [] => []
+       | "x" :: "xs'" =>
            let () :=
              match by (compare_int (x, "x")) with
              | `"Lt" () => perform (`"Larger" "x")
@@ -513,13 +512,13 @@ Example partition x xs :=
      handle
        (handle
           (handle ("go" xs) with
-           | `"Larger" "x", "k" => let "r" := "k" () in Inr ("x", "r")
+           | `"Larger" "x", "k" => let "r" := "k" () in "x" :: "r"
            end)
         with
-        | `"Equal" "x", "k" => let "r" := "k" () in Inr ("x", "r")
+        | `"Equal" "x", "k" => let "r" := "k" () in "x" :: "r"
         end)
      with
-     | `"Smaller" "x", "k" => let "r" := "k" () in Inr ("x", "r")
+     | `"Smaller" "x", "k" => let "r" := "k" () in "x" :: "r"
      end }>.
 
 Compute (eval_term_to_list_int 20 <{ {partition 1 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).

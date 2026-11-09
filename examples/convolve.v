@@ -12,31 +12,31 @@ Example convolve_cont :=
   <{ fun ("xs", "ys") =>
        let fix "go" ("ys", "k") :=
          match "ys" with
-         | Inl _ => "k" "xs"
-         | Inr ("y", "ys'") =>
+         | [] => "k" "xs"
+         | "y" :: "ys'" =>
              "go" ("ys'", fun "xs" =>
                             match "xs" with
-                            | Inl _ => Inl ()
-                            | Inr ("x", "xs'") => Inr (("x", "y"), by ("k" "xs'"))
+                            | [] => []
+                            | "x" :: "xs'" => ("x", "y") :: by ("k" "xs'")
                             end)
          end
        in
-       "go" ("ys", fun _ => Inl ()) }>.
+       "go" ("ys", fun _ => []) }>.
 
 Example convolve_dcont :=
   <{ fun ("xs", "ys") =>
        let fix "go" "ys" :=
          match "ys" with
-         | Inl _ => fun _ => Inl ()
-         | Inr ("y", "ys'") =>
+         | [] => fun _ => []
+         | "y" :: "ys'" =>
              let "r" :=
                control
                  (fun "k" =>
                     let "k" := "k" "ys'" in
                     fun "xs" =>
                       match "xs" with
-                      | Inl _ => Inl ()
-                      | Inr ("x", "xs'") => Inr (("x", "y"), by ("k" "xs'"))
+                      | [] => []
+                      | "x" :: "xs'" => ("x", "y") :: by ("k" "xs'")
                       end)
              in
              "go" "r"
@@ -48,12 +48,12 @@ Example convolve :=
   <{ fun ("xs", "ys") =>
        let fix "go" "xs" :=
          match "xs" with
-         | Inl _ => ("ys", Inl ())
-         | Inr ("x", "xs'") =>
+         | [] => ("ys", [])
+         | "x" :: "xs'" =>
              let (("ys_b", "r") as "p") := "go" "xs'" in
              match "ys_b" with
-             | Inl _ => "p"
-             | Inr ("y", "ys_b'") => ("ys_b'", Inr (("x", "y"), "r"))
+             | [] => "p"
+             | "y" :: "ys_b'" => ("ys_b'", ("x", "y") :: "r")
              end
          end
        in

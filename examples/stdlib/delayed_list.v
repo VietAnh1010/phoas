@@ -59,10 +59,10 @@ Example DelayedList :=
      let fix "to_list" "xs" :=
        let "xs" := "xs" () in
        match "xs" with
-       | Inl _ => Inl ()
+       | Inl _ => []
        | Inr ("x", "xs'") =>
            let "r" := "to_list" "xs'" in
-           Inr ("x", "r")
+           "x" :: "r"
        end
      in
      `{ "empty"

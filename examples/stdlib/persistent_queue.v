@@ -8,7 +8,7 @@ Open Scope term_scope.
 Example PersistentQueue :=
   <{ let "empty" :=
        let "f" := "Lazy".`"pure" (Inl ()) in
-       `("f", Inl (), "f")
+       `("f", [], "f")
      in
      let "is_empty" `("f", _, _) :=
        match by ("Lazy".`"get" "f") with
@@ -16,7 +16,7 @@ Example PersistentQueue :=
        | Inr _ => false
        end
      in
-     let fix "rotate" `("f", Inr ("y", "r"), "s") :=
+     let fix "rotate" `("f", "y" :: "r", "s") :=
        let "s" := "Lazy".`"pure" (Inr ("y", "s")) in
        match by ("Lazy".`"get" "f") with
        | Inl _ => "s"
@@ -27,12 +27,12 @@ Example PersistentQueue :=
        match by ("Lazy".`"get" "s") with
        | Inl _ =>
            let "f" := "rotate" "q" in
-           `("f", Inl (), "f")
+           `("f", [], "f")
        | Inr "p" => `("f", "r", snd "p")
        end
      in
      let "snoc" (`("f", "r", "s"), "x") :=
-       "exec" `("f", Inr ("x", "r"), "s")
+       "exec" `("f", "x" :: "r", "s")
      in
      let "ne_head" `("f", _, _) :=
        match by ("Lazy".`"get" "f") with

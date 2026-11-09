@@ -10,14 +10,14 @@ Local Open Scope term_scope.
 Example prefixes_cont :=
   <{ fun "xs" =>
        let fix "go" ("xs", "k") :=
-         let "p" := "k" (Inl ()) in
+         let "p" := "k" [] in
          let "ps" :=
            match "xs" with
-           | Inl _ => Inl ()
-           | Inr ("x", "xs'") => "go" ("xs'", fun "r" => "k" (Inr ("x", "r")))
+           | [] => []
+           | "x" :: "xs'" => "go" ("xs'", fun "r" => "k" ("x" :: "r"))
            end
          in
-         Inr ("p", "ps")
+         "p" :: "ps"
        in
        "go" ("xs", fun "r" => "r") }>.
 
@@ -26,14 +26,14 @@ Example prefixes_dcont :=
        let fix "go" "xs" :=
          control
            (fun "k" =>
-              let "p" := "k" (Inl ()) in
+              let "p" := "k" [] in
               let "ps" :=
                 match "xs" with
-                | Inl _ => Inl ()
-                | Inr ("x", "xs'") => prompt (let "r" := "go" "xs'" in "k" (Inr ("x", "r")))
+                | [] => []
+                | "x" :: "xs'" => prompt (let "r" := "go" "xs'" in "k" ("x" :: "r"))
                 end
               in
-              Inr ("p", "ps"))
+              "p" :: "ps")
        in
        prompt ("go" "xs") }>.
 

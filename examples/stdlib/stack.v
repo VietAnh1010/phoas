@@ -7,17 +7,17 @@ Local Open Scope term_scope.
 
 Example Stack :=
   <{ let "create" _ :=
-       `{"length" := ref 0; "contents" := ref (Inl ())}
+       `{"length" := ref 0; "contents" := ref []}
      in
      let "is_empty" "s" := !"s".`"length" = 0 in
      let "push" ("x", "s") :=
        let _ := "s".`"length" <- !"s".`"length" + 1 in
-       "s".`"contents" <- Inr ("x", !"s".`"contents")
+       "s".`"contents" <- "x" :: !"s".`"contents"
      in
      let "pop" "s" :=
        match !"s".`"contents" with
-       | Inl _ => raise (`"Empty" ())
-       | Inr ("x", "xs") =>
+       | [] => raise (`"Empty" ())
+       | "x" :: "xs" =>
            let _ := "s".`"length" <- !"s".`"length" - 1 in
            let _ := "s".`"contents" <- "xs" in
            "x"
@@ -25,14 +25,14 @@ Example Stack :=
      in
      let "peek" "s" :=
        match !"s".`"contents" with
-       | Inl _ => raise (`"Empty" ())
-       | Inr ("x", _) => "x"
+       | [] => raise (`"Empty" ())
+       | "x" :: _ => "x"
        end
      in
      let "length" "s" := !"s".`"length" in
      let "clear" "s" :=
        let _ := "s".`"length" <- 0 in
-       "s".`"contents" <- Inl ()
+       "s".`"contents" <- []
      in
      let "copy" "s" :=
        `{"length" := ref !"s".`"length"; "contents" := ref !"s".`"contents"}
@@ -40,8 +40,8 @@ Example Stack :=
      let "iter" ("f", "s") :=
        let fix "go" "xs" :=
          match "xs" with
-         | Inl _ => ()
-         | Inr ("x", "xs'") => "f" "x"; "go" "xs'"
+         | [] => ()
+         | "x" :: "xs'" => "f" "x"; "go" "xs'"
          end
        in
        "go" !"s".`"contents"

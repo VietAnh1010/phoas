@@ -19,8 +19,8 @@ Example ndfa :=
        match "r" with
        | `"Char" "c" =>
            match "l" with
-           | Inl _ => fail ()
-           | Inr ("h", "t") => if "h" = "c" then "t" else fail ()
+           | [] => fail ()
+           | "h" :: "t" => if "h" = "c" then "t" else fail ()
            end
        | `"Concat" ("r1", "r2") =>
            let "l" := "go" ("r1", "l") in
@@ -44,8 +44,8 @@ Example accept :=
               (let "l" := ndfa "args" in
                "counter" <- !"counter" + 1;
                match "l" with
-               | Inl _ => raise (`"Accept" ())
-               | Inr _ => {TVString "no"}
+               | [] => raise (`"Accept" ())
+               | _ :: _ => {TVString "no"}
                end)
             with
             | `"Fail" _, _ => {TVString "no"}

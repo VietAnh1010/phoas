@@ -43,8 +43,8 @@ Definition eval_ephemeral_it (fuel : nat) (t : val_term) :=
   eval_term_to_list_int fuel
   <{ let fix "to_list" "it" :=
        match by ("it" ()) with
-       | Inl _ => Inl ()
-       | Inr "x" => Inr ("x", by ("to_list" "it"))
+       | Inl _ => []
+       | Inr "x" => "x" :: by ("to_list" "it")
        end
      in
      "to_list" (by (ephemeral_it t)) }>.

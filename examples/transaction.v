@@ -34,8 +34,8 @@ Example atomically :=
        "k" (fun _ => ()) }>.
 
 Example ex1 :=
-  <{ let "stdout" := ref (Inl ()) in
-     let "print" "v" := "stdout" <- Inr ("v", !"stdout") in
+  <{ let "stdout" := ref [] in
+     let "print" "v" := "stdout" <- "v" :: !"stdout" in
      atomically
        (fun _ =>
           let "r" := ref 10 in

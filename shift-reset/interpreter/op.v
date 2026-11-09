@@ -105,13 +105,13 @@ Definition dispatch_lxor (v1 v2 : val) : iv_monad val :=
   | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
-Definition dispatch_shl (v1 v2 : val) : iv_monad val :=
+Definition dispatch_shiftl (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftl z1 z2))
   | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
-Definition dispatch_shr (v1 v2 : val) : iv_monad val :=
+Definition dispatch_shiftr (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftr z1 z2))
   | _, _ => throw (Type_error "int * int" (VPair v1 v2))
@@ -261,8 +261,8 @@ Definition dispatch_bin_op (op : bin_op) : val -> val -> iv_monad val :=
   | BinOpLand => dispatch_land
   | BinOpLor => dispatch_lor
   | BinOpLxor => dispatch_lxor
-  | BinOpShl => dispatch_shl
-  | BinOpShr => dispatch_shr
+  | BinOpShiftl => dispatch_shiftl
+  | BinOpShiftr => dispatch_shiftr
   | BinOpApp => dispatch_app
   | BinOpLt => dispatch_lt
   | BinOpLe => dispatch_le

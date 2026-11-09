@@ -53,8 +53,8 @@ Inductive bin_op : Type :=
 | BinOpLand : bin_op
 | BinOpLor : bin_op
 | BinOpLxor : bin_op
-| BinOpShl : bin_op
-| BinOpShr : bin_op
+| BinOpShiftl : bin_op
+| BinOpShiftr : bin_op
 | BinOpApp : bin_op
 | BinOpLt : bin_op
 | BinOpLe : bin_op

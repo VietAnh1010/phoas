@@ -333,11 +333,11 @@ Notation "t1 'lxor' t2" :=
 Notation "t1 ^ t2" :=
   (BinOpPow t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
 
-Notation "t1 'shl' t2" :=
-  (BinOpShl t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
+Notation "t1 'shiftl' t2" :=
+  (BinOpShiftl t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
 
-Notation "t1 'shr' t2" :=
-  (BinOpShr t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
+Notation "t1 'shiftr' t2" :=
+  (BinOpShiftr t1 t2) (in custom term at level 38, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 = t2" :=
   (BinOpEq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term, left associativity) : term_scope.

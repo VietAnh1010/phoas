@@ -1,7 +1,7 @@
 From Stdlib Require Import List String ZArith.
 From shift_reset.lib Require list.
 From shift_reset.lib Require Import int.
-From shift_reset.core Require Import syntax ident tuple.
+From shift_reset.core Require Import syntax ident vals.
 From shift_reset.monad Require except.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require Import array error iheap imonad unwrap.
@@ -17,7 +17,7 @@ Definition array_length (v : val) : ivh_monad val :=
   let+ '(Array _ z) := iv_monad_to_ivh_monad (unwrap_varray v) in VInt z.
 
 Definition tuple_length (v : val) : ivh_monad val :=
-  let+ t := iv_monad_to_ivh_monad (unwrap_vtuple v) in VInt (Z.of_nat (tuple_length t)).
+  let+ t := iv_monad_to_ivh_monad (unwrap_vtuple v) in VInt (Z.of_nat (vals_length t)).
 
 Definition array_free (v : val) : ivh_monad val :=
   let* '(Array l z) := iv_monad_to_ivh_monad (unwrap_varray v) in
@@ -63,7 +63,7 @@ Definition tuple_get (v : val) : ivh_monad val :=
   if i <? 0 then
     throw (Invalid_argument "index out of bounds")
   else
-    match tuple_get (Z.to_nat i) t with
+    match vals_get (Z.to_nat i) t with
     | Some v => pure v
     | None => throw (Invalid_argument "index out of bounds")
     end.

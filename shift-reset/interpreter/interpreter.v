@@ -1,5 +1,5 @@
 From Stdlib Require Import Bool List String ZArith.
-From shift_reset.core Require Import syntax env ident loc record tuple.
+From shift_reset.core Require Import syntax ident ident_val_assocs loc vals.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require op prim.
 From shift_reset.interpreter Require Import array error iheap imonad pattern unwrap.
@@ -12,27 +12,27 @@ Local Open Scope lazy_bool_scope.
 Definition val_interpreter : Type := expr -> env -> ivh_monad val.
 Definition interpreter : Type := comp -> env -> kont -> irh_monad val.
 
-Fixpoint interpret_tuple_expr (self : val_interpreter) (t : tuple_expr) (e : env) : ivh_monad tuple :=
+Fixpoint interpret_exprs (self : val_interpreter) (t : exprs) (e : env) : ivh_monad vals :=
   match t with
-  | ETupleNil => pure TupleNil
-  | ETupleCons t1 t2 =>
+  | EsNil => pure VsNil
+  | EsCons t1 t2 =>
       let* v := self t1 e in
-      TupleCons v <$> interpret_tuple_expr self t2 e
+      VsCons v <$> interpret_exprs self t2 e
   end.
 
 Fixpoint interpret_record_expr (self : val_interpreter) (t : record_expr) (e : env) : ivh_monad record :=
   match t with
-  | ERecordNil => pure RecordNil
+  | ERecordNil => pure IVAsNil
   | ERecordRest t' =>
       let* v := self t' e in
       iv_monad_to_ivh_monad (unwrap_vrecord v)
   | ERecordCons l t1 t2 =>
       let* v := self t1 e in
-      RecordCons l v <$> interpret_record_expr self t2 e
+      IVAsCons l v <$> interpret_record_expr self t2 e
   | ERecordConsPun l t' =>
-      match env_find l e with
+      match ident_val_assocs_find l e with
       | None => throw (Name_error (ident_car l))
-      | Some v => RecordCons l v <$> interpret_record_expr self t' e
+      | Some v => IVAsCons l v <$> interpret_record_expr self t' e
       end
   end.
 
@@ -44,28 +44,19 @@ Definition interpret_variant_expr (self : val_interpreter) (t : variant_expr) (e
 
 Fixpoint update_record (r1 r2 : record) : ivh_monad record :=
   match r2 with
-  | RecordNil => pure r1
-  | RecordCons l v r2' =>
-      match record_replace l v r1 with
+  | IVAsNil => pure r1
+  | IVAsCons l v r2' =>
+      match ident_val_assocs_replace l v r1 with
       | None => throw (Name_error (ident_car l))
       | Some r1' => update_record r1' r2'
       end
-  end.
-
-Fixpoint interpret_array_expr (self : val_interpreter) (t : array_expr) (e : env) : ivh_monad (nat * list val) :=
-  match t with
-  | EArrayNil => pure (O, [])
-  | EArrayCons t1 t2 =>
-      let* v := self t1 e in
-      let+ '(n, vs) := interpret_array_expr self t2 e in
-      (S n, v :: vs)
   end.
 
 Definition interpret_expr (self : interpreter) : expr -> env -> ivh_monad val :=
   fix self' t e :=
     match t with
     | EVar x =>
-        match env_find x e with
+        match ident_val_assocs_find x e with
         | None => throw (Name_error (ident_car x))
         | Some v => pure v
         end
@@ -96,19 +87,19 @@ Definition interpret_expr (self : interpreter) : expr -> env -> ivh_monad val :=
     | ESnd t' =>
         let* v := self' t' e in
         snd <$> iv_monad_to_ivh_monad (unwrap_vprod v)
-    | ETuple t' => VTuple <$> interpret_tuple_expr self' t' e
+    | ETuple t' => VTuple <$> interpret_exprs self' t' e
     | ERecord t' => VRecord <$> interpret_record_expr self' t' e
     | EProjTuple t' i =>
         let* v := self' t' e in
         let* t := iv_monad_to_ivh_monad (unwrap_vtuple v) in
-        match tuple_get i t with
+        match vals_get i t with
         | None => throw (Invalid_argument "index out of bounds")
         | Some v' => pure v'
         end
     | EProjRecord t' l =>
         let* v := self' t' e in
         let* r := iv_monad_to_ivh_monad (unwrap_vrecord v) in
-        match record_find l r with
+        match ident_val_assocs_find l r with
         | None => throw (Name_error (ident_car l))
         | Some v' => pure v'
         end
@@ -128,8 +119,8 @@ Definition interpret_expr (self : interpreter) : expr -> env -> ivh_monad val :=
         let* v := self' t' e in
         state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))
     | EArray t' =>
-        let* '(n, vs) := interpret_array_expr self' t' e in
-        state (fun h => (VArray (iheap_next_loc h) (Z.of_nat n), array_of_list_alloc vs h))
+        let* vs := interpret_exprs self' t' e in
+        state (fun h => (VArray (iheap_next_loc h) (Z.of_nat (vals_length vs)), array_of_vals_alloc vs h))
     | EGet t' =>
         let* v := self' t' e in
         let* l := iv_monad_to_ivh_monad (unwrap_vref v) in
@@ -203,7 +194,7 @@ Definition interpret_expr' (self : interpreter) (t : expr) (e : env) : irh_monad
 Definition with_binder (b : binder) (v : val) (e : env) : env :=
   match b with
   | BAny => e
-  | BVar x => EnvCons x v e
+  | BVar x => IVAsCons x v e
   end.
 
 Definition with_for_direction (d : for_direction) (i1 i2 : Z) : (Z -> Z) * Z :=
@@ -214,8 +205,8 @@ Definition with_for_direction (d : for_direction) (i1 i2 : Z) : (Z -> Z) * Z :=
 
 Fixpoint with_fix_mut_defs (t : fix_mut_defs) (e : env) : env :=
   match t with
-  | FixMutLast f _ _ => EnvCons f (VFixMut t f e) e
-  | FixMutCons f _ _ t' => with_fix_mut_defs t' (EnvCons f (VFixMut t f e) e)
+  | FixMutLast f _ _ => IVAsCons f (VFixMut t f e) e
+  | FixMutCons f _ _ t' => with_fix_mut_defs t' (IVAsCons f (VFixMut t f e) e)
   end.
 
 Fixpoint interpret_match_cases (self : interpreter) (t : match_cases) (e : env) (k : kont) (v : val) : irh_monad val :=
@@ -384,7 +375,7 @@ Definition interpret_comp'_aux (self : interpreter) : comp -> env -> kont -> irh
             let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v2 e) in
             self t' e' k
         | AFix f p t' e =>
-            let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v2 (EnvCons f v1 e)) in
+            let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v2 (IVAsCons f v1 e)) in
             self t' e' k
         | AFixMut t' f e => interpret_fix_mut_defs self t' (with_fix_mut_defs t' e) k f v2
         | APrim l =>
@@ -429,7 +420,7 @@ Definition interpret_comp'_aux (self : interpreter) : comp -> env -> kont -> irh
               go n' i'
           end
         in go (Z.to_nat (z + 1)) i1
-    | CLetFix f p t1 t2 => self' t2 (EnvCons f (VFix f p t1 e) e) k
+    | CLetFix f p t1 t2 => self' t2 (IVAsCons f (VFix f p t1 e) e) k
     | CLetFixMut t1 t2 => self' t2 (with_fix_mut_defs t1 e) k
     | CShift b t' => throw (IRShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
     | CControl b t' => throw (IRControl (MKPure k) (fun u => self' t' (with_binder b u e) KNil))
@@ -456,7 +447,7 @@ Definition interpret_comp (fuel : nat) (t : comp) (e : env) (k : kont) : ivh_mon
   irh_monad_to_ivh_monad (interpret_comp' fuel t e k).
 
 Definition run_comp (fuel : nat) (t : comp) : (val + val) * iheap :=
-  run_es_monad (interpret_comp fuel t EnvNil KNil) iheap_empty.
+  run_es_monad (interpret_comp fuel t IVAsNil KNil) iheap_empty.
 
 Definition eval_comp (fuel : nat) (t : comp) : val + val :=
   fst (run_comp fuel t).

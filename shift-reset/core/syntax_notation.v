@@ -427,7 +427,7 @@ Notation "` l t" :=
   (EVariant (EVariantSome l t)) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
 
 Notation "`( t1 , t2 , t3 , .. , tn )" :=
-  (ETuple (ETupleCons t1 (ETupleCons t2 (ETupleCons t3 .. (ETupleCons tn ETupleNil) ..)))) (in custom term at level 0,
+  (ETuple (EsCons t1 (EsCons t2 (EsCons t3 .. (EsCons tn EsNil) ..)))) (in custom term at level 0,
         t1 custom term at level 64,
         t2 custom term at level 64,
         t3 custom term at level 64,
@@ -476,10 +476,10 @@ Notation "t1 .[ t2 ] <- t3" :=
         t3 custom term at level 65,
         left associativity) : term_scope.
 
-Notation "'array' [ ]" := (EArray EArrayNil) (in custom term at level 0) : term_scope.
+Notation "'array' [ ]" := (EArray EsNil) (in custom term at level 0) : term_scope.
 
 Notation "'array' [ t1 ; .. ; tn ]" :=
-  (EArray (EArrayCons t1 .. (EArrayCons tn EArrayNil) ..)) (in custom term at level 0,
+  (EArray (EsCons t1 .. (EsCons tn EsNil) ..)) (in custom term at level 0,
         t1 custom term at level 65,
         tn custom term at level 65) : term_scope.
 

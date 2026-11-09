@@ -39,7 +39,7 @@ Definition unwrap_vsum : val -> iv_monad (val + val) :=
 Definition unwrap_vvariant : val -> iv_monad variant :=
   unwrap_val val_to_variant "variant".
 
-Definition unwrap_vtuple : val -> iv_monad tuple :=
+Definition unwrap_vtuple : val -> iv_monad vals :=
   unwrap_val val_to_tuple "tuple".
 
 Definition unwrap_vrecord : val -> iv_monad record :=

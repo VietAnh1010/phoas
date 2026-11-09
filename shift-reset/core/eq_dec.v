@@ -47,10 +47,9 @@ with handle_cases_eq_dec : forall (t1 t2 : handle_cases), {t1 = t2} + {t1 <> t2}
 with effect_cases_eq_dec : forall (t1 t2 : effect_cases), {t1 = t2} + {t1 <> t2}
 with return_case_eq_dec : forall (t1 t2 : return_case), {t1 = t2} + {t1 <> t2}
 with fix_mut_defs_eq_dec : forall (t1 t2 : fix_mut_defs), {t1 = t2} + {t1 <> t2}
-with tuple_expr_eq_dec : forall (t1 t2 : tuple_expr), {t1 = t2} + {t1 <> t2}
+with exprs_eq_dec : forall (t1 t2 : exprs), {t1 = t2} + {t1 <> t2}
 with record_expr_eq_dec : forall (t1 t2 : record_expr), {t1 = t2} + {t1 <> t2}
-with variant_expr_eq_dec : forall (t1 t2 : variant_expr), {t1 = t2} + {t1 <> t2}
-with array_expr_eq_dec : forall (t1 t2 : array_expr), {t1 = t2} + {t1 <> t2}.
+with variant_expr_eq_dec : forall (t1 t2 : variant_expr), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve comp_eq_dec : eq_dec_db.
@@ -60,25 +59,23 @@ Hint Resolve handle_cases_eq_dec : eq_dec_db.
 Hint Resolve effect_cases_eq_dec : eq_dec_db.
 Hint Resolve return_case_eq_dec : eq_dec_db.
 Hint Resolve fix_mut_defs_eq_dec : eq_dec_db.
-Hint Resolve tuple_expr_eq_dec : eq_dec_db.
+Hint Resolve exprs_eq_dec : eq_dec_db.
 Hint Resolve record_expr_eq_dec : eq_dec_db.
 Hint Resolve variant_expr_eq_dec : eq_dec_db.
 
 Lemma val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
 with metakont_eq_dec : forall (mk1 mk2 : metakont), {mk1 = mk2} + {mk1 <> mk2}
-with env_eq_dec : forall (e1 e2 : env), {e1 = e2} + {e1 <> e2}
-with tuple_eq_dec : forall (t1 t2 : tuple), {t1 = t2} + {t1 <> t2}
-with record_eq_dec : forall (r1 r2 : record), {r1 = r2} + {r1 <> r2}
+with vals_eq_dec : forall (vs1 vs2 : vals), {vs1 = vs2} + {vs1 <> vs2}
+with ident_val_assocs_eq_dec : forall (ivs1 ivs2 : ident_val_assocs), {ivs1 = ivs2} + {ivs1 <> ivs2}
 with variant_eq_dec : forall (v1 v2 : variant), {v1 = v2} + {v1 <> v2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve val_eq_dec : eq_dec_db.
 Hint Resolve kont_eq_dec : eq_dec_db.
 Hint Resolve metakont_eq_dec : eq_dec_db.
-Hint Resolve env_eq_dec : eq_dec_db.
-Hint Resolve tuple_eq_dec : eq_dec_db.
-Hint Resolve record_eq_dec : eq_dec_db.
+Hint Resolve vals_eq_dec : eq_dec_db.
+Hint Resolve ident_val_assocs_eq_dec : eq_dec_db.
 Hint Resolve variant_eq_dec : eq_dec_db.
 
 Lemma applicable_eq_dec : forall (a1 a2 : applicable), {a1 = a2} + {a1 <> a2}.

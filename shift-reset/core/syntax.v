@@ -104,7 +104,7 @@ with expr : Type :=
 | EPair : expr -> expr -> expr
 | EFst : expr -> expr
 | ESnd : expr -> expr
-| ETuple : tuple_expr -> expr
+| ETuple : exprs -> expr
 | ERecord : record_expr -> expr
 | EProjTuple : expr -> nat -> expr
 | EProjRecord : expr -> ident -> expr
@@ -115,7 +115,7 @@ with expr : Type :=
 | ECons : expr -> expr -> expr
 | EVariant : variant_expr -> expr
 | ERef : expr -> expr
-| EArray : array_expr -> expr
+| EArray : exprs -> expr
 | EGet : expr -> expr
 | ESet : expr -> expr -> expr
 | EGetAt : expr -> expr -> expr
@@ -138,9 +138,9 @@ with return_case : Type :=
 with fix_mut_defs : Type :=
 | FixMutLast : ident -> pattern -> comp -> fix_mut_defs
 | FixMutCons : ident -> pattern -> comp -> fix_mut_defs -> fix_mut_defs
-with tuple_expr : Type :=
-| ETupleNil : tuple_expr
-| ETupleCons : expr -> tuple_expr -> tuple_expr
+with exprs : Type :=
+| EsNil : exprs
+| EsCons : expr -> exprs -> exprs
 with record_expr : Type :=
 | ERecordNil : record_expr
 | ERecordRest : expr -> record_expr
@@ -148,10 +148,7 @@ with record_expr : Type :=
 | ERecordConsPun : ident -> record_expr -> record_expr
 with variant_expr : Type :=
 | EVariantNone : ident -> variant_expr
-| EVariantSome : ident -> expr -> variant_expr
-with array_expr : Type :=
-| EArrayNil : array_expr
-| EArrayCons : expr -> array_expr -> array_expr.
+| EVariantSome : ident -> expr -> variant_expr.
 
 Definition match_cases : Type := cases.
 Definition try_cases : Type := cases.
@@ -164,13 +161,13 @@ Inductive val : Type :=
 | VFalse : val
 | VChar : ascii -> val
 | VString : string -> val
-| VFun : pattern -> comp -> env -> val
-| VFix : ident -> pattern -> comp -> env -> val
-| VFixMut : fix_mut_defs -> ident -> env -> val
+| VFun : pattern -> comp -> ident_val_assocs -> val
+| VFix : ident -> pattern -> comp -> ident_val_assocs -> val
+| VFixMut : fix_mut_defs -> ident -> ident_val_assocs -> val
 | VPrim : ident -> val
 | VPair : val -> val -> val
-| VTuple : tuple -> val
-| VRecord : record -> val
+| VTuple : vals -> val
+| VRecord : ident_val_assocs -> val
 | VInl : val -> val
 | VInr : val -> val
 | VNil : val
@@ -180,40 +177,40 @@ Inductive val : Type :=
 | VArray : loc -> Z -> val
 | VMKPure : metakont -> val
 | VMKReset : metakont -> val
-| VMKHandle : metakont -> handle_cases -> env -> val
+| VMKHandle : metakont -> handle_cases -> ident_val_assocs -> val
 with kont : Type :=
 | KNil : kont
-| KConsSeq : comp -> env -> kont -> kont
-| KConsLet : pattern -> comp -> env -> kont -> kont
+| KConsSeq : comp -> ident_val_assocs -> kont -> kont
+| KConsLet : pattern -> comp -> ident_val_assocs -> kont -> kont
 | KApp : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> kont -> metakont
 | MKPrompt : metakont -> kont -> metakont
-| MKTry : metakont -> cases -> env -> kont -> metakont
-| MKHandle : metakont -> handle_cases -> env -> kont -> metakont
-| MKShallowHandle : metakont -> handle_cases -> env -> kont -> metakont
-with env : Type :=
-| EnvNil : env
-| EnvCons : ident -> val -> env -> env
-with tuple : Type :=
-| TupleNil : tuple
-| TupleCons : val -> tuple -> tuple
-with record : Type :=
-| RecordNil : record
-| RecordCons : ident -> val -> record -> record
+| MKTry : metakont -> cases -> ident_val_assocs -> kont -> metakont
+| MKHandle : metakont -> handle_cases -> ident_val_assocs -> kont -> metakont
+| MKShallowHandle : metakont -> handle_cases -> ident_val_assocs -> kont -> metakont
+with vals : Type :=
+| VsNil : vals
+| VsCons : val -> vals -> vals
+with ident_val_assocs : Type :=
+| IVAsNil : ident_val_assocs
+| IVAsCons : ident -> val -> ident_val_assocs -> ident_val_assocs
 with variant : Type :=
 | VariantNone : ident -> variant
 | VariantSome : ident -> val -> variant.
 
+Definition env : Type := ident_val_assocs.
+Definition record : Type := ident_val_assocs.
+
 Inductive applicable : Type :=
-| AFun : pattern -> comp -> env -> applicable
-| AFix : ident -> pattern -> comp -> env -> applicable
-| AFixMut : fix_mut_defs -> ident -> env -> applicable
+| AFun : pattern -> comp -> ident_val_assocs -> applicable
+| AFix : ident -> pattern -> comp -> ident_val_assocs -> applicable
+| AFixMut : fix_mut_defs -> ident -> ident_val_assocs -> applicable
 | APrim : ident -> applicable
 | AMKPure : metakont -> applicable
 | AMKReset : metakont -> applicable
-| AMKHandle : metakont -> handle_cases -> env -> applicable.
+| AMKHandle : metakont -> handle_cases -> ident_val_assocs -> applicable.
 
 Inductive array : Type :=
 | Array : loc -> Z -> array.

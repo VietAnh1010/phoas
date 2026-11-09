@@ -5,7 +5,7 @@ Definition Failure (s : string) : val :=
   VVariant (VariantSome (Ident "Failure") (VString s)).
 
 Definition Type_error (s : string) (v : val) : val :=
-  VVariant (VariantSome (Ident "Type_error") (VRecord (RecordCons (Ident "expected") (VString s) (RecordCons (Ident "got") v RecordNil)))).
+  VVariant (VariantSome (Ident "Type_error") (VRecord (IVAsCons (Ident "expected") (VString s) (IVAsCons (Ident "got") v IVAsNil)))).
 
 Definition Name_error (s : string) : val :=
   VVariant (VariantSome (Ident "Name_error") (VString s)).

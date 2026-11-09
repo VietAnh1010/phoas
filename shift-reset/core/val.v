@@ -86,7 +86,7 @@ Definition val_to_variant (v : val) : option variant :=
   | _ => None
   end.
 
-Definition val_to_tuple (v : val) : option tuple :=
+Definition val_to_tuple (v : val) : option vals :=
   match v with
   | VTuple t => Some t
   | _ => None

@@ -1,6 +1,6 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
 From shift_reset.lib Require Import float.
-From shift_reset.core Require Import syntax ident pattern record.
+From shift_reset.core Require Import syntax ident ident_val_assocs pattern.
 From shift_reset.monad Require Import except.
 From shift_reset.interpreter Require Import error imonad.
 Import ExceptNotations.
@@ -10,12 +10,12 @@ Local Open Scope except_scope.
 Fixpoint match_pattern (p : pattern) (v : val) (e : env) : iv_monad (option env) :=
   match p, v with
   | PAny, _ => pure (Some e)
-  | PVar x, _ => pure (Some (EnvCons x v e))
+  | PVar x, _ => pure (Some (IVAsCons x v e))
   | PAlias p' x, _ =>
       let+ o := match_pattern p' v e in
       match o with
       | None => None
-      | Some e' => Some (EnvCons x v e')
+      | Some e' => Some (IVAsCons x v e')
       end
   | POr p1 p2, _ =>
       let* o := match_pattern p1 v e in
@@ -56,10 +56,10 @@ Fixpoint match_pattern (p : pattern) (v : val) (e : env) : iv_monad (option env)
   | PVariant p', VVariant v' => match_variant_pattern p' v' e
   | _, _ => throw (Type_error (type_of_pattern p) v)
   end
-with match_tuple_pattern (p : tuple_pattern) (t : tuple) (e : env) : iv_monad (option env) :=
+with match_tuple_pattern (p : tuple_pattern) (t : vals) (e : env) : iv_monad (option env) :=
   match p, t with
-  | PTupleNil, TupleNil => pure (Some e)
-  | PTupleCons p1 p2, TupleCons v t' =>
+  | PTupleNil, VsNil => pure (Some e)
+  | PTupleCons p1 p2, VsCons v t' =>
       let* o := match_pattern p1 v e in
       match o with
       | None => pure None
@@ -71,12 +71,12 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : iv_monad
   match p with
   | PRecordNil =>
       match r with
-      | RecordNil => pure (Some e)
-      | RecordCons _ _ _ => throw (Match_failure "match_record_pattern")
+      | IVAsNil => pure (Some e)
+      | IVAsCons _ _ _ => throw (Match_failure "match_record_pattern")
       end
   | PRecordRest p' => match_pattern p' (VRecord r) e
   | PRecordCons l p1 p2 =>
-      let (o, r') := record_find_remove l r in
+      let (o, r') := ident_val_assocs_find_remove l r in
       match o with
       | None => throw (Match_failure "match_record_pattern")
       | Some v =>
@@ -87,10 +87,10 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : iv_monad
           end
       end
   | PRecordConsPun l p' =>
-      let (o, r') := record_find_remove l r in
+      let (o, r') := ident_val_assocs_find_remove l r in
       match o with
       | None => throw (Match_failure "match_record_pattern")
-      | Some v => match_record_pattern p' r' (EnvCons l v e)
+      | Some v => match_record_pattern p' r' (IVAsCons l v e)
       end
   end
 with match_variant_pattern (p : variant_pattern) (v : variant) (e : env) : iv_monad (option env) :=

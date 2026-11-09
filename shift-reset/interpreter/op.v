@@ -148,7 +148,7 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
       | Eq => compare_val v12 v22
       | _ => pure c
       end
-  | VTuple t1, VTuple t2 => compare_tuple t1 t2
+  | VTuple t1, VTuple t2 => compare_vals t1 t2
   | VInl v1', VInl v2' => compare_val v1' v2'
   | VInr v1', VInr v2' => compare_val v1' v2'
   | VInl _, VInr _ => pure Lt
@@ -164,13 +164,13 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
   | VCons _ _, VNil => pure Gt
   | _, _ => throw (Type_error "'a ord => 'a * 'a" (VPair v1 v2))
   end
-with compare_tuple (t1 t2 : tuple) : iv_monad comparison :=
+with compare_vals (t1 t2 : vals) : iv_monad comparison :=
   match t1, t2 with
-  | TupleNil, TupleNil => pure Eq
-  | TupleCons v1 t1', TupleCons v2 t2' =>
+  | VsNil, VsNil => pure Eq
+  | VsCons v1 t1', VsCons v2 t2' =>
       let* c := compare_val v1 v2 in
       match c with
-      | Eq => compare_tuple t1' t2'
+      | Eq => compare_vals t1' t2'
       | _ => pure c
       end
   | _, _ => throw (Type_error "'a ord => 'a * 'a" (VPair (VTuple t1) (VTuple t2)))
@@ -190,8 +190,8 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
   | VPair v11 v12, VPair v21 v22 =>
       let* b := equal_val v11 v21 in
       if b then equal_val v12 v22 else pure false
-  | VTuple t1, VTuple t2 => equal_tuple t1 t2
-  | VRecord r1, VRecord r2 => equal_record r1 r2
+  | VTuple t1, VTuple t2 => equal_vals t1 t2
+  | VRecord r1, VRecord r2 => equal_ident_val_assocs r1 r2
   | VInl v1', VInl v2' => equal_val v1' v2'
   | VInr v1', VInr v2' => equal_val v1' v2'
   | VInl _, VInr _ => pure false
@@ -207,21 +207,21 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
   | VArray l1 z1, VArray l2 z2 => pure (loc_eqb l1 l2 &&& (z1 =? z2)%Z)
   | _, _ => throw (Type_error "'a eq => 'a * 'a" (VPair v1 v2))
   end
-with equal_tuple (t1 t2 : tuple) : iv_monad bool :=
+with equal_vals (t1 t2 : vals) : iv_monad bool :=
   match t1, t2 with
-  | TupleNil, TupleNil => pure true
-  | TupleCons v1 t1', TupleCons v2 t2' =>
+  | VsNil, VsNil => pure true
+  | VsCons v1 t1', VsCons v2 t2' =>
       let* b := equal_val v1 v2 in
-      if b then equal_tuple t1' t2' else pure false
+      if b then equal_vals t1' t2' else pure false
   | _, _ => pure false
   end
-with equal_record (r1 r2 : record) : iv_monad bool :=
+with equal_ident_val_assocs (r1 r2 : ident_val_assocs) : iv_monad bool :=
   match r1, r2 with
-  | RecordNil, RecordNil => pure true
-  | RecordCons l1 v1 r1', RecordCons l2 v2 r2' =>
+  | IVAsNil, IVAsNil => pure true
+  | IVAsCons l1 v1 r1', IVAsCons l2 v2 r2' =>
       if ident_eqb l1 l2 then
         let* b := equal_val v1 v2 in
-        if b then equal_record r1' r2' else pure false
+        if b then equal_ident_val_assocs r1' r2' else pure false
       else pure false
   | _, _ => pure false
   end

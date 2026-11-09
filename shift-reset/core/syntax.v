@@ -76,6 +76,7 @@ Inductive comp : Type :=
 | CIf : expr -> comp -> comp -> comp
 | CWhile : expr -> comp -> comp
 | CFor : binder -> expr -> for_direction -> expr -> comp -> comp
+| CLetFun : ident -> pattern -> comp -> comp -> comp
 | CLetFix : ident -> pattern -> comp -> comp -> comp
 | CLetFixMut : fix_mut_defs -> comp -> comp
 | CShift : binder -> comp -> comp

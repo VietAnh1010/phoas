@@ -429,6 +429,7 @@ Definition interpret_comp'_aux (self : interpreter) : comp -> env -> kont -> irh
               go n' i'
           end
         in go (Z.to_nat (z + 1)) i1
+    | CLetFun f p t1 t2 => self' t2 (IVAsCons f (VFun p t1 e) e) k
     | CLetFix f p t1 t2 => self' t2 (IVAsCons f (VFix f p t1 e) e) k
     | CLetFixMut t1 t2 => self' t2 (with_fix_mut_defs t1 e) k
     | CShift b t' => throw (IRShift (MKPure k) (fun u => self' t' (with_binder b u e) KNil))

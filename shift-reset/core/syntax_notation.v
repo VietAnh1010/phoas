@@ -136,10 +136,19 @@ Notation "'let' p := t1 'in' t2" :=
 Notation "'match' tv 'with' t 'end'" :=
   (CMatch tv t) (in custom term at level 0, tv custom term, t custom cases) : term_scope.
 
-Notation "'let' f p1 .. pn := t1 'in' t2" :=
-  (CLet f (EFun p1 .. (EFun pn t1) ..) t2) (in custom term at level 60,
+Notation "'let' f p := t1 'in' t2" :=
+  (CLetFun f p t1 t2) (in custom term at level 60,
+        f custom pattern' at level 0,
+        p custom pattern' at level 0,
+        t1 custom term,
+        t2 custom term at level 69,
+        right associativity) : term_scope.
+
+Notation "'let' f p1 p2 .. pn := t1 'in' t2" :=
+  (CLetFun f p1 (EFun p2 .. (EFun pn t1) ..) t2) (in custom term at level 60,
         f custom pattern' at level 0,
         p1 custom pattern' at level 0,
+        p2 custom pattern' at level 0,
         pn custom pattern' at level 0,
         t1 custom term,
         t2 custom term at level 69,

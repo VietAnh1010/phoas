@@ -67,92 +67,92 @@ Inductive for_direction : Type :=
 | Upto : for_direction
 | Downto : for_direction.
 
-Inductive term : Type :=
-| TVal : val_term -> term
-| TApp : val_term -> val_term -> term
-| TSeq : term -> term -> term
-| TLet : pattern -> term -> term -> term
-| TMatch : val_term -> match_term -> term
-| TIf : val_term -> term -> term -> term
-| TWhile : val_term -> term -> term
-| TFor : binder -> val_term -> for_direction -> val_term -> term -> term
-| TLetFix : ident -> pattern -> term -> term -> term
-| TLetFixMut : fix_mut_term -> term -> term
-| TShift : binder -> term -> term
-| TControl : binder -> term -> term
-| TReset : term -> term
-| TPrompt : term -> term
-| TRaise : val_term -> term
-| TTry : term -> exn_term -> term
-| TPerform : val_term -> term
-| THandle : term -> ret_term -> eff_term -> term
-| TShallowHandle : term -> ret_term -> eff_term -> term
-with val_term : Type :=
-| TVVar : ident -> val_term
-| TVTt : val_term
-| TVInt : Z -> val_term
-| TVFloat : Qc -> val_term
-| TVTrue : val_term
-| TVFalse : val_term
-| TVChar : ascii -> val_term
-| TVString : string -> val_term
-| TVAnd : val_term -> val_term -> val_term
-| TVOr : val_term -> val_term -> val_term
-| TVFun : pattern -> term -> val_term
-| TVFix : ident -> pattern -> term -> val_term
-| TVFixMut : fix_mut_term -> ident -> val_term
-| TVPair : val_term -> val_term -> val_term
-| TVFst : val_term -> val_term
-| TVSnd : val_term -> val_term
-| TVTuple : tuple_term -> val_term
-| TVRecord : record_term -> val_term
-| TVProjTuple : val_term -> nat -> val_term
-| TVProjRecord : val_term -> ident -> val_term
-| TVUpdateRecord : val_term -> record_term -> val_term
-| TVInl : val_term -> val_term
-| TVInr : val_term -> val_term
-| TVNil : val_term
-| TVCons : val_term -> val_term -> val_term
-| TVVariant : variant_term -> val_term
-| TVRef : val_term -> val_term
-| TVArray : array_term -> val_term
-| TVGet : val_term -> val_term
-| TVSet : val_term -> val_term -> val_term
-| TVGetAt : val_term -> val_term -> val_term
-| TVSetAt : val_term -> val_term -> val_term -> val_term
-| TVOp1 : op1 -> val_term -> val_term
-| TVOp2 : op2 -> val_term -> val_term -> val_term
-| TVPrim : ident -> val_term
-| TVBy : term -> val_term
+Inductive comp : Type :=
+| TVal : expr -> comp
+| CApp : expr -> expr -> comp
+| CSeq : comp -> comp -> comp
+| CLet : pattern -> comp -> comp -> comp
+| CMatch : expr -> match_term -> comp
+| CIf : expr -> comp -> comp -> comp
+| CWhile : expr -> comp -> comp
+| CFor : binder -> expr -> for_direction -> expr -> comp -> comp
+| CLetFix : ident -> pattern -> comp -> comp -> comp
+| CLetFixMut : fix_mut_term -> comp -> comp
+| CShift : binder -> comp -> comp
+| CControl : binder -> comp -> comp
+| CReset : comp -> comp
+| CPrompt : comp -> comp
+| CRaise : expr -> comp
+| CTry : comp -> exn_term -> comp
+| CPerform : expr -> comp
+| CHandle : comp -> ret_term -> eff_term -> comp
+| CShallowHandle : comp -> ret_term -> eff_term -> comp
+with expr : Type :=
+| EVar : ident -> expr
+| ETt : expr
+| EInt : Z -> expr
+| EFloat : Qc -> expr
+| ETrue : expr
+| EFalse : expr
+| EChar : ascii -> expr
+| EString : string -> expr
+| EAnd : expr -> expr -> expr
+| EOr : expr -> expr -> expr
+| EFun : pattern -> comp -> expr
+| EFix : ident -> pattern -> comp -> expr
+| EFixMut : fix_mut_term -> ident -> expr
+| EPair : expr -> expr -> expr
+| EFst : expr -> expr
+| ESnd : expr -> expr
+| ETuple : tuple_expr -> expr
+| ERecord : record_expr -> expr
+| EProjTuple : expr -> nat -> expr
+| EProjRecord : expr -> ident -> expr
+| EUpdateRecord : expr -> record_expr -> expr
+| EInl : expr -> expr
+| EInr : expr -> expr
+| ENil : expr
+| ECons : expr -> expr -> expr
+| EVariant : variant_expr -> expr
+| ERef : expr -> expr
+| EArray : array_expr -> expr
+| EGet : expr -> expr
+| ESet : expr -> expr -> expr
+| EGetAt : expr -> expr -> expr
+| ESetAt : expr -> expr -> expr -> expr
+| EOp1 : op1 -> expr -> expr
+| EOp2 : op2 -> expr -> expr -> expr
+| EPrim : ident -> expr
+| EBy : comp -> expr
 with match_term : Type :=
 | TMatchNil : match_term
-| TMatchCons : pattern -> term -> match_term -> match_term
+| TMatchCons : pattern -> comp -> match_term -> match_term
 with fix_mut_term : Type :=
-| TFixMutLast : ident -> pattern -> term -> fix_mut_term
-| TFixMutCons : ident -> pattern -> term -> fix_mut_term -> fix_mut_term
+| TFixMutLast : ident -> pattern -> comp -> fix_mut_term
+| TFixMutCons : ident -> pattern -> comp -> fix_mut_term -> fix_mut_term
 with ret_term : Type :=
 | TRetNone : ret_term
-| TRetSome : pattern -> term -> ret_term
+| TRetSome : pattern -> comp -> ret_term
 with exn_term : Type :=
-| TExnLast : pattern -> term -> exn_term
-| TExnCons : pattern -> term -> exn_term -> exn_term
+| TExnLast : pattern -> comp -> exn_term
+| TExnCons : pattern -> comp -> exn_term -> exn_term
 with eff_term : Type :=
-| TEffLast : pattern -> binder -> term -> eff_term
-| TEffCons : pattern -> binder -> term -> eff_term -> eff_term
-with tuple_term : Type :=
-| TTupleNil : tuple_term
-| TTupleCons : val_term -> tuple_term -> tuple_term
-with record_term : Type :=
-| TRecordNil : record_term
-| TRecordRest : val_term -> record_term
-| TRecordConsPun : ident -> record_term -> record_term
-| TRecordCons : ident -> val_term -> record_term -> record_term
-with variant_term : Type :=
-| TVariantNone : ident -> variant_term
-| TVariantSome : ident -> val_term -> variant_term
-with array_term : Type :=
-| TArrayNil : array_term
-| TArrayCons : val_term -> array_term -> array_term.
+| TEffLast : pattern -> binder -> comp -> eff_term
+| TEffCons : pattern -> binder -> comp -> eff_term -> eff_term
+with tuple_expr : Type :=
+| ETupleNil : tuple_expr
+| ETupleCons : expr -> tuple_expr -> tuple_expr
+with record_expr : Type :=
+| ERecordNil : record_expr
+| ERecordRest : expr -> record_expr
+| ERecordConsPun : ident -> record_expr -> record_expr
+| ERecordCons : ident -> expr -> record_expr -> record_expr
+with variant_expr : Type :=
+| EVariantNone : ident -> variant_expr
+| EVariantSome : ident -> expr -> variant_expr
+with array_expr : Type :=
+| EArrayNil : array_expr
+| EArrayCons : expr -> array_expr -> array_expr.
 
 Inductive val : Type :=
 | VTt : val
@@ -162,8 +162,8 @@ Inductive val : Type :=
 | VFalse : val
 | VChar : ascii -> val
 | VString : string -> val
-| VFun : pattern -> term -> env -> val
-| VFix : ident -> pattern -> term -> env -> val
+| VFun : pattern -> comp -> env -> val
+| VFix : ident -> pattern -> comp -> env -> val
 | VFixMut : fix_mut_term -> ident -> env -> val
 | VPrim : ident -> val
 | VPair : val -> val -> val
@@ -181,8 +181,8 @@ Inductive val : Type :=
 | VMKHandle : metakont -> ret_term -> eff_term -> env -> val
 with kont : Type :=
 | KNil : kont
-| KConsSeq : term -> env -> kont -> kont
-| KConsLet : pattern -> term -> env -> kont -> kont
+| KConsSeq : comp -> env -> kont -> kont
+| KConsLet : pattern -> comp -> env -> kont -> kont
 | KApp : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
@@ -192,8 +192,8 @@ with metakont : Type :=
 | MKHandle : metakont -> ret_term -> eff_term -> env -> kont -> metakont
 | MKShallowHandle : metakont -> ret_term -> eff_term -> env -> kont -> metakont
 with env : Type :=
-| ENil : env
-| ECons : ident -> val -> env -> env
+| EnvNil : env
+| EnvCons : ident -> val -> env -> env
 with tuple : Type :=
 | TupleNil : tuple
 | TupleCons : val -> tuple -> tuple
@@ -205,8 +205,8 @@ with variant : Type :=
 | VariantSome : ident -> val -> variant.
 
 Inductive applicable : Type :=
-| AFun : pattern -> term -> env -> applicable
-| AFix : ident -> pattern -> term -> env -> applicable
+| AFun : pattern -> comp -> env -> applicable
+| AFix : ident -> pattern -> comp -> env -> applicable
 | AFixMut : fix_mut_term -> ident -> env -> applicable
 | APrim : ident -> applicable
 | AMKPure : metakont -> applicable

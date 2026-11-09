@@ -61,4 +61,4 @@ Example ex1 :=
           end);
      !"stdout" }>.
 
-Compute (eval_term_to_list_int 100 <{ ex1 }>).
+Compute (eval_comp_to_list_int 100 <{ ex1 }>).

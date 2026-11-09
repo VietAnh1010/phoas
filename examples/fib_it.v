@@ -21,8 +21,8 @@ Example fib_it_dcont :=
        in
        reset ("go" (0, 1)) }>.
 
-Example eval_fib (candidate : val_term) (fuel : nat) (n : Z) :=
-  eval_term_to_list_int fuel
+Example eval_fib (candidate : expr) (fuel : nat) (n : Z) :=
+  eval_comp_to_list_int fuel
   <{ let "DelayedList" := DelayedList in
      let `{"take"; "to_list"; .._} := "DelayedList" in
      let "it" := "take" (n, candidate) in

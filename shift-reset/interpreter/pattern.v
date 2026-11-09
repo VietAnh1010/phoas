@@ -10,12 +10,12 @@ Local Open Scope except_scope.
 Fixpoint match_pattern (p : pattern) (v : val) (e : env) : iv_monad (option env) :=
   match p, v with
   | PAny, _ => pure (Some e)
-  | PVar x, _ => pure (Some (ECons x v e))
+  | PVar x, _ => pure (Some (EnvCons x v e))
   | PAlias p' x, _ =>
       let+ o := match_pattern p' v e in
       match o with
       | None => None
-      | Some e' => Some (ECons x v e')
+      | Some e' => Some (EnvCons x v e')
       end
   | POr p1 p2, _ =>
       let* o := match_pattern p1 v e in
@@ -79,7 +79,7 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : iv_monad
       let (o, r') := record_find_remove l r in
       match o with
       | None => throw (Match_failure "match_record_pattern")
-      | Some v => match_record_pattern p' r' (ECons l v e)
+      | Some v => match_record_pattern p' r' (EnvCons l v e)
       end
   | PRecordCons l p1 p2 =>
       let (o, r') := record_find_remove l r in

@@ -59,8 +59,8 @@ Example convolve :=
        in
        snd (by ("go" "xs")) }>.
 
-Definition eval_convolve (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
-  eval_term_to_list_prod_int_int fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.
+Definition eval_convolve (candidate : expr) (fuel : nat) (xs ys : list Z) :=
+  eval_comp_to_list_prod_int_int fuel <{ candidate ({list_int_to_expr xs}, {list_int_to_expr ys}) }>.
 
 Compute (eval_convolve convolve 100 [1; 2] [3; 4]).
 Compute (eval_convolve convolve_cont 100 [1; 2] [3; 4]).

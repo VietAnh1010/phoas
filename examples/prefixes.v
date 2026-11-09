@@ -37,8 +37,8 @@ Example prefixes_dcont :=
        in
        prompt ("go" "xs") }>.
 
-Definition eval_prefixes (candidate : val_term) (fuel : nat) (xs : list Z) :=
-  deep_eval_term_to_list val_to_list_int fuel <{ candidate {list_int_to_val_term xs} }>.
+Definition eval_prefixes (candidate : expr) (fuel : nat) (xs : list Z) :=
+  deep_eval_comp_to_list val_to_list_int fuel <{ candidate {list_int_to_expr xs} }>.
 
 Time Compute (eval_prefixes prefixes_cont 100 []).
 Time Compute (eval_prefixes prefixes_cont 100 [0]).

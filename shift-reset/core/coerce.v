@@ -7,10 +7,10 @@ Coercion PVar : ident >-> pattern.
 Coercion PInt : Z >-> pattern.
 Coercion PFloat : Qc >-> pattern.
 Coercion PChar : ascii >-> pattern.
-Coercion TVVar : ident >-> val_term.
-Coercion TVInt : Z >-> val_term.
-Coercion TVFloat : Qc >-> val_term.
-Coercion TVChar : ascii >-> val_term.
-Coercion TVOp1 : op1 >-> Funclass.
-Coercion TVOp2 : op2 >-> Funclass.
-Coercion TVal : val_term >-> term.
+Coercion EVar : ident >-> expr.
+Coercion EInt : Z >-> expr.
+Coercion EFloat : Qc >-> expr.
+Coercion EChar : ascii >-> expr.
+Coercion EOp1 : op1 >-> Funclass.
+Coercion EOp2 : op2 >-> Funclass.
+Coercion TVal : expr >-> comp.

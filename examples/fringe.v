@@ -36,11 +36,11 @@ Example ephemeral_it :=
        let _ := "r" <- fun () => reset (iter ("f", "t"); Inl ()) in
        fun () => !"r" () }>.
 
-Definition eval_persistent_it (fuel : nat) (t : val_term) :=
-  eval_term_to_list_int fuel <{ (by DelayedList).`"to_list" (by (persistent_it t)) }>.
+Definition eval_persistent_it (fuel : nat) (t : expr) :=
+  eval_comp_to_list_int fuel <{ (by DelayedList).`"to_list" (by (persistent_it t)) }>.
 
-Definition eval_ephemeral_it (fuel : nat) (t : val_term) :=
-  eval_term_to_list_int fuel
+Definition eval_ephemeral_it (fuel : nat) (t : expr) :=
+  eval_comp_to_list_int fuel
   <{ let fix "to_list" "it" :=
        match by ("it" ()) with
        | Inl _ => []

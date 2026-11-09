@@ -34,8 +34,8 @@ Example fib_logarithmic :=
        in
        fst (by ("go" "n")) }>.
 
-Example eval_fib (candidate : val_term) (fuel : nat) (n : Z) :=
-  eval_term fuel <{ candidate n }>.
+Example eval_fib (candidate : expr) (fuel : nat) (n : Z) :=
+  eval_comp fuel <{ candidate n }>.
 
 Time Compute (eval_fib fib_linear 1012 1007).
 Time Compute (eval_fib fib_logarithmic 1012 1007).

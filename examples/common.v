@@ -16,14 +16,14 @@ Definition range (s e : Z) : list Z :=
   in
   go s (Z.to_nat (e - s)).
 
-Fixpoint list_to_val_term {A} (f : A -> val_term) (xs : list A) : val_term :=
+Fixpoint list_to_expr {A} (f : A -> expr) (xs : list A) : expr :=
   match xs with
   | [] => <{ [] }>
-  | x :: xs' => <{ {f x} :: {list_to_val_term f xs'} }>
+  | x :: xs' => <{ {f x} :: {list_to_expr f xs'} }>
   end.
 
-Definition list_int_to_val_term : list Z -> val_term :=
-  list_to_val_term TVInt.
+Definition list_int_to_expr : list Z -> expr :=
+  list_to_expr EInt.
 
 Fixpoint deep_val_to_list {A} (f : val -> option A) (v : val) : option (list A) :=
   match v with
@@ -43,15 +43,15 @@ Definition val_to_prod_int_int (v : val) : option (Z * Z) :=
   | _ => None
   end.
 
-Definition deep_eval_term_to_list {A} (f : val -> option A) (fuel : nat) (t : term) : val + list A :=
-  let* v := eval_term fuel t in
+Definition deep_eval_comp_to_list {A} (f : val -> option A) (fuel : nat) (t : comp) : val + list A :=
+  let* v := eval_comp fuel t in
   match deep_val_to_list f v with
-  | None => inl (Failure "deep_eval_term_to_list")
+  | None => inl (Failure "deep_eval_comp_to_list")
   | Some xs => inr xs
   end%sum.
 
-Definition eval_term_to_list_int : nat -> term -> val + list Z :=
-  deep_eval_term_to_list val_to_int.
+Definition eval_comp_to_list_int : nat -> comp -> val + list Z :=
+  deep_eval_comp_to_list val_to_int.
 
-Definition eval_term_to_list_prod_int_int : nat -> term -> val + list (Z * Z) :=
-  deep_eval_term_to_list val_to_prod_int_int.
+Definition eval_comp_to_list_prod_int_int : nat -> comp -> val + list (Z * Z) :=
+  deep_eval_comp_to_list val_to_prod_int_int.

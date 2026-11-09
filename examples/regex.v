@@ -45,14 +45,14 @@ Example accept :=
                "counter" <- !"counter" + 1;
                match "l" with
                | [] => raise (`"Accept" ())
-               | _ :: _ => {TVString "no"}
+               | _ :: _ => {EString "no"}
                end)
             with
-            | `"Fail" _, _ => {TVString "no"}
+            | `"Fail" _, _ => {EString "no"}
             | `"Flip" _, "k" => "k" true; "k" false
             end)
          with
-         | `"Accept" _ => {TVString "yes"}
+         | `"Accept" _ => {EString "yes"}
          end
        in
        "answer", !"counter" }>.
@@ -68,26 +68,26 @@ Arguments Concat {A} _ _.
 Arguments Union {A} _ _.
 Arguments Star {A} _.
 
-Fixpoint regex_int_to_val_term (r : regex Z) : val_term :=
+Fixpoint regex_int_to_expr (r : regex Z) : expr :=
   match r with
   | Char c => <{ `"Char" c }>
-  | Concat r1 r2 => <{ `"Concat" ({regex_int_to_val_term r1}, {regex_int_to_val_term r2}) }>
-  | Union r1 r2 => <{ `"Union" ({regex_int_to_val_term r1}, {regex_int_to_val_term r2}) }>
-  | Star r' => <{ `"Star" {regex_int_to_val_term r'} }>
+  | Concat r1 r2 => <{ `"Concat" ({regex_int_to_expr r1}, {regex_int_to_expr r2}) }>
+  | Union r1 r2 => <{ `"Union" ({regex_int_to_expr r1}, {regex_int_to_expr r2}) }>
+  | Star r' => <{ `"Star" {regex_int_to_expr r'} }>
   end.
 
 Definition eval_accept (fuel : nat) (r : regex Z) (l : list Z) :=
-  eval_term fuel <{ accept ({regex_int_to_val_term r}, {list_int_to_val_term l}) }>.
+  eval_comp fuel <{ accept ({regex_int_to_expr r}, {list_int_to_expr l}) }>.
 
-Definition test_accept (fuel : nat) (r : regex Z) (l : list Z) (t : term) :=
-  eval_accept fuel r l = eval_term 1 t.
+Definition test_accept (fuel : nat) (r : regex Z) (l : list Z) (t : comp) :=
+  eval_accept fuel r l = eval_comp 1 t.
 
 Module Tests.
   Example regex_1 := Concat (Char 67) (Char 69).
   Example list_1_1 := [0].
   Example list_1_2 := [67; 69].
-  Compute (eq_refl : test_accept 1000 regex_1 list_1_1 <{ {TVString "no"}, 0 }>).
-  Compute (eq_refl : test_accept 1000 regex_1 list_1_2 <{ {TVString "yes"}, 1 }>).
+  Compute (eq_refl : test_accept 1000 regex_1 list_1_1 <{ {EString "no"}, 0 }>).
+  Compute (eq_refl : test_accept 1000 regex_1 list_1_2 <{ {EString "yes"}, 1 }>).
 
   Example regex_2 := Star (Concat (Char 7) (Char 12)).
   Example list_2_1 : list Z := [].

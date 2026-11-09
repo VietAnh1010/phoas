@@ -2,7 +2,7 @@ From shift_reset.core Require Import syntax.
 
 Declare Scope term_scope.
 Delimit Scope term_scope with term.
-Bind Scope term_scope with term.
+Bind Scope term_scope with comp.
 Local Open Scope term_scope.
 
 Declare Custom Entry binder'.
@@ -13,7 +13,7 @@ Declare Custom Entry match_term.
 Declare Custom Entry fix_mut_term.
 Declare Custom Entry exn_term.
 Declare Custom Entry eff_term.
-Declare Custom Entry record_term.
+Declare Custom Entry record_expr.
 
 Notation "'_'" := BAny (in custom binder' at level 0) : term_scope.
 Notation "b" := b (in custom binder' at level 0, b constr at level 0) : term_scope.
@@ -126,29 +126,29 @@ Notation "| p , k => t1 t2" :=
         right associativity) : term_scope.
 
 Notation "t1 t2" :=
-  (TApp t1 t2) (in custom term at level 17, t1 custom term, t2 custom term, left associativity) : term_scope.
+  (CApp t1 t2) (in custom term at level 17, t1 custom term, t2 custom term, left associativity) : term_scope.
 
 Notation "'if' tv 'then' t1 'else' t2" :=
-  (TIf tv t1 t2) (in custom term at level 60,
+  (CIf tv t1 t2) (in custom term at level 60,
         tv custom term,
         t1 custom term,
         t2 custom term at level 69) : term_scope.
 
 Notation "t1 ; t2" :=
-  (TSeq t1 t2) (in custom term at level 69, t1 custom term, t2 custom term, right associativity) : term_scope.
+  (CSeq t1 t2) (in custom term at level 69, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "'let' p := t1 'in' t2" :=
-  (TLet p t1 t2) (in custom term at level 60,
+  (CLet p t1 t2) (in custom term at level 60,
         p custom pattern' at level 0,
         t1 custom term,
         t2 custom term at level 69,
         right associativity) : term_scope.
 
 Notation "'match' tv 'with' t 'end'" :=
-  (TMatch tv t) (in custom term at level 0, tv custom term, t custom match_term) : term_scope.
+  (CMatch tv t) (in custom term at level 0, tv custom term, t custom match_term) : term_scope.
 
 Notation "'let' f p1 .. pn := t1 'in' t2" :=
-  (TLet f (TVFun p1 .. (TVFun pn t1) ..) t2) (in custom term at level 60,
+  (CLet f (EFun p1 .. (EFun pn t1) ..) t2) (in custom term at level 60,
         f custom pattern' at level 0,
         p1 custom pattern' at level 0,
         pn custom pattern' at level 0,
@@ -157,7 +157,7 @@ Notation "'let' f p1 .. pn := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f p := t1 'in' t2" :=
-  (TLetFix f p t1 t2) (in custom term at level 60,
+  (CLetFix f p t1 t2) (in custom term at level 60,
         f constr at level 0,
         p custom pattern' at level 0,
         t1 custom term,
@@ -165,7 +165,7 @@ Notation "'let' 'fix' f p := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'let' 'fix' f p1 p2 .. pn := t1 'in' t2" :=
-  (TLetFix f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) (in custom term at level 60,
+  (CLetFix f p1 (EFun p2 .. (EFun pn t1) ..) t2) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -175,48 +175,48 @@ Notation "'let' 'fix' f p1 p2 .. pn := t1 'in' t2" :=
         right associativity) : term_scope.
 
 Notation "'while' tv 'do' t" :=
-  (TWhile tv t) (in custom term at level 60, tv custom term, t custom term at level 68) : term_scope.
+  (CWhile tv t) (in custom term at level 60, tv custom term, t custom term at level 68) : term_scope.
 
 Notation "'for' b 'from' tv1 'upto' tv2 'do' t" :=
-  (TFor b tv1 Upto tv2 t) (in custom term at level 60,
+  (CFor b tv1 Upto tv2 t) (in custom term at level 60,
         b custom binder' at level 0,
         tv1 custom term,
         tv2 custom term,
         t custom term at level 68) : term_scope.
 
 Notation "'for' b 'from' tv1 'downto' tv2 'do' t" :=
-  (TFor b tv1 Downto tv2 t) (in custom term at level 60,
+  (CFor b tv1 Downto tv2 t) (in custom term at level 60,
         b custom binder' at level 0,
         tv1 custom term,
         tv2 custom term,
         t custom term at level 68) : term_scope.
 
 Notation "'shift' ( 'fun' k => t )" :=
-  (TShift k t) (in custom term at level 0, k custom binder' at level 0, t custom term) : term_scope.
+  (CShift k t) (in custom term at level 0, k custom binder' at level 0, t custom term) : term_scope.
 
 Notation "'control' ( 'fun' k => t )" :=
-  (TControl k t) (in custom term at level 0, k custom binder' at level 0, t custom term) : term_scope.
+  (CControl k t) (in custom term at level 0, k custom binder' at level 0, t custom term) : term_scope.
 
 Notation "'reset' t" :=
-  (TReset t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (CReset t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'prompt' t" :=
-  (TPrompt t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (CPrompt t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'fun' p1 .. pn => t" :=
-  (TVFun p1 .. (TVFun pn t) ..) (in custom term at level 60,
+  (EFun p1 .. (EFun pn t) ..) (in custom term at level 60,
         p1 custom pattern' at level 0,
         pn custom pattern' at level 0,
         t custom term at level 99) : term_scope.
 
 Notation "'fix' f p := t" :=
-  (TVFix f p t) (in custom term at level 60,
+  (EFix f p t) (in custom term at level 60,
         f constr at level 0,
         p custom pattern' at level 0,
         t custom term at level 99) : term_scope.
 
 Notation "'fix' f p1 p2 .. pn := t" :=
-  (TVFix f p1 (TVFun p2 .. (TVFun pn t) ..)) (in custom term at level 60,
+  (EFix f p1 (EFun p2 .. (EFun pn t) ..)) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -231,7 +231,7 @@ Notation "f p := t1 'with' t2" :=
         t2 custom fix_mut_term) : term_scope.
 
 Notation "f p1 p2 .. pn := t1 'with' t2" :=
-  (TFixMutCons f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) (in custom fix_mut_term at level 69,
+  (TFixMutCons f p1 (EFun p2 .. (EFun pn t1) ..) t2) (in custom fix_mut_term at level 69,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -246,7 +246,7 @@ Notation "f p := t" :=
         t custom term) : term_scope.
 
 Notation "f p1 p2 .. pn := t" :=
-  (TFixMutLast f p1 (TVFun p2 .. (TVFun pn t) ..)) (in custom fix_mut_term at level 69,
+  (TFixMutLast f p1 (EFun p2 .. (EFun pn t) ..)) (in custom fix_mut_term at level 69,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -254,7 +254,7 @@ Notation "f p1 p2 .. pn := t" :=
         t custom term) : term_scope.
 
 Notation "'let' 'fix' f p := t1 'with' t2 'in' t3" :=
-  (TLetFixMut (TFixMutCons f p t1 t2) t3) (in custom term at level 60,
+  (CLetFixMut (TFixMutCons f p t1 t2) t3) (in custom term at level 60,
         f constr at level 0,
         p custom pattern' at level 0,
         t1 custom term,
@@ -262,7 +262,7 @@ Notation "'let' 'fix' f p := t1 'with' t2 'in' t3" :=
         t3 custom term at level 69) : term_scope.
 
 Notation "'let' 'fix' f p1 p2 .. pn := t1 'with' t2 'in' t3" :=
-  (TLetFixMut (TFixMutCons f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) t3) (in custom term at level 60,
+  (CLetFixMut (TFixMutCons f p1 (EFun p2 .. (EFun pn t1) ..) t2) t3) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -272,7 +272,7 @@ Notation "'let' 'fix' f p1 p2 .. pn := t1 'with' t2 'in' t3" :=
         t3 custom term at level 69) : term_scope.
 
 Notation "'fix' f p := t1 'with' t2 'for' g" :=
-  (TVFixMut (TFixMutCons f p t1 t2) g) (in custom term at level 60,
+  (EFixMut (TFixMutCons f p t1 t2) g) (in custom term at level 60,
         f constr at level 0,
         p custom pattern' at level 0,
         t1 custom term at level 99,
@@ -280,7 +280,7 @@ Notation "'fix' f p := t1 'with' t2 'for' g" :=
         g constr at level 0) : term_scope.
 
 Notation "'fix' f p1 p2 .. pn := t1 'with' t2 'for' g" :=
-  (TVFixMut (TFixMutCons f p1 (TVFun p2 .. (TVFun pn t1) ..) t2) g) (in custom term at level 60,
+  (EFixMut (TFixMutCons f p1 (EFun p2 .. (EFun pn t1) ..) t2) g) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -289,12 +289,12 @@ Notation "'fix' f p1 p2 .. pn := t1 'with' t2 'for' g" :=
         t2 custom fix_mut_term,
         g constr at level 0) : term_scope.
 
-Notation "()" := TVTt (in custom term at level 0) : term_scope.
-Notation "'true'" := TVTrue (in custom term at level 0) : term_scope.
-Notation "'false'" := TVFalse (in custom term at level 0) : term_scope.
+Notation "()" := ETt (in custom term at level 0) : term_scope.
+Notation "'true'" := ETrue (in custom term at level 0) : term_scope.
+Notation "'false'" := EFalse (in custom term at level 0) : term_scope.
 
 Notation "! t" :=
-  (TVGet t) (in custom term at level 2, t custom term at level 10) : term_scope.
+  (EGet t) (in custom term at level 2, t custom term at level 10) : term_scope.
 
 Notation "- t" :=
   (Op1Neg t) (in custom term at level 23, t custom term at level 10) : term_scope.
@@ -309,13 +309,13 @@ Notation "'lnot' t" :=
   (Op1Lnot t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'fst' t" :=
-  (TVFst t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (EFst t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'snd' t" :=
-  (TVSnd t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (ESnd t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'ref' t" :=
-  (TVRef t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (ERef t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "t1 + t2" :=
   (Op2Add t1 t2) (in custom term at level 40, t1 custom term, t2 custom term, left associativity) : term_scope.
@@ -372,125 +372,125 @@ Notation "t1 ++ t2" :=
   (Op2App t1 t2) (in custom term at level 41, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 && t2" :=
-  (TVAnd t1 t2) (in custom term at level 51, t1 custom term, t2 custom term, right associativity) : term_scope.
+  (EAnd t1 t2) (in custom term at level 51, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 || t2" :=
-  (TVOr t1 t2) (in custom term at level 52, t1 custom term, t2 custom term, right associativity) : term_scope.
+  (EOr t1 t2) (in custom term at level 52, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 <- t2" :=
-  (TVSet t1 t2) (in custom term at level 66, t1 custom term, t2 custom term, right associativity) : term_scope.
+  (ESet t1 t2) (in custom term at level 66, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 , t2" :=
-  (TVPair t1 t2) (in custom term at level 65, t1 custom term, t2 custom term, left associativity) : term_scope.
+  (EPair t1 t2) (in custom term at level 65, t1 custom term, t2 custom term, left associativity) : term_scope.
 
 Notation "'Inl' t" :=
-  (TVInl t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (EInl t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'Inr' t" :=
-  (TVInr t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (EInr t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
-Notation "[ ]" := TVNil (in custom term at level 0) : term_scope.
+Notation "[ ]" := ENil (in custom term at level 0) : term_scope.
 
 Notation "t1 :: t2" :=
-  (TVCons t1 t2) (in custom term at level 41, t1 custom term, t2 custom term, right associativity) : term_scope.
+  (ECons t1 t2) (in custom term at level 41, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "[ t1 ; .. ; tn ]" :=
-  (TVCons t1 .. (TVCons tn TVNil) ..) (in custom term at level 0,
+  (ECons t1 .. (ECons tn ENil) ..) (in custom term at level 0,
         t1 custom term at level 65,
         tn custom term at level 65) : term_scope.
 
 Notation "'raise' t" :=
-  (TRaise t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (CRaise t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'perform' t" :=
-  (TPerform t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (CPerform t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "'try' t1 'with' t2 'end'" :=
-  (TTry t1 t2) (in custom term at level 0, t1 custom term at level 10, t2 custom exn_term) : term_scope.
+  (CTry t1 t2) (in custom term at level 0, t1 custom term at level 10, t2 custom exn_term) : term_scope.
 
 Notation "'handle' t1 'with' t2 'end'" :=
-  (THandle t1 TRetNone t2) (in custom term at level 0, t1 custom term at level 10, t2 custom eff_term) : term_scope.
+  (CHandle t1 TRetNone t2) (in custom term at level 0, t1 custom term at level 10, t2 custom eff_term) : term_scope.
 
 Notation "'handle' t1 'with' '|' 'return' p => t2 t3 'end'" :=
-  (THandle t1 (TRetSome p t2) t3) (in custom term at level 0,
+  (CHandle t1 (TRetSome p t2) t3) (in custom term at level 0,
         t1 custom term at level 10,
         p custom pattern' at level 69,
         t2 custom term,
         t3 custom eff_term) : term_scope.
 
 Notation "'shallow' 'handle' t1 'with' t2 'end'" :=
-  (TShallowHandle t1 TRetNone t2) (in custom term at level 0, t1 custom term at level 10, t2 custom eff_term) : term_scope.
+  (CShallowHandle t1 TRetNone t2) (in custom term at level 0, t1 custom term at level 10, t2 custom eff_term) : term_scope.
 
 Notation "'shallow' 'handle' t1 'with' '|' 'return' p => t2 t3 'end'" :=
-  (TShallowHandle t1 (TRetSome p t2) t3) (in custom term at level 0,
+  (CShallowHandle t1 (TRetSome p t2) t3) (in custom term at level 0,
         t1 custom term at level 10,
         p custom pattern' at level 69,
         t2 custom term,
         t3 custom eff_term) : term_scope.
 
 Notation "'by' t" :=
-  (TVBy t) (in custom term at level 17, t custom term at level 10) : term_scope.
+  (EBy t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
 Notation "` l" :=
-  (TVVariant (TVariantNone l)) (in custom term at level 17, l constr at level 0) : term_scope.
+  (EVariant (EVariantNone l)) (in custom term at level 17, l constr at level 0) : term_scope.
 
 Notation "` l t" :=
-  (TVVariant (TVariantSome l t)) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
+  (EVariant (EVariantSome l t)) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
 
 Notation "`( t1 , t2 , t3 , .. , tn )" :=
-  (TVTuple (TTupleCons t1 (TTupleCons t2 (TTupleCons t3 .. (TTupleCons tn TTupleNil) ..)))) (in custom term at level 0,
+  (ETuple (ETupleCons t1 (ETupleCons t2 (ETupleCons t3 .. (ETupleCons tn ETupleNil) ..)))) (in custom term at level 0,
         t1 custom term at level 64,
         t2 custom term at level 64,
         t3 custom term at level 64,
         tn custom term at level 64) : term_scope.
 
 Notation "l" :=
-  (TRecordConsPun l TRecordNil) (in custom record_term at level 1, l constr at level 0) : term_scope.
+  (ERecordConsPun l ERecordNil) (in custom record_expr at level 1, l constr at level 0) : term_scope.
 
 Notation "l ; t" :=
-  (TRecordConsPun l t) (in custom record_term at level 1, l constr at level 0, t custom record_term at level 1) : term_scope.
+  (ERecordConsPun l t) (in custom record_expr at level 1, l constr at level 0, t custom record_expr at level 1) : term_scope.
 
 Notation "l := t" :=
-  (TRecordCons l t TRecordNil) (in custom record_term at level 1, l constr at level 0, t custom term at level 65) : term_scope.
+  (ERecordCons l t ERecordNil) (in custom record_expr at level 1, l constr at level 0, t custom term at level 65) : term_scope.
 
 Notation "l := t1 ; t2" :=
-  (TRecordCons l t1 t2) (in custom record_term at level 1,
+  (ERecordCons l t1 t2) (in custom record_expr at level 1,
         l constr at level 0,
         t1 custom term at level 65,
-        t2 custom record_term at level 1) : term_scope.
+        t2 custom record_expr at level 1) : term_scope.
 
 Notation "'..' t" :=
-  (TRecordRest t) (in custom record_term at level 1, t custom term at level 65) : term_scope.
+  (ERecordRest t) (in custom record_expr at level 1, t custom term at level 65) : term_scope.
 
 Notation "`{ t }" :=
-  (TVRecord t) (in custom term at level 0, t custom record_term at level 1) : term_scope.
+  (ERecord t) (in custom term at level 0, t custom record_expr at level 1) : term_scope.
 
 Notation "t .# i" :=
-  (TVProjTuple t i) (in custom term at level 1, t custom term, i constr at level 0, left associativity) : term_scope.
+  (EProjTuple t i) (in custom term at level 1, t custom term, i constr at level 0, left associativity) : term_scope.
 
 Notation "t .` l" :=
-  (TVProjRecord t l) (in custom term at level 1, t custom term, l constr at level 0, left associativity) : term_scope.
+  (EProjRecord t l) (in custom term at level 1, t custom term, l constr at level 0, left associativity) : term_scope.
 
 Notation "t .`{ r }" :=
-  (TVUpdateRecord t r) (in custom term at level 1, t custom term, r custom record_term at level 1, left associativity) : term_scope.
+  (EUpdateRecord t r) (in custom term at level 1, t custom term, r custom record_expr at level 1, left associativity) : term_scope.
 
 Notation "% l" :=
-  (TVPrim l) (in custom term at level 1, l constr at level 0) : term_scope.
+  (EPrim l) (in custom term at level 1, l constr at level 0) : term_scope.
 
 Notation "t1 .[ t2 ]" :=
-  (TVGetAt t1 t2) (in custom term at level 1, t1 custom term, t2 custom term at level 65, left associativity) : term_scope.
+  (EGetAt t1 t2) (in custom term at level 1, t1 custom term, t2 custom term at level 65, left associativity) : term_scope.
 
 Notation "t1 .[ t2 ] <- t3" :=
-  (TVSetAt t1 t2 t3) (in custom term at level 1,
+  (ESetAt t1 t2 t3) (in custom term at level 1,
         t1 custom term,
         t2 custom term at level 65,
         t3 custom term at level 65,
         left associativity) : term_scope.
 
-Notation "'array' [ ]" := (TVArray TArrayNil) (in custom term at level 0) : term_scope.
+Notation "'array' [ ]" := (EArray EArrayNil) (in custom term at level 0) : term_scope.
 
 Notation "'array' [ t1 ; .. ; tn ]" :=
-  (TVArray (TArrayCons t1 .. (TArrayCons tn TArrayNil) ..)) (in custom term at level 0,
+  (EArray (EArrayCons t1 .. (EArrayCons tn EArrayNil) ..)) (in custom term at level 0,
         t1 custom term at level 65,
         tn custom term at level 65) : term_scope.
 

@@ -19,4 +19,4 @@ programs (`examples/`).
 - Name the equational lemma for one clause of a `Fixpoint`/`Definition`
   `fold_unfold_<function>_<constructor>`, listing the scrutinized constructors
   in match order (for example `fold_unfold_match_pattern_PPair_VPair`,
-  `fold_unfold_interpret_tuple_term_TTupleNil`).
+  `fold_unfold_interpret_tuple_expr_ETupleNil`).

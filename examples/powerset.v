@@ -50,8 +50,8 @@ Example powerset_fold_left :=
        in
        !"r" }>.
 
-Definition eval_powerset (candidate : val_term) (fuel : nat) (xs : list Z) :=
-  deep_eval_term_to_list val_to_list_int fuel <{ candidate {list_int_to_val_term xs} }>.
+Definition eval_powerset (candidate : expr) (fuel : nat) (xs : list Z) :=
+  deep_eval_comp_to_list val_to_list_int fuel <{ candidate {list_int_to_expr xs} }>.
 
 Time Compute (eval_powerset powerset_filter 1010 (range 0 4)).
 Time Compute (eval_powerset powerset_fold_left 1010 (range 0 4)).

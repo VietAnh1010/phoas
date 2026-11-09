@@ -30,7 +30,7 @@ Example run_toss x :=
      let "r" := toss "x" in
      !"x", "r" }>.
 
-Compute (eval_term 4 (run_toss 0)).
+Compute (eval_comp 4 (run_toss 0)).
 
 Example do_toss_n :=
   <{ fun ("n", "x") =>
@@ -54,4 +54,4 @@ Example run_toss_n n x :=
      let "r" := toss_n (n, "x") in
      !"x", "r" }>.
 
-Time Compute (eval_term 100 (run_toss_n 15 0)).
+Time Compute (eval_comp 100 (run_toss_n 15 0)).

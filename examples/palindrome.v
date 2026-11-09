@@ -42,11 +42,11 @@ Example is_palindrome_exception :=
        | false => false
        end }>.
 
-Definition eval_is_palindrome (candidate : val_term) (fuel : nat) (xs : list Z) :=
-  eval_term fuel <{ candidate {list_int_to_val_term xs} }>.
+Definition eval_is_palindrome (candidate : expr) (fuel : nat) (xs : list Z) :=
+  eval_comp fuel <{ candidate {list_int_to_expr xs} }>.
 
-Definition test_is_palindrome (candidate : val_term) (fuel : nat) (xs : list Z) (t : term) :=
-  eval_is_palindrome candidate fuel xs = eval_term 1 t.
+Definition test_is_palindrome (candidate : expr) (fuel : nat) (xs : list Z) (t : comp) :=
+  eval_is_palindrome candidate fuel xs = eval_comp 1 t.
 
 Compute (eq_refl : test_is_palindrome is_palindrome_cont 100 [] <{ true }>).
 Compute (eq_refl : test_is_palindrome is_palindrome_cont 100 [1; 2; 2; 1] <{ true }>).

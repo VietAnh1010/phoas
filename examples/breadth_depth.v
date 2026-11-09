@@ -103,8 +103,8 @@ Example depth_it_effect :=
        | `"Yield" "x", "k" => Inr ("x", "k")
        end }>.
 
-Definition eval_it {A} (f : val -> option A) (candidate : val_term) (fuel : nat) (n : Z) (t : val_term) :=
-  deep_eval_term_to_list f fuel
+Definition eval_it {A} (f : val -> option A) (candidate : expr) (fuel : nat) (n : Z) (t : expr) :=
+  deep_eval_comp_to_list f fuel
   <{ let "DelayedList" := DelayedList in
      let `{"take"; "to_list"; .._} := "DelayedList" in
      let "it" := candidate t in

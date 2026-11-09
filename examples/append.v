@@ -28,12 +28,12 @@ Example append_dcont :=
 Example append :=
   <{ (by List).`"append" }>.
 
-Definition eval_append (candidate : val_term) (fuel : nat) (xs ys : list Z) :=
-  eval_term_to_list_int fuel <{ candidate ({list_int_to_val_term xs}, {list_int_to_val_term ys}) }>.
+Definition eval_append (candidate : expr) (fuel : nat) (xs ys : list Z) :=
+  eval_comp_to_list_int fuel <{ candidate ({list_int_to_expr xs}, {list_int_to_expr ys}) }>.
 
-Compute (eval_term 3 <{ append_dcont_aux {list_int_to_val_term []} }>).
-Compute (eval_term 4 <{ append_dcont_aux {list_int_to_val_term [1]} }>).
-Compute (eval_term 5 <{ append_dcont_aux {list_int_to_val_term [1; 2]} }>).
+Compute (eval_comp 3 <{ append_dcont_aux {list_int_to_expr []} }>).
+Compute (eval_comp 4 <{ append_dcont_aux {list_int_to_expr [1]} }>).
+Compute (eval_comp 5 <{ append_dcont_aux {list_int_to_expr [1; 2]} }>).
 
 Compute (eval_append append 3 [] [69]).
 Compute (eval_append append 4 [1] [69]).

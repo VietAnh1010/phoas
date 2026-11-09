@@ -9,31 +9,31 @@ Local Open Scope Z_scope.
 Local Open Scope term_scope.
 
 Example arith1 := <{ 1 + 2 * 3 }>.
-Compute (eval_term 1 arith1).
+Compute (eval_comp 1 arith1).
 
 Example arith2 := <{ 1 + 6 / 6 }>.
-Compute (eval_term 1 arith2).
+Compute (eval_comp 1 arith2).
 
 Example arith3 := <{ {Q2Qc (4 # 6)} + {Q2Qc (4 # 5)} }>.
-Compute (eval_term 1 arith3).
+Compute (eval_comp 1 arith3).
 
 Example arith4 := <{ 10 / 0 }>.
-Compute (eval_term 1 arith4).
+Compute (eval_comp 1 arith4).
 
 Example arith5 := <{ 10 mod 0 }>.
-Compute (eval_term 1 arith5).
+Compute (eval_comp 1 arith5).
 
 Example arith6 := <{ {Q2Qc (6 # 9)} / {0%Qc} }>.
-Compute (eval_term 1 arith6).
+Compute (eval_comp 1 arith6).
 
 Example cmp1 := <{ 4 + 2 < 6 + 9 }>.
-Compute (eval_term 1 cmp1).
+Compute (eval_comp 1 cmp1).
 
 Example cmp2 := <{ true < true }>.
-Compute (eval_term 1 cmp2).
+Compute (eval_comp 1 cmp2).
 
 Example cmp3 := <{ (4, 2) < (6, 9) }>.
-Compute (eval_term 1 cmp3).
+Compute (eval_comp 1 cmp3).
 
 Example ex1 :=
   <{ let "f" :=
@@ -44,7 +44,7 @@ Example ex1 :=
      in
      "f" 10 }>.
 
-Compute (eval_term 2 ex1).
+Compute (eval_comp 2 ex1).
 
 Example either :=
   <{ fun "x" "y" => shift (fun "k" => "k" "x"; "k" "y") }>.
@@ -60,7 +60,7 @@ Example ex2 :=
      let "answer" := !"result" || "crash" in
      %"ref_free" "result"; "answer" }>.
 
-Compute (eval_term 5 ex2).
+Compute (eval_comp 5 ex2).
 
 Example choice :=
   <{ fun "xs" =>
@@ -81,10 +81,10 @@ Example sum xs :=
                                     let "answer" := !"result" in
                                     %"ref_free" "result"; "answer") }>.
 
-Compute (eval_term 3 (sum (list_int_to_val_term []))).
-Compute (eval_term 4 (sum (list_int_to_val_term [1]))).
-Compute (eval_term 5 (sum (list_int_to_val_term [1; 2]))).
-Time Compute (eval_term 5005 (sum (list_int_to_val_term (range 0 5000)))).
+Compute (eval_comp 3 (sum (list_int_to_expr []))).
+Compute (eval_comp 4 (sum (list_int_to_expr [1]))).
+Compute (eval_comp 5 (sum (list_int_to_expr [1; 2]))).
+Time Compute (eval_comp 5005 (sum (list_int_to_expr (range 0 5000)))).
 
 Example yield :=
   <{ fun "x" => shift (fun "k" => Inr ("x", "k")) }>.
@@ -125,19 +125,19 @@ Inductive tree (A : Type) :=
 Arguments Leaf {A} _.
 Arguments Node {A} _ _.
 
-Fixpoint term_of_tree (t : tree Z) : val_term :=
+Fixpoint expr_of_tree (t : tree Z) : expr :=
   match t with
   | Leaf x => <{ Inl x }>
-  | Node l r => <{ Inr ({term_of_tree l}, {term_of_tree r}) }>
+  | Node l r => <{ Inr ({expr_of_tree l}, {expr_of_tree r}) }>
   end.
 
 Example sum_tree1 t :=
-  <{ let "sum_tree" := sum_tree in "sum_tree" {term_of_tree t} }>.
+  <{ let "sum_tree" := sum_tree in "sum_tree" {expr_of_tree t} }>.
 
-Compute (eval_term 100 (sum_tree1 (Leaf 0))).
-Compute (eval_term 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).
+Compute (eval_comp 100 (sum_tree1 (Leaf 0))).
+Compute (eval_comp 100 (sum_tree1 (Node (Leaf 0) (Leaf 1)))).
 
-Fixpoint make_balanced_tree3 (n : nat) : val_term :=
+Fixpoint make_balanced_tree3 (n : nat) : expr :=
   match n with
   | O => <{ `"Leaf" {Z.of_nat n} }>
   | S n' =>
@@ -166,10 +166,10 @@ Example bfs :=
 Example bfs1 t :=
   <{ prompt (bfs t; []) }>.
 
-Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 0))).
-Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 1))).
-Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 2))).
-Compute (eval_term_to_list_int 100 (bfs1 (make_balanced_tree3 3))).
+Compute (eval_comp_to_list_int 100 (bfs1 (make_balanced_tree3 0))).
+Compute (eval_comp_to_list_int 100 (bfs1 (make_balanced_tree3 1))).
+Compute (eval_comp_to_list_int 100 (bfs1 (make_balanced_tree3 2))).
+Compute (eval_comp_to_list_int 100 (bfs1 (make_balanced_tree3 3))).
 
 Example dfs :=
   <{ fix "dfs" "t" :=
@@ -192,10 +192,10 @@ Example dfs :=
 Example dfs1 t :=
   <{ reset (dfs t; []) }>.
 
-Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 0))).
-Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 1))).
-Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 2))).
-Compute (eval_term_to_list_int 100 (dfs1 (make_balanced_tree3 3))).
+Compute (eval_comp_to_list_int 100 (dfs1 (make_balanced_tree3 0))).
+Compute (eval_comp_to_list_int 100 (dfs1 (make_balanced_tree3 1))).
+Compute (eval_comp_to_list_int 100 (dfs1 (make_balanced_tree3 2))).
+Compute (eval_comp_to_list_int 100 (dfs1 (make_balanced_tree3 3))).
 
 Example unhandled_exception :=
   <{ raise (`"Segfault" 139) }>.
@@ -210,10 +210,10 @@ Example handle_exception (tag : string) :=
      | "exn" => raise "exn"
      end }>.
 
-Compute (eval_term 1 unhandled_exception).
-Compute (eval_term 1 (handle_exception "Segfault")).
-Compute (eval_term 1 (handle_exception "StackOverflow")).
-Compute (eval_term 1 (handle_exception "Exception")).
+Compute (eval_comp 1 unhandled_exception).
+Compute (eval_comp 1 (handle_exception "Segfault")).
+Compute (eval_comp 1 (handle_exception "StackOverflow")).
+Compute (eval_comp 1 (handle_exception "Exception")).
 
 Example unhandled_effect :=
   <{ handle (perform (`"Effect0" ())) with
@@ -221,7 +221,7 @@ Example unhandled_effect :=
      | `"Effect2" _, _ => ()
      end }>.
 
-Compute (eval_term 1 unhandled_effect).
+Compute (eval_comp 1 unhandled_effect).
 
 Example print :=
   <{ fun "x" => "stdout" <- ("x", !"stdout") }>.
@@ -260,7 +260,7 @@ Example basic_exn_eff :=
       end);
      !"stdout" }>.
 
-Compute (eval_term 4 basic_exn_eff).
+Compute (eval_comp 4 basic_exn_eff).
 
 Example collatz k :=
   <{ let fix "collatz_len" "n" :=
@@ -281,7 +281,7 @@ Example collatz k :=
      in
      !"n_of_max_len", !"max_len" }>.
 
-Time Compute (eval_term 150 (collatz 500)).
+Time Compute (eval_comp 150 (collatz 500)).
 
 Example eval_ltr :=
   <{ fix "eval" "e" :=
@@ -298,8 +298,8 @@ Example eval_ltr_input1 :=
 Example eval_ltr_input2 :=
   <{ `"Sub" `{"lhs" := `"Num" 6; "rhs" := `"Num" 9} }>.
 
-Compute (eval_term 10 <{ eval_ltr eval_ltr_input1 }>).
-Compute (eval_term 10 <{ eval_ltr eval_ltr_input2 }>).
+Compute (eval_comp 10 <{ eval_ltr eval_ltr_input1 }>).
+Compute (eval_comp 10 <{ eval_ltr eval_ltr_input2 }>).
 
 Example loop :=
   <{ let "stdout" := ref () in
@@ -315,16 +315,16 @@ Example loop :=
      | `"Foo" _, "k" => "k" "f"
      end }>.
 
-Compute (run_term 10 loop).
+Compute (run_comp 10 loop).
 
 Example even :=
   <{ fix "odd" "x" := if "x" = 0 then false else "even" ("x" - 1)
      with "even" "x" := if "x" = 0 then true else "odd" ("x" - 1)
      for "even" }>.
 
-Compute (eval_term 100 <{ even 50 }>).
-Compute (eval_term 100 <{ even 49 }>).
-Compute (eval_term 100 <{ even (-1) }>).
+Compute (eval_comp 100 <{ even 50 }>).
+Compute (eval_comp 100 <{ even 49 }>).
+Compute (eval_comp 100 <{ even (-1) }>).
 
 Example send_recv_protocol :=
   <{ fun "k" =>
@@ -364,7 +364,7 @@ Example run_send_recv1 :=
           ());
      !"stdout" }>.
 
-Compute (eval_term 9 run_send_recv1).
+Compute (eval_comp 9 run_send_recv1).
 
 Example run_send_recv2 :=
   <{ let "stdout" := ref () in
@@ -380,7 +380,7 @@ Example run_send_recv2 :=
           ());
      !"stdout" }>.
 
-Compute (eval_term 6 run_send_recv2).
+Compute (eval_comp 6 run_send_recv2).
 
 Example nat_iterator n :=
   <{ let "seed" := ref n in
@@ -427,30 +427,30 @@ Example run_delta_n it n k :=
      in
      !"r" }>.
 
-Compute (eval_term 10 (run_delta_n (nat_iterator 0) 0 5)).
-Compute (eval_term 10 (run_delta_n (nat_iterator 0) 1 5)).
-Compute (eval_term 10 (run_delta_n (nat_iterator 0) 2 5)).
+Compute (eval_comp 10 (run_delta_n (nat_iterator 0) 0 5)).
+Compute (eval_comp 10 (run_delta_n (nat_iterator 0) 1 5)).
+Compute (eval_comp 10 (run_delta_n (nat_iterator 0) 2 5)).
 
 Example square_iterator n :=
   <{ let "it" := {nat_iterator n} in
      let "f" "x" := "x" * "x" in
      {map_iterator "f" "it"} }>.
 
-Compute (eval_term 10 (run_delta_n (square_iterator 0) 0 5)).
-Compute (eval_term 10 (run_delta_n (square_iterator 0) 1 5)).
-Compute (eval_term 10 (run_delta_n (square_iterator 0) 2 5)).
-Compute (eval_term 10 (run_delta_n (square_iterator 0) 3 5)).
+Compute (eval_comp 10 (run_delta_n (square_iterator 0) 0 5)).
+Compute (eval_comp 10 (run_delta_n (square_iterator 0) 1 5)).
+Compute (eval_comp 10 (run_delta_n (square_iterator 0) 2 5)).
+Compute (eval_comp 10 (run_delta_n (square_iterator 0) 3 5)).
 
 Example cube_iterator n :=
   <{ let "it" := {nat_iterator n} in
      let "f" "x" := "x" * "x" * "x" in
      {map_iterator "f" "it"} }>.
 
-Compute (eval_term 10 (run_delta_n (cube_iterator 0) 0 5)).
-Compute (eval_term 10 (run_delta_n (cube_iterator 0) 1 5)).
-Compute (eval_term 10 (run_delta_n (cube_iterator 0) 2 5)).
-Compute (eval_term 10 (run_delta_n (cube_iterator 0) 3 5)).
-Compute (eval_term 15 (run_delta_n (cube_iterator 0) 4 5)).
+Compute (eval_comp 10 (run_delta_n (cube_iterator 0) 0 5)).
+Compute (eval_comp 10 (run_delta_n (cube_iterator 0) 1 5)).
+Compute (eval_comp 10 (run_delta_n (cube_iterator 0) 2 5)).
+Compute (eval_comp 10 (run_delta_n (cube_iterator 0) 3 5)).
+Compute (eval_comp 15 (run_delta_n (cube_iterator 0) 4 5)).
 
 Example x3_x2_iterator n :=
   <{ let "it1" := {cube_iterator n} in
@@ -458,11 +458,11 @@ Example x3_x2_iterator n :=
      let "f" "args" := let ("x", "y") := "args" in "x" + "y" in
      {zip_with_iterator "f" "it1" "it2"} }>.
 
-Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 0 5)).
-Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 1 5)).
-Compute (eval_term 10 (run_delta_n (x3_x2_iterator 0) 2 5)).
-Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 3 5)).
-Compute (eval_term 15 (run_delta_n (x3_x2_iterator 0) 4 5)).
+Compute (eval_comp 10 (run_delta_n (x3_x2_iterator 0) 0 5)).
+Compute (eval_comp 10 (run_delta_n (x3_x2_iterator 0) 1 5)).
+Compute (eval_comp 10 (run_delta_n (x3_x2_iterator 0) 2 5)).
+Compute (eval_comp 15 (run_delta_n (x3_x2_iterator 0) 3 5)).
+Compute (eval_comp 15 (run_delta_n (x3_x2_iterator 0) 4 5)).
 
 Example array_make := <{ %"array_make" }>.
 
@@ -485,11 +485,11 @@ Example counting_sort_lt_10 xs :=
            "ref_xs" <- "i" :: !"ref_xs"));
      !"ref_xs" }>.
 
-Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term []))).
-Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [0]))).
-Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [0; 9; 1]))).
-Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [8; 7; 0; 9; 1]))).
-Compute (eval_term_to_list_int 11 (counting_sort_lt_10 (list_int_to_val_term [8; 7; 0; 7; 9; 1; 7]))).
+Compute (eval_comp_to_list_int 11 (counting_sort_lt_10 (list_int_to_expr []))).
+Compute (eval_comp_to_list_int 11 (counting_sort_lt_10 (list_int_to_expr [0]))).
+Compute (eval_comp_to_list_int 11 (counting_sort_lt_10 (list_int_to_expr [0; 9; 1]))).
+Compute (eval_comp_to_list_int 11 (counting_sort_lt_10 (list_int_to_expr [8; 7; 0; 9; 1]))).
+Compute (eval_comp_to_list_int 11 (counting_sort_lt_10 (list_int_to_expr [8; 7; 0; 7; 9; 1; 7]))).
 
 Example compare_int :=
   <{ fun ("x", "y") => if "x" < "y" then `"Lt" () else if "x" = "y" then `"Eq" () else `"Gt" () }>.
@@ -521,9 +521,9 @@ Example partition x xs :=
      | `"Smaller" "x", "k" => let "r" := "k" () in "x" :: "r"
      end }>.
 
-Compute (eval_term_to_list_int 20 <{ {partition 1 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
-Compute (eval_term_to_list_int 20 <{ {partition 2 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
-Compute (eval_term_to_list_int 20 <{ {partition 3 (list_int_to_val_term [4; 1; 3; 5; 2; 3])} }>).
+Compute (eval_comp_to_list_int 20 <{ {partition 1 (list_int_to_expr [4; 1; 3; 5; 2; 3])} }>).
+Compute (eval_comp_to_list_int 20 <{ {partition 2 (list_int_to_expr [4; 1; 3; 5; 2; 3])} }>).
+Compute (eval_comp_to_list_int 20 <{ {partition 3 (list_int_to_expr [4; 1; 3; 5; 2; 3])} }>).
 
 From Stdlib Require Import Extraction.
 From Stdlib Require Import ExtrOcamlBasic ExtrOcamlChar ExtrOcamlNativeString.
@@ -531,5 +531,5 @@ From Stdlib Require Import ExtrOcamlBasic ExtrOcamlChar ExtrOcamlNativeString.
 Print LoadPath.*)
 
 Extraction Language OCaml.
-(*Extraction "interpreter.ml" run_term.*)
-Recursive Extraction run_term.
+(*Extraction "interpreter.ml" run_comp.*)
+Recursive Extraction run_comp.

@@ -468,7 +468,7 @@ Example array_make := <{ %"array_make" }>.
 
 Example counting_sort_lt_10 xs :=
   <{ let "ref_xs" := ref xs in
-     let "arr_fs" := `[| 0; 0; 0; 0; 0; 0; 0; 0; 0; 0 |] in
+     let "arr_fs" := array [0; 0; 0; 0; 0; 0; 0; 0; 0; 0] in
      (try
         (while true do
            (match !"ref_xs" with

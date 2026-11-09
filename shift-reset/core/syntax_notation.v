@@ -487,7 +487,9 @@ Notation "t1 .[ t2 ] <- t3" :=
         t3 custom term at level 65,
         left associativity) : term_scope.
 
-Notation "`[| t1 ; .. ; tn |]" :=
+Notation "'array' [ ]" := (TVArray TArrayNil) (in custom term at level 0) : term_scope.
+
+Notation "'array' [ t1 ; .. ; tn ]" :=
   (TVArray (TArrayCons t1 .. (TArrayCons tn TArrayNil) ..)) (in custom term at level 0,
         t1 custom term at level 65,
         tn custom term at level 65) : term_scope.

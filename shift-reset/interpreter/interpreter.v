@@ -20,6 +20,12 @@ Fixpoint interpret_exprs (self : val_interpreter) (t : exprs) (e : env) : ivh_mo
       VsCons v <$> interpret_exprs self t2 e
   end.
 
+Definition record_add (l : ident) (v : val) (r : record) : ivh_monad record :=
+  match ident_val_assocs_disjoint_union (IVAsCons l v IVAsNil) r with
+  | None => throw (Invalid_argument "duplicate label")
+  | Some r' => pure r'
+  end.
+
 Fixpoint interpret_record_expr (self : val_interpreter) (t : record_expr) (e : env) : ivh_monad record :=
   match t with
   | ERecordNil => pure IVAsNil
@@ -28,11 +34,14 @@ Fixpoint interpret_record_expr (self : val_interpreter) (t : record_expr) (e : e
       iv_monad_to_ivh_monad (unwrap_vrecord v)
   | ERecordCons l t1 t2 =>
       let* v := self t1 e in
-      IVAsCons l v <$> interpret_record_expr self t2 e
+      let* r := interpret_record_expr self t2 e in
+      record_add l v r
   | ERecordConsPun l t' =>
       match ident_val_assocs_find l e with
       | None => throw (Name_error (ident_car l))
-      | Some v => IVAsCons l v <$> interpret_record_expr self t' e
+      | Some v =>
+          let* r := interpret_record_expr self t' e in
+          record_add l v r
       end
   end.
 

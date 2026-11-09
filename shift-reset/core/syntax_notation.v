@@ -367,7 +367,7 @@ Notation "t1 <> t2" :=
   (BinOpNeq t1 t2) (in custom term at level 50, t1 custom term, t2 custom term, left associativity) : term_scope.
 
 Notation "t1 ++ t2" :=
-  (BinOpApp t1 t2) (in custom term at level 41, t1 custom term, t2 custom term, right associativity) : term_scope.
+  (BinOpAppend t1 t2) (in custom term at level 41, t1 custom term, t2 custom term, right associativity) : term_scope.
 
 Notation "t1 && t2" :=
   (EAnd t1 t2) (in custom term at level 51, t1 custom term, t2 custom term, right associativity) : term_scope.

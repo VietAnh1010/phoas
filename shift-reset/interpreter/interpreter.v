@@ -323,14 +323,14 @@ Definition unwind_shallow_handle (self : interpreter) (h : handle_cases) (e : en
       end
   end.
 
-Fixpoint invoke_kont_app (self : interpreter) (k1 : kont) (k2 : kont) (v : val) : irh_monad val :=
+Fixpoint invoke_kont_append (self : interpreter) (k1 : kont) (k2 : kont) (v : val) : irh_monad val :=
   match k1 with
   | KNil => pure v
-  | KConsSeq t e k1' => self t e (KApp k1' k2) >>= invoke_kont_app self k1' k2
+  | KConsSeq t e k1' => self t e (KAppend k1' k2) >>= invoke_kont_append self k1' k2
   | KConsLet p t e k1' =>
       let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
-      self t e' (KApp k1' k2) >>= invoke_kont_app self k1' k2
-  | KApp k11 k12 => invoke_kont_app self k11 (KApp k12 k2) v >>= invoke_kont_app self k12 k2
+      self t e' (KAppend k1' k2) >>= invoke_kont_append self k1' k2
+  | KAppend k11 k12 => invoke_kont_append self k11 (KAppend k12 k2) v >>= invoke_kont_append self k12 k2
   end.
 
 Fixpoint invoke_kont (self : interpreter) (k : kont) (v : val) : irh_monad val :=
@@ -340,7 +340,7 @@ Fixpoint invoke_kont (self : interpreter) (k : kont) (v : val) : irh_monad val :
   | KConsLet p t e k' =>
       let* e' := iv_monad_to_irh_monad (match_irrefutable_pattern p v e) in
       self t e' k' >>= invoke_kont self k'
-  | KApp k1 k2 => invoke_kont_app self k1 k2 v >>= invoke_kont self k2
+  | KAppend k1 k2 => invoke_kont_append self k1 k2 v >>= invoke_kont self k2
   end.
 
 Fixpoint invoke_metakont (self : interpreter) (mk : metakont) (v : val) : irh_monad val :=
@@ -357,18 +357,18 @@ Fixpoint invoke_metakont (self : interpreter) (mk : metakont) (v : val) : irh_mo
       unwind_shallow_handle self h e k m >>= invoke_kont self k
   end.
 
-Definition invoke_metakont_app (self : interpreter) (mk : metakont) (k : kont) (v : val) : irh_monad val :=
+Definition invoke_metakont_append (self : interpreter) (mk : metakont) (k : kont) (v : val) : irh_monad val :=
   match mk with
-  | MKPure k' => invoke_kont_app self k' k v
-  | MKReset mk' k' => catch (invoke_metakont self mk' v) (unwind_reset (KApp k' k)) >>= invoke_kont_app self k' k
-  | MKPrompt mk' k' => catch (invoke_metakont self mk' v) (unwind_prompt (KApp k' k)) >>= invoke_kont_app self k' k
-  | MKTry mk' t e k' => catch (invoke_metakont self mk' v) (unwind_try self t e (KApp k' k)) >>= invoke_kont_app self k' k
+  | MKPure k' => invoke_kont_append self k' k v
+  | MKReset mk' k' => catch (invoke_metakont self mk' v) (unwind_reset (KAppend k' k)) >>= invoke_kont_append self k' k
+  | MKPrompt mk' k' => catch (invoke_metakont self mk' v) (unwind_prompt (KAppend k' k)) >>= invoke_kont_append self k' k
+  | MKTry mk' t e k' => catch (invoke_metakont self mk' v) (unwind_try self t e (KAppend k' k)) >>= invoke_kont_append self k' k
   | MKHandle mk' h e k' =>
       let* m := try (invoke_metakont self mk' v) in
-      unwind_handle self h e (KApp k' k) m >>= invoke_kont_app self k' k
+      unwind_handle self h e (KAppend k' k) m >>= invoke_kont_append self k' k
   | MKShallowHandle mk' h e k' =>
       let* m := try (invoke_metakont self mk' v) in
-      unwind_shallow_handle self h e (KApp k' k) m >>= invoke_kont_app self k' k
+      unwind_shallow_handle self h e (KAppend k' k) m >>= invoke_kont_append self k' k
   end.
 
 Definition interpret_comp'_aux (self : interpreter) : comp -> env -> kont -> irh_monad val :=
@@ -390,7 +390,7 @@ Definition interpret_comp'_aux (self : interpreter) : comp -> env -> kont -> irh
         | APrim l =>
             let* f := iv_monad_to_irh_monad (prim.dispatch_prim l) in
             ivh_monad_to_irh_monad (f v2)
-        | AMKPure mk => invoke_metakont_app self mk k v2
+        | AMKPure mk => invoke_metakont_append self mk k v2
         | AMKReset mk => catch (invoke_metakont self mk v2) (unwind_reset k)
         | AMKHandle mk h e => try (invoke_metakont self mk v2) >>= unwind_handle self h e k
         end

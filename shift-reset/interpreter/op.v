@@ -124,7 +124,7 @@ Fixpoint append_list (v1 v2 : val) : iv_monad val :=
   | _ => throw (Type_error "list" v1)
   end.
 
-Definition dispatch_app (v1 v2 : val) : iv_monad val :=
+Definition dispatch_append (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VString s1, VString s2 => pure (VString (s1 ++ s2))
   | (VNil | VCons _ _), _ => append_list v1 v2
@@ -263,7 +263,7 @@ Definition dispatch_bin_op (op : bin_op) : val -> val -> iv_monad val :=
   | BinOpLxor => dispatch_lxor
   | BinOpShiftl => dispatch_shiftl
   | BinOpShiftr => dispatch_shiftr
-  | BinOpApp => dispatch_app
+  | BinOpAppend => dispatch_append
   | BinOpLt => dispatch_lt
   | BinOpLe => dispatch_le
   | BinOpGt => dispatch_gt

@@ -55,7 +55,7 @@ Inductive bin_op : Type :=
 | BinOpLxor : bin_op
 | BinOpShiftl : bin_op
 | BinOpShiftr : bin_op
-| BinOpApp : bin_op
+| BinOpAppend : bin_op
 | BinOpLt : bin_op
 | BinOpLe : bin_op
 | BinOpGt : bin_op
@@ -183,7 +183,7 @@ with kont : Type :=
 | KNil : kont
 | KConsSeq : comp -> ident_val_assocs -> kont -> kont
 | KConsLet : pattern -> comp -> ident_val_assocs -> kont -> kont
-| KApp : kont -> kont -> kont
+| KAppend : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> kont -> metakont

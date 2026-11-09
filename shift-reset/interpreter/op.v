@@ -117,10 +117,18 @@ Definition dispatch_shr (v1 v2 : val) : iv_monad val :=
   | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
+Fixpoint append_list (v1 v2 : val) : iv_monad val :=
+  match v1 with
+  | VNil => pure v2
+  | VCons v11 v12 => VCons v11 <$> append_list v12 v2
+  | _ => throw (Type_error "list" v1)
+  end.
+
 Definition dispatch_app (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VString s1, VString s2 => pure (VString (s1 ++ s2))
-  | _, _ => throw (Type_error "string * string" (VPair v1 v2))
+  | (VNil | VCons _ _), _ => append_list v1 v2
+  | _, _ => throw (Type_error "string * string | list * list" (VPair v1 v2))
   end.
 
 Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
@@ -145,6 +153,15 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
   | VInr v1', VInr v2' => compare_val v1' v2'
   | VInl _, VInr _ => pure Lt
   | VInr _, VInl _ => pure Gt
+  | VNil, VNil => pure Eq
+  | VCons v11 v12, VCons v21 v22 =>
+      let* c := compare_val v11 v21 in
+      match c with
+      | Eq => compare_val v12 v22
+      | _ => pure c
+      end
+  | VNil, VCons _ _ => pure Lt
+  | VCons _ _, VNil => pure Gt
   | _, _ => throw (Type_error "'a ord => 'a * 'a" (VPair v1 v2))
   end
 with compare_tuple (t1 t2 : tuple) : iv_monad comparison :=
@@ -179,6 +196,12 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
   | VInr v1', VInr v2' => equal_val v1' v2'
   | VInl _, VInr _ => pure false
   | VInr _, VInl _ => pure false
+  | VNil, VNil => pure true
+  | VCons v11 v12, VCons v21 v22 =>
+      let* b := equal_val v11 v21 in
+      if b then equal_val v12 v22 else pure false
+  | VNil, VCons _ _ => pure false
+  | VCons _ _, VNil => pure false
   | VVariant v1', VVariant v2' => equal_variant v1' v2'
   | VRef l1, VRef l2 => pure (loc_eqb l1 l2)
   | VArray l1 z1, VArray l2 z2 => pure (loc_eqb l1 l2 &&& (z1 =? z2)%Z)

@@ -119,6 +119,10 @@ Definition interpret_val_term (self : interpreter) : val_term -> env -> ivh_mona
         VRecord <$> update_record r1 r2
     | TVInl t' => VInl <$> self' t' e
     | TVInr t' => VInr <$> self' t' e
+    | TVNil => pure VNil
+    | TVCons t1 t2 =>
+        let* v := self' t1 e in
+        VCons v <$> self' t2 e
     | TVVariant t' => VVariant <$> interpret_variant_term self' t' e
     | TVRef t' =>
         let* v := self' t' e in

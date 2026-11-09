@@ -22,6 +22,8 @@ Inductive pattern : Type :=
 | PRecord : record_pattern -> pattern
 | PInl : pattern -> pattern
 | PInr : pattern -> pattern
+| PNil : pattern
+| PCons : pattern -> pattern -> pattern
 | PVariant : variant_pattern -> pattern
 with tuple_pattern : Type :=
 | PTupleNil : tuple_pattern
@@ -109,6 +111,8 @@ with val_term : Type :=
 | TVUpdateRecord : val_term -> record_term -> val_term
 | TVInl : val_term -> val_term
 | TVInr : val_term -> val_term
+| TVNil : val_term
+| TVCons : val_term -> val_term -> val_term
 | TVVariant : variant_term -> val_term
 | TVRef : val_term -> val_term
 | TVArray : array_term -> val_term
@@ -167,6 +171,8 @@ Inductive val : Type :=
 | VRecord : record -> val
 | VInl : val -> val
 | VInr : val -> val
+| VNil : val
+| VCons : val -> val -> val
 | VVariant : variant -> val
 | VRef : loc -> val
 | VArray : loc -> Z -> val

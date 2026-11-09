@@ -128,6 +128,7 @@ Definition type_of_val (v : val) : string :=
   | VTuple _ => "tuple"
   | VRecord _ => "record"
   | VInl _ | VInr _ => "sum"
+  | VNil | VCons _ _ => "list"
   | VVariant _ => "variant"
   | VRef _ => "ref"
   | VArray _ _ => "array"

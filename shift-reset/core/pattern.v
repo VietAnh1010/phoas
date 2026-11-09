@@ -15,5 +15,6 @@ Fixpoint type_of_pattern (p : pattern) : string :=
   | PTuple _ => "tuple"
   | PRecord _ => "record"
   | PInl _ | PInr _ => "sum"
+  | PNil | PCons _ _ => "list"
   | PVariant _ => "variant"
   end.

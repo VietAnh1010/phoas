@@ -52,6 +52,16 @@ Notation "'Inl' p" :=
 Notation "'Inr' p" :=
   (PInr p) (in custom pattern' at level 23, p custom pattern' at level 10) : term_scope.
 
+Notation "[ ]" := PNil (in custom pattern' at level 0) : term_scope.
+
+Notation "p1 :: p2" :=
+  (PCons p1 p2) (in custom pattern' at level 41, p1 custom pattern', p2 custom pattern', right associativity) : term_scope.
+
+Notation "[ p1 ; .. ; pn ]" :=
+  (PCons p1 .. (PCons pn PNil) ..) (in custom pattern' at level 0,
+        p1 custom pattern' at level 65,
+        pn custom pattern' at level 65) : term_scope.
+
 Notation "` l" :=
   (PVariant (PVariantNone l)) (in custom pattern' at level 23, l constr at level 0) : term_scope.
 
@@ -378,6 +388,16 @@ Notation "'Inl' t" :=
 
 Notation "'Inr' t" :=
   (TVInr t) (in custom term at level 17, t custom term at level 10) : term_scope.
+
+Notation "[ ]" := TVNil (in custom term at level 0) : term_scope.
+
+Notation "t1 :: t2" :=
+  (TVCons t1 t2) (in custom term at level 41, t1 custom term, t2 custom term, right associativity) : term_scope.
+
+Notation "[ t1 ; .. ; tn ]" :=
+  (TVCons t1 .. (TVCons tn TVNil) ..) (in custom term at level 0,
+        t1 custom term at level 65,
+        tn custom term at level 65) : term_scope.
 
 Notation "'raise' t" :=
   (TRaise t) (in custom term at level 17, t custom term at level 10) : term_scope.

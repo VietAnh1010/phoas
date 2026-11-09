@@ -44,6 +44,15 @@ Fixpoint match_pattern (p : pattern) (v : val) (e : env) : iv_monad (option env)
   | PInr p', VInr v' => match_pattern p' v' e
   | PInl _, VInr _ => pure None
   | PInr _, VInl _ => pure None
+  | PNil, VNil => pure (Some e)
+  | PCons p1 p2, VCons v1 v2 =>
+      let* o := match_pattern p1 v1 e in
+      match o with
+      | None => pure None
+      | Some e' => match_pattern p2 v2 e'
+      end
+  | PNil, VCons _ _ => pure None
+  | PCons _ _, VNil => pure None
   | PVariant p', VVariant v' => match_variant_pattern p' v' e
   | _, _ => throw (Type_error (type_of_pattern p) v)
   end

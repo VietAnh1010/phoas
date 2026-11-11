@@ -22,9 +22,10 @@ Inductive pattern : Type :=
 | PRecord : record_pattern -> pattern
 | PInl : pattern -> pattern
 | PInr : pattern -> pattern
+| PVariant : ident -> pattern -> pattern
+| PEnum : ident -> pattern
 | PNil : pattern
 | PCons : pattern -> pattern -> pattern
-| PVariant : ident -> pattern -> pattern
 with tuple_pattern : Type :=
 | PTupleNil : tuple_pattern
 | PTupleCons : pattern -> tuple_pattern -> tuple_pattern
@@ -60,9 +61,9 @@ Inductive bin_op : Type :=
 | BinOpEq : bin_op
 | BinOpNeq : bin_op.
 
-Inductive for_direction : Type :=
-| Upto : for_direction
-| Downto : for_direction.
+Inductive direction_flag : Type :=
+| Upto : direction_flag
+| Downto : direction_flag.
 
 Inductive comp : Type :=
 | CReturn : expr -> comp
@@ -72,7 +73,7 @@ Inductive comp : Type :=
 | CMatch : expr -> cases -> comp
 | CIf : expr -> comp -> comp -> comp
 | CWhile : expr -> comp -> comp
-| CFor : binder -> expr -> for_direction -> expr -> comp -> comp
+| CFor : binder -> expr -> direction_flag -> expr -> comp -> comp
 | CLetFun : ident -> pattern -> comp -> comp -> comp
 | CLetFix : ident -> pattern -> comp -> comp -> comp
 | CLetFixMut : fix_mut_defs -> comp -> comp
@@ -81,8 +82,8 @@ Inductive comp : Type :=
 | CReset : comp -> comp
 | CPrompt : comp -> comp
 | CRaise : expr -> comp
-| CTry : comp -> cases -> comp
 | CPerform : expr -> comp
+| CTry : comp -> cases -> comp
 | CHandle : comp -> handle_cases -> comp
 | CShallowHandle : comp -> handle_cases -> comp
 with expr : Type :=
@@ -109,9 +110,10 @@ with expr : Type :=
 | EUpdateRecord : expr -> record_expr -> expr
 | EInl : expr -> expr
 | EInr : expr -> expr
+| EVariant : ident -> expr -> expr
+| EEnum : ident -> expr
 | ENil : expr
 | ECons : expr -> expr -> expr
-| EVariant : ident -> expr -> expr
 | ERef : expr -> expr
 | EArray : exprs -> expr
 | EGet : expr -> expr
@@ -127,12 +129,12 @@ with cases : Type :=
 | CasesCons : pattern -> comp -> cases -> cases
 with handle_cases : Type :=
 | HandleCases : return_case -> effect_cases -> handle_cases
-with effect_cases : Type :=
-| EffectCasesNil : effect_cases
-| EffectCasesCons : pattern -> binder -> comp -> effect_cases -> effect_cases
 with return_case : Type :=
 | ReturnCaseNone : return_case
 | ReturnCaseSome : pattern -> comp -> return_case
+with effect_cases : Type :=
+| EffectCasesNil : effect_cases
+| EffectCasesCons : pattern -> binder -> comp -> effect_cases -> effect_cases
 with fix_mut_defs : Type :=
 | FixMutLast : ident -> pattern -> comp -> fix_mut_defs
 | FixMutCons : ident -> pattern -> comp -> fix_mut_defs -> fix_mut_defs
@@ -159,17 +161,18 @@ Inductive val : Type :=
 | VFun : pattern -> comp -> ident_val_assocs -> val
 | VFix : ident -> pattern -> comp -> ident_val_assocs -> val
 | VFixMut : fix_mut_defs -> ident -> ident_val_assocs -> val
-| VPrim : ident -> val
 | VPair : val -> val -> val
 | VTuple : vals -> val
 | VRecord : ident_val_assocs -> val
 | VInl : val -> val
 | VInr : val -> val
+| VVariant : ident -> val -> val
+| VEnum : ident -> val
 | VNil : val
 | VCons : val -> val -> val
-| VVariant : ident -> val -> val
 | VRef : loc -> val
 | VArray : loc -> Z -> val
+| VPrim : ident -> val
 | VMKPure : metakont -> val
 | VMKReset : metakont -> val
 | VMKHandle : metakont -> handle_cases -> ident_val_assocs -> val
@@ -194,6 +197,9 @@ with ident_val_assocs : Type :=
 
 Definition env : Type := ident_val_assocs.
 Definition record : Type := ident_val_assocs.
+
+Inductive enum : Type :=
+| Enum : ident -> enum.
 
 Inductive variant : Type :=
 | Variant : ident -> val -> variant.

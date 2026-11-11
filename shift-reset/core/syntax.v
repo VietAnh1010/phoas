@@ -18,7 +18,7 @@ Inductive pattern : Type :=
 | PChar : ascii -> pattern
 | PString : string -> pattern
 | PPair : pattern -> pattern -> pattern
-| PTuple : tuple_pattern -> pattern
+| PTuple : patterns -> pattern
 | PRecord : record_pattern -> pattern
 | PInl : pattern -> pattern
 | PInr : pattern -> pattern
@@ -26,9 +26,9 @@ Inductive pattern : Type :=
 | PEnum : ident -> pattern
 | PNil : pattern
 | PCons : pattern -> pattern -> pattern
-with tuple_pattern : Type :=
-| PTupleNil : tuple_pattern
-| PTupleCons : pattern -> tuple_pattern -> tuple_pattern
+with patterns : Type :=
+| PsNil : patterns
+| PsCons : pattern -> patterns -> patterns
 with record_pattern : Type :=
 | PRecordNil : record_pattern
 | PRecordRest : pattern -> record_pattern
@@ -158,12 +158,12 @@ Inductive val : Type :=
 | VFalse : val
 | VChar : ascii -> val
 | VString : string -> val
-| VFun : pattern -> comp -> ident_val_assocs -> val
-| VFix : ident -> pattern -> comp -> ident_val_assocs -> val
-| VFixMut : fix_mut_defs -> ident -> ident_val_assocs -> val
+| VFun : pattern -> comp -> env -> val
+| VFix : ident -> pattern -> comp -> env -> val
+| VFixMut : fix_mut_defs -> ident -> env -> val
 | VPair : val -> val -> val
 | VTuple : vals -> val
-| VRecord : ident_val_assocs -> val
+| VRecord : record -> val
 | VInl : val -> val
 | VInr : val -> val
 | VVariant : ident -> val -> val
@@ -175,43 +175,46 @@ Inductive val : Type :=
 | VPrim : ident -> val
 | VMKPure : metakont -> val
 | VMKReset : metakont -> val
-| VMKHandle : metakont -> handle_cases -> ident_val_assocs -> val
+| VMKHandle : metakont -> handle_cases -> env -> val
 with kont : Type :=
 | KNil : kont
-| KConsSeq : comp -> ident_val_assocs -> kont -> kont
-| KConsLet : pattern -> comp -> ident_val_assocs -> kont -> kont
+| KConsSeq : comp -> env -> kont -> kont
+| KConsLet : pattern -> comp -> env -> kont -> kont
 | KAppend : kont -> kont -> kont
 with metakont : Type :=
 | MKPure : kont -> metakont
 | MKReset : metakont -> kont -> metakont
 | MKPrompt : metakont -> kont -> metakont
-| MKTry : metakont -> cases -> ident_val_assocs -> kont -> metakont
-| MKHandle : metakont -> handle_cases -> ident_val_assocs -> kont -> metakont
-| MKShallowHandle : metakont -> handle_cases -> ident_val_assocs -> kont -> metakont
+| MKTry : metakont -> cases -> env -> kont -> metakont
+| MKHandle : metakont -> handle_cases -> env -> kont -> metakont
+| MKShallowHandle : metakont -> handle_cases -> env -> kont -> metakont
 with vals : Type :=
 | VsNil : vals
 | VsCons : val -> vals -> vals
-with ident_val_assocs : Type :=
-| IVAsNil : ident_val_assocs
-| IVAsCons : ident -> val -> ident_val_assocs -> ident_val_assocs.
+with env : Type :=
+| EnvNil : env
+| EnvCons : ident -> val -> env -> env
+with record : Type :=
+| RecordNil : record
+| RecordCons : ident -> val -> record -> record.
 
-Definition env : Type := ident_val_assocs.
-Definition record : Type := ident_val_assocs.
-
-Inductive enum : Type :=
-| Enum : ident -> enum.
+Inductive tuple : Type :=
+| Tuple : vals -> tuple.
 
 Inductive variant : Type :=
 | Variant : ident -> val -> variant.
 
-Inductive applicable : Type :=
-| AFun : pattern -> comp -> ident_val_assocs -> applicable
-| AFix : ident -> pattern -> comp -> ident_val_assocs -> applicable
-| AFixMut : fix_mut_defs -> ident -> ident_val_assocs -> applicable
-| APrim : ident -> applicable
-| AMKPure : metakont -> applicable
-| AMKReset : metakont -> applicable
-| AMKHandle : metakont -> handle_cases -> ident_val_assocs -> applicable.
+Inductive enum : Type :=
+| Enum : ident -> enum.
 
 Inductive array : Type :=
 | Array : loc -> Z -> array.
+
+Inductive applicable : Type :=
+| AFun : pattern -> comp -> env -> applicable
+| AFix : ident -> pattern -> comp -> env -> applicable
+| AFixMut : fix_mut_defs -> ident -> env -> applicable
+| APrim : ident -> applicable
+| AMKPure : metakont -> applicable
+| AMKReset : metakont -> applicable
+| AMKHandle : metakont -> handle_cases -> env -> applicable.

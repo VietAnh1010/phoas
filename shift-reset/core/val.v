@@ -15,13 +15,13 @@ Definition VSum (s : val + val) : val :=
 
 Definition VApplicable (a : applicable) : val :=
   match a with
-  | AFun p t e => VFun p t e
-  | AFix f p t e => VFix f p t e
-  | AFixMut t f e => VFixMut t f e
+  | AFun p c e => VFun p c e
+  | AFix f p c e => VFix f p c e
+  | AFixMut ds f e => VFixMut ds f e
   | APrim l => VPrim l
   | AMKPure mk => VMKPure mk
   | AMKReset mk => VMKReset mk
-  | AMKHandle mk h e => VMKHandle mk h e
+  | AMKHandle mk cs e => VMKHandle mk cs e
   end.
 
 Definition val_to_unit (v : val) : option unit :=
@@ -86,9 +86,15 @@ Definition val_to_variant (v : val) : option variant :=
   | _ => None
   end.
 
-Definition val_to_tuple (v : val) : option vals :=
+Definition val_to_enum (v : val) : option enum :=
   match v with
-  | VTuple t => Some t
+  | VEnum l => Some (Enum l)
+  | _ => None
+  end.
+
+Definition val_to_tuple (v : val) : option tuple :=
+  match v with
+  | VTuple vs => Some (Tuple vs)
   | _ => None
   end.
 
@@ -106,13 +112,13 @@ Definition val_to_array (v : val) : option array :=
 
 Definition val_to_applicable (v : val) : option applicable :=
   match v with
-  | VFun p t e => Some (AFun p t e)
-  | VFix f p t e => Some (AFix f p t e)
-  | VFixMut t f e => Some (AFixMut t f e)
+  | VFun p c e => Some (AFun p c e)
+  | VFix f p c e => Some (AFix f p c e)
+  | VFixMut ds f e => Some (AFixMut ds f e)
   | VPrim l => Some (APrim l)
   | VMKPure mk => Some (AMKPure mk)
   | VMKReset mk => Some (AMKReset mk)
-  | VMKHandle mk h e => Some (AMKHandle mk h e)
+  | VMKHandle mk cs e => Some (AMKHandle mk cs e)
   | _ => None
   end.
 
@@ -128,10 +134,16 @@ Definition type_of_val (v : val) : string :=
   | VTuple _ => "tuple"
   | VRecord _ => "record"
   | VInl _ | VInr _ => "sum"
-  | VNil | VCons _ _ => "list"
   | VVariant _ _ => "variant"
+  | VEnum _ => "enum"
+  | VNil | VCons _ _ => "list"
   | VRef _ => "ref"
   | VArray _ _ => "array"
-  | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _ | VPrim _
-  | VMKPure _ | VMKReset _ | VMKHandle _ _ _ => "applicable"
+  | VFun _ _ _
+  | VFix _ _ _ _
+  | VFixMut _ _ _
+  | VPrim _
+  | VMKPure _
+  | VMKReset _
+  | VMKHandle _ _ _ => "applicable"
   end.

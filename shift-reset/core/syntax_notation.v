@@ -62,11 +62,8 @@ Notation "[ p1 ; .. ; pn ]" :=
         p1 custom pattern' at level 65,
         pn custom pattern' at level 65) : term_scope.
 
-Notation "` l" :=
-  (PVariant (PVariantNone l)) (in custom pattern' at level 23, l constr at level 0) : term_scope.
-
 Notation "` l p" :=
-  (PVariant (PVariantSome l p)) (in custom pattern' at level 23, l constr at level 0, p custom pattern' at level 0) : term_scope.
+  (PVariant l p) (in custom pattern' at level 23, l constr at level 0, p custom pattern' at level 0) : term_scope.
 
 Notation "'..' p" :=
   (PRecordRest p) (in custom record_pattern at level 1, p custom pattern' at level 65) : term_scope.
@@ -430,11 +427,8 @@ Notation "'shallow' 'handle' t1 'with' '|' 'return' p => t2 t3 'end'" :=
 Notation "'by' t" :=
   (EBy t) (in custom term at level 17, t custom term at level 10) : term_scope.
 
-Notation "` l" :=
-  (EVariant (EVariantNone l)) (in custom term at level 17, l constr at level 0) : term_scope.
-
 Notation "` l t" :=
-  (EVariant (EVariantSome l t)) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
+  (EVariant l t) (in custom term at level 17, l constr at level 0, t custom term at level 10) : term_scope.
 
 Notation "`( t1 , t2 , t3 , .. , tn )" :=
   (ETuple (EsCons t1 (EsCons t2 (EsCons t3 .. (EsCons tn EsNil) ..)))) (in custom term at level 0,

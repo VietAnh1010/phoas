@@ -45,12 +45,6 @@ Fixpoint interpret_record_expr (self : val_interpreter) (t : record_expr) (e : e
       end
   end.
 
-Definition interpret_variant_expr (self : val_interpreter) (t : variant_expr) (e : env) : ivh_monad variant :=
-  match t with
-  | EVariantNone l => pure (VariantNone l)
-  | EVariantSome l t' => VariantSome l <$> self t' e
-  end.
-
 Fixpoint update_record (r1 r2 : record) : ivh_monad record :=
   match r2 with
   | IVAsNil => pure r1
@@ -123,7 +117,7 @@ Definition interpret_expr (self : interpreter) : expr -> env -> ivh_monad val :=
     | ECons t1 t2 =>
         let* v := self' t1 e in
         VCons v <$> self' t2 e
-    | EVariant t' => VVariant <$> interpret_variant_expr self' t' e
+    | EVariant l t' => VVariant l <$> self' t' e
     | ERef t' =>
         let* v := self' t' e in
         state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))

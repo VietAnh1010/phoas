@@ -53,7 +53,7 @@ Fixpoint match_pattern (p : pattern) (v : val) (e : env) : iv_monad (option env)
       end
   | PNil, VCons _ _ => pure None
   | PCons _ _, VNil => pure None
-  | PVariant p', VVariant v' => match_variant_pattern p' v' e
+  | PVariant l1 p', VVariant l2 v' => if ident_eqb l1 l2 then match_pattern p' v' e else pure None
   | _, _ => throw (Type_error (type_of_pattern p) v)
   end
 with match_tuple_pattern (p : tuple_pattern) (t : vals) (e : env) : iv_monad (option env) :=
@@ -92,15 +92,6 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : iv_monad
       | None => throw (Match_failure "match_record_pattern")
       | Some v => match_record_pattern p' r' (IVAsCons l v e)
       end
-  end
-with match_variant_pattern (p : variant_pattern) (v : variant) (e : env) : iv_monad (option env) :=
-  match p, v with
-  | PVariantNone l1, VariantNone l2 => pure (if ident_eqb l1 l2 then Some e else None)
-  | PVariantSome l1 p', VariantSome l2 v' => if ident_eqb l1 l2 then match_pattern p' v' e else pure None
-  | PVariantNone l1, VariantSome l2 _ =>
-      if ident_eqb l1 l2 then throw (Match_failure "match_variant_pattern") else pure None
-  | PVariantSome l1 _, VariantNone l2 =>
-      if ident_eqb l1 l2 then throw (Match_failure "match_variant_pattern") else pure None
   end.
 
 Definition match_irrefutable_pattern (p : pattern) (v : val) (e : env) : iv_monad env :=

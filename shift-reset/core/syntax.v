@@ -24,7 +24,7 @@ Inductive pattern : Type :=
 | PInr : pattern -> pattern
 | PNil : pattern
 | PCons : pattern -> pattern -> pattern
-| PVariant : variant_pattern -> pattern
+| PVariant : ident -> pattern -> pattern
 with tuple_pattern : Type :=
 | PTupleNil : tuple_pattern
 | PTupleCons : pattern -> tuple_pattern -> tuple_pattern
@@ -32,10 +32,7 @@ with record_pattern : Type :=
 | PRecordNil : record_pattern
 | PRecordRest : pattern -> record_pattern
 | PRecordCons : ident -> pattern -> record_pattern -> record_pattern
-| PRecordConsPun : ident -> record_pattern -> record_pattern
-with variant_pattern : Type :=
-| PVariantNone : ident -> variant_pattern
-| PVariantSome : ident -> pattern -> variant_pattern.
+| PRecordConsPun : ident -> record_pattern -> record_pattern.
 
 Inductive un_op : Type :=
 | UnOpNeg : un_op
@@ -114,7 +111,7 @@ with expr : Type :=
 | EInr : expr -> expr
 | ENil : expr
 | ECons : expr -> expr -> expr
-| EVariant : variant_expr -> expr
+| EVariant : ident -> expr -> expr
 | ERef : expr -> expr
 | EArray : exprs -> expr
 | EGet : expr -> expr
@@ -146,10 +143,7 @@ with record_expr : Type :=
 | ERecordNil : record_expr
 | ERecordRest : expr -> record_expr
 | ERecordCons : ident -> expr -> record_expr -> record_expr
-| ERecordConsPun : ident -> record_expr -> record_expr
-with variant_expr : Type :=
-| EVariantNone : ident -> variant_expr
-| EVariantSome : ident -> expr -> variant_expr.
+| ERecordConsPun : ident -> record_expr -> record_expr.
 
 Definition match_cases : Type := cases.
 Definition try_cases : Type := cases.
@@ -173,7 +167,7 @@ Inductive val : Type :=
 | VInr : val -> val
 | VNil : val
 | VCons : val -> val -> val
-| VVariant : variant -> val
+| VVariant : ident -> val -> val
 | VRef : loc -> val
 | VArray : loc -> Z -> val
 | VMKPure : metakont -> val
@@ -196,13 +190,13 @@ with vals : Type :=
 | VsCons : val -> vals -> vals
 with ident_val_assocs : Type :=
 | IVAsNil : ident_val_assocs
-| IVAsCons : ident -> val -> ident_val_assocs -> ident_val_assocs
-with variant : Type :=
-| VariantNone : ident -> variant
-| VariantSome : ident -> val -> variant.
+| IVAsCons : ident -> val -> ident_val_assocs -> ident_val_assocs.
 
 Definition env : Type := ident_val_assocs.
 Definition record : Type := ident_val_assocs.
+
+Inductive variant : Type :=
+| Variant : ident -> val -> variant.
 
 Inductive applicable : Type :=
 | AFun : pattern -> comp -> ident_val_assocs -> applicable

@@ -82,7 +82,7 @@ Definition val_to_sum (v : val) : option (val + val) :=
 
 Definition val_to_variant (v : val) : option variant :=
   match v with
-  | VVariant v' => Some v'
+  | VVariant l v' => Some (Variant l v')
   | _ => None
   end.
 
@@ -129,7 +129,7 @@ Definition type_of_val (v : val) : string :=
   | VRecord _ => "record"
   | VInl _ | VInr _ => "sum"
   | VNil | VCons _ _ => "list"
-  | VVariant _ => "variant"
+  | VVariant _ _ => "variant"
   | VRef _ => "ref"
   | VArray _ _ => "array"
   | VFun _ _ _ | VFix _ _ _ _ | VFixMut _ _ _ | VPrim _

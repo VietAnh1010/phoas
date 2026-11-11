@@ -202,7 +202,7 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
       if b then equal_val v12 v22 else pure false
   | VNil, VCons _ _ => pure false
   | VCons _ _, VNil => pure false
-  | VVariant v1', VVariant v2' => equal_variant v1' v2'
+  | VVariant l1 v1', VVariant l2 v2' => if ident_eqb l1 l2 then equal_val v1' v2' else pure false
   | VRef l1, VRef l2 => pure (loc_eqb l1 l2)
   | VArray l1 z1, VArray l2 z2 => pure (loc_eqb l1 l2 &&& (z1 =? z2)%Z)
   | _, _ => throw (Type_error "'a eq => 'a * 'a" (VPair v1 v2))
@@ -223,12 +223,6 @@ with equal_ident_val_assocs (r1 r2 : ident_val_assocs) : iv_monad bool :=
         let* b := equal_val v1 v2 in
         if b then equal_ident_val_assocs r1' r2' else pure false
       else pure false
-  | _, _ => pure false
-  end
-with equal_variant (v1 v2 : variant) : iv_monad bool :=
-  match v1, v2 with
-  | VariantNone l1, VariantNone l2 => pure (ident_eqb l1 l2)
-  | VariantSome l1 v1', VariantSome l2 v2' => if ident_eqb l1 l2 then equal_val v1' v2' else pure false
   | _, _ => pure false
   end.
 

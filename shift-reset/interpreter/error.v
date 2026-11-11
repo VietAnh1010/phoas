@@ -2,40 +2,40 @@ From Stdlib Require Import String.
 From shift_reset.core Require Import syntax ident.
 
 Definition Failure (s : string) : val :=
-  VVariant (VariantSome (Ident "Failure") (VString s)).
+  VVariant (Ident "Failure") (VString s).
 
 Definition Type_error (s : string) (v : val) : val :=
-  VVariant (VariantSome (Ident "Type_error") (VRecord (IVAsCons (Ident "expected") (VString s) (IVAsCons (Ident "got") v IVAsNil)))).
+  VVariant (Ident "Type_error") (VRecord (IVAsCons (Ident "expected") (VString s) (IVAsCons (Ident "got") v IVAsNil))).
 
 Definition Name_error (s : string) : val :=
-  VVariant (VariantSome (Ident "Name_error") (VString s)).
+  VVariant (Ident "Name_error") (VString s).
 
 Definition Memory_error (s : string) : val :=
-  VVariant (VariantSome (Ident "Memory_error") (VString s)).
+  VVariant (Ident "Memory_error") (VString s).
 
 Definition Match_failure (s : string) : val :=
-  VVariant (VariantSome (Ident "Match_failure") (VString s)).
+  VVariant (Ident "Match_failure") (VString s).
 
 Definition Invalid_argument (s : string) : val :=
-  VVariant (VariantSome (Ident "Invalid_argument") (VString s)).
+  VVariant (Ident "Invalid_argument") (VString s).
 
 Definition Unhandled_effect (v : val) : val :=
-  VVariant (VariantSome (Ident "Unhandled_effect") v).
+  VVariant (Ident "Unhandled_effect") v.
 
 Definition Division_by_zero : val :=
-  VVariant (VariantNone (Ident "Division_by_zero")).
+  VVariant (Ident "Division_by_zero") VTt.
 
 Definition Negative_exponent : val :=
-  VVariant (VariantNone (Ident "Negative_exponent")).
+  VVariant (Ident "Negative_exponent") VTt.
 
 Definition Negative_arithmetic_shift : val :=
-  VVariant (VariantNone (Ident "Negative_arithmetic_shift")).
+  VVariant (Ident "Negative_arithmetic_shift") VTt.
 
 Definition Undelimited_shift : val :=
-  VVariant (VariantNone (Ident "Undelimited_shift")).
+  VVariant (Ident "Undelimited_shift") VTt.
 
 Definition Undelimited_control : val :=
-  VVariant (VariantNone (Ident "Undelimited_control")).
+  VVariant (Ident "Undelimited_control") VTt.
 
 Definition Out_of_fuel : val :=
-  VVariant (VariantNone (Ident "Out_of_fuel")).
+  VVariant (Ident "Out_of_fuel") VTt.

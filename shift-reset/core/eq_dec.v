@@ -18,14 +18,12 @@ Hint Resolve binder_eq_dec : eq_dec_db.
 
 Lemma pattern_eq_dec : forall (p1 p2 : pattern), {p1 = p2} + {p1 <> p2}
 with tuple_pattern_eq_dec : forall (p1 p2 : tuple_pattern), {p1 = p2} + {p1 <> p2}
-with record_pattern_eq_dec : forall (p1 p2 : record_pattern), {p1 = p2} + {p1 <> p2}
-with variant_pattern_eq_dec : forall (p1 p2 : variant_pattern), {p1 = p2} + {p1 <> p2}.
+with record_pattern_eq_dec : forall (p1 p2 : record_pattern), {p1 = p2} + {p1 <> p2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve pattern_eq_dec : eq_dec_db.
 Hint Resolve tuple_pattern_eq_dec : eq_dec_db.
 Hint Resolve record_pattern_eq_dec : eq_dec_db.
-Hint Resolve variant_pattern_eq_dec : eq_dec_db.
 
 Lemma un_op_eq_dec : forall (op1 op2 : un_op), {op1 = op2} + {op1 <> op2}.
 Proof. decide equality; auto with eq_dec_db. Defined.
@@ -48,8 +46,7 @@ with effect_cases_eq_dec : forall (t1 t2 : effect_cases), {t1 = t2} + {t1 <> t2}
 with return_case_eq_dec : forall (t1 t2 : return_case), {t1 = t2} + {t1 <> t2}
 with fix_mut_defs_eq_dec : forall (t1 t2 : fix_mut_defs), {t1 = t2} + {t1 <> t2}
 with exprs_eq_dec : forall (t1 t2 : exprs), {t1 = t2} + {t1 <> t2}
-with record_expr_eq_dec : forall (t1 t2 : record_expr), {t1 = t2} + {t1 <> t2}
-with variant_expr_eq_dec : forall (t1 t2 : variant_expr), {t1 = t2} + {t1 <> t2}.
+with record_expr_eq_dec : forall (t1 t2 : record_expr), {t1 = t2} + {t1 <> t2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve comp_eq_dec : eq_dec_db.
@@ -61,14 +58,12 @@ Hint Resolve return_case_eq_dec : eq_dec_db.
 Hint Resolve fix_mut_defs_eq_dec : eq_dec_db.
 Hint Resolve exprs_eq_dec : eq_dec_db.
 Hint Resolve record_expr_eq_dec : eq_dec_db.
-Hint Resolve variant_expr_eq_dec : eq_dec_db.
 
 Lemma val_eq_dec : forall (v1 v2 : val), {v1 = v2} + {v1 <> v2}
 with kont_eq_dec : forall (k1 k2 : kont), {k1 = k2} + {k1 <> k2}
 with metakont_eq_dec : forall (mk1 mk2 : metakont), {mk1 = mk2} + {mk1 <> mk2}
 with vals_eq_dec : forall (vs1 vs2 : vals), {vs1 = vs2} + {vs1 <> vs2}
-with ident_val_assocs_eq_dec : forall (ivs1 ivs2 : ident_val_assocs), {ivs1 = ivs2} + {ivs1 <> ivs2}
-with variant_eq_dec : forall (v1 v2 : variant), {v1 = v2} + {v1 <> v2}.
+with ident_val_assocs_eq_dec : forall (ivs1 ivs2 : ident_val_assocs), {ivs1 = ivs2} + {ivs1 <> ivs2}.
 Proof. all: decide equality; auto with eq_dec_db. Defined.
 
 Hint Resolve val_eq_dec : eq_dec_db.
@@ -76,6 +71,10 @@ Hint Resolve kont_eq_dec : eq_dec_db.
 Hint Resolve metakont_eq_dec : eq_dec_db.
 Hint Resolve vals_eq_dec : eq_dec_db.
 Hint Resolve ident_val_assocs_eq_dec : eq_dec_db.
+
+Lemma variant_eq_dec : forall (v1 v2 : variant), {v1 = v2} + {v1 <> v2}.
+Proof. decide equality; auto with eq_dec_db. Defined.
+
 Hint Resolve variant_eq_dec : eq_dec_db.
 
 Lemma applicable_eq_dec : forall (a1 a2 : applicable), {a1 = a2} + {a1 <> a2}.

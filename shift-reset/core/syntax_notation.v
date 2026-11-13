@@ -153,7 +153,7 @@ Notation "'let' f p := c1 'in' c2" :=
         c2 custom term at level 99) : term_scope.
 
 Notation "'let' f p1 p2 .. pn := c1 'in' c2" :=
-  (CLetFun f p1 (EFun p2 .. (EFun pn c1) ..) c2) (in custom term at level 60,
+  (CLetFun f p1 (CReturn (EFun p2 .. (CReturn (EFun pn c1)) ..)) c2) (in custom term at level 60,
         f custom pattern' at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -169,7 +169,7 @@ Notation "'let' 'fix' f p := c1 'in' c2" :=
         c2 custom term at level 99) : term_scope.
 
 Notation "'let' 'fix' f p1 p2 .. pn := c1 'in' c2" :=
-  (CLetFix f p1 (EFun p2 .. (EFun pn c1) ..) c2) (in custom term at level 60,
+  (CLetFix f p1 (CReturn (EFun p2 .. (CReturn (EFun pn c1)) ..)) c2) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -186,7 +186,7 @@ Notation "'let' 'fix' f p := c1 'with' ds 'in' c2" :=
         c2 custom term at level 99) : term_scope.
 
 Notation "'let' 'fix' f p1 p2 .. pn := c1 'with' ds 'in' c2" :=
-  (CLetFixMut (FixMutCons f p1 (EFun p2 .. (EFun pn c1) ..) ds) c2) (in custom term at level 60,
+  (CLetFixMut (FixMutCons f p1 (CReturn (EFun p2 .. (CReturn (EFun pn c1)) ..)) ds) c2) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -255,9 +255,15 @@ Notation "e1 && e2" :=
 Notation "e1 || e2" :=
   (EOr e1 e2) (in custom term at level 52, e1 custom term, e2 custom term, right associativity) : term_scope.
 
-Notation "'fun' p1 .. pn => c" :=
-  (EFun p1 .. (EFun pn c) ..) (in custom term at level 60,
+Notation "'fun' p => c" :=
+  (EFun p c) (in custom term at level 60,
+        p custom pattern' at level 0,
+        c custom term at level 99) : term_scope.
+
+Notation "'fun' p1 p2 .. pn => c" :=
+  (EFun p1 (CReturn (EFun p2 .. (CReturn (EFun pn c)) ..))) (in custom term at level 60,
         p1 custom pattern' at level 0,
+        p2 custom pattern' at level 0,
         pn custom pattern' at level 0,
         c custom term at level 99) : term_scope.
 
@@ -268,7 +274,7 @@ Notation "'fix' f p := c" :=
         c custom term at level 99) : term_scope.
 
 Notation "'fix' f p1 p2 .. pn := c" :=
-  (EFix f p1 (EFun p2 .. (EFun pn c) ..)) (in custom term at level 60,
+  (EFix f p1 (CReturn (EFun p2 .. (CReturn (EFun pn c)) ..))) (in custom term at level 60,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -284,7 +290,7 @@ Notation "'fix' f1 p := c 'with' ds 'for' f2" :=
         f2 constr at level 0) : term_scope.
 
 Notation "'fix' f1 p1 p2 .. pn := c 'with' ds 'for' f2" :=
-  (EFixMut (FixMutCons f1 p1 (EFun p2 .. (EFun pn c) ..) ds) f2) (in custom term at level 60,
+  (EFixMut (FixMutCons f1 p1 (CReturn (EFun p2 .. (CReturn (EFun pn c)) ..)) ds) f2) (in custom term at level 60,
         f1 constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -476,7 +482,7 @@ Notation "f p := c" :=
         c custom term) : term_scope.
 
 Notation "f p1 p2 .. pn := c" :=
-  (FixMutCons f p1 (EFun p2 .. (EFun pn c) ..) FixMutNil) (in custom fix_mut_defs at level 1,
+  (FixMutCons f p1 (CReturn (EFun p2 .. (CReturn (EFun pn c)) ..)) FixMutNil) (in custom fix_mut_defs at level 1,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,
@@ -491,7 +497,7 @@ Notation "f p := c 'with' ds" :=
         ds custom fix_mut_defs at level 1) : term_scope.
 
 Notation "f p1 p2 .. pn := c 'with' ds" :=
-  (FixMutCons f p1 (EFun p2 .. (EFun pn c) ..) ds) (in custom fix_mut_defs at level 1,
+  (FixMutCons f p1 (CReturn (EFun p2 .. (CReturn (EFun pn c)) ..)) ds) (in custom fix_mut_defs at level 1,
         f constr at level 0,
         p1 custom pattern' at level 0,
         p2 custom pattern' at level 0,

@@ -9,7 +9,7 @@ Lemma loc_eq_dec : forall (l1 l2 : loc), {l1 = l2} + {l1 <> l2}.
 Proof. decide equality; auto using Pos.eq_dec. Defined.
 
 Definition loc_eqb (l1 l2 : loc) : bool :=
-  Pos.eqb (loc_car l1) (loc_car l2).
+  loc_car l1 =? loc_car l2.
 
 Definition loc_neqb (l1 l2 : loc) : bool :=
   negb (loc_eqb l1 l2).

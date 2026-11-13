@@ -136,7 +136,7 @@ with effect_cases : Type :=
 | EffectCasesNil : effect_cases
 | EffectCasesCons : pattern -> binder -> comp -> effect_cases -> effect_cases
 with fix_mut_defs : Type :=
-| FixMutLast : ident -> pattern -> comp -> fix_mut_defs
+| FixMutNil : fix_mut_defs
 | FixMutCons : ident -> pattern -> comp -> fix_mut_defs -> fix_mut_defs
 with exprs : Type :=
 | EsNil : exprs

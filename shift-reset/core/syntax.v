@@ -101,10 +101,10 @@ with expr : Type :=
 | EFix : ident -> pattern -> comp -> expr
 | EFixMut : fix_mut_defs -> ident -> expr
 | EPair : expr -> expr -> expr
-| EFst : expr -> expr
-| ESnd : expr -> expr
 | ETuple : exprs -> expr
 | ERecord : record_expr -> expr
+| EFst : expr -> expr
+| ESnd : expr -> expr
 | EProjTuple : expr -> nat -> expr
 | EProjRecord : expr -> ident -> expr
 | EUpdateRecord : expr -> record_expr -> expr

@@ -302,12 +302,6 @@ Notation "'fix' f1 p1 p2 .. pn := c 'with' ds 'for' f2" :=
 Notation "e1 , e2" :=
   (EPair e1 e2) (in custom term at level 65, e1 custom term, e2 custom term, left associativity) : term_scope.
 
-Notation "'fst' e" :=
-  (EFst e) (in custom term at level 17, e custom term at level 10) : term_scope.
-
-Notation "'snd' e" :=
-  (ESnd e) (in custom term at level 17, e custom term at level 10) : term_scope.
-
 Notation "`( e1 , e2 , e3 , .. , en )" :=
   (ETuple (EsCons e1 (EsCons e2 (EsCons e3 .. (EsCons en EsNil) ..)))) (in custom term at level 0,
         e1 custom term at level 64,
@@ -317,6 +311,12 @@ Notation "`( e1 , e2 , e3 , .. , en )" :=
 
 Notation "`{ e }" :=
   (ERecord e) (in custom term at level 0, e custom record_expr at level 1) : term_scope.
+
+Notation "'fst' e" :=
+  (EFst e) (in custom term at level 17, e custom term at level 10) : term_scope.
+
+Notation "'snd' e" :=
+  (ESnd e) (in custom term at level 17, e custom term at level 10) : term_scope.
 
 Notation "e .# n" :=
   (EProjTuple e n) (in custom term at level 1, e custom term, n constr at level 0, left associativity) : term_scope.

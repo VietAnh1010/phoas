@@ -5,37 +5,28 @@ Definition Failure (s : string) : val :=
   VVariant (Ident "Failure") (VString s).
 
 Definition Type_error (s : string) (v : val) : val :=
-  VVariant (Ident "Type_error") (VRecord (IVAsCons (Ident "expected") (VString s) (IVAsCons (Ident "got") v IVAsNil))).
+  VVariant (Ident "Type_error") (VPair (VString s) v).
 
 Definition Name_error (s : string) : val :=
   VVariant (Ident "Name_error") (VString s).
 
-Definition Memory_error (s : string) : val :=
-  VVariant (Ident "Memory_error") (VString s).
+Definition Memory_error : val -> val :=
+  VVariant (Ident "Memory_error").
 
-Definition Match_failure (s : string) : val :=
-  VVariant (Ident "Match_failure") (VString s).
+Definition Match_failure : val -> val :=
+  VVariant (Ident "Match_failure").
 
-Definition Invalid_argument (s : string) : val :=
-  VVariant (Ident "Invalid_argument") (VString s).
+Definition Invalid_argument (s : string) (v : val) : val :=
+  VVariant (Ident "Invalid_argument") (VPair (VString s) v).
 
-Definition Unhandled_effect (v : val) : val :=
-  VVariant (Ident "Unhandled_effect") v.
-
-Definition Division_by_zero : val :=
-  VVariant (Ident "Division_by_zero") VTt.
-
-Definition Negative_exponent : val :=
-  VVariant (Ident "Negative_exponent") VTt.
-
-Definition Negative_arithmetic_shift : val :=
-  VVariant (Ident "Negative_arithmetic_shift") VTt.
+Definition Unhandled_effect : val -> val :=
+  VVariant (Ident "Unhandled_effect").
 
 Definition Undelimited_shift : val :=
-  VVariant (Ident "Undelimited_shift") VTt.
+  VEnum (Ident "Undelimited_shift").
 
 Definition Undelimited_control : val :=
-  VVariant (Ident "Undelimited_control") VTt.
+  VEnum (Ident "Undelimited_control").
 
 Definition Out_of_fuel : val :=
-  VVariant (Ident "Out_of_fuel") VTt.
+  VEnum (Ident "Out_of_fuel").

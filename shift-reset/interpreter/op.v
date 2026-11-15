@@ -69,22 +69,37 @@ Definition dispatch_mul (v1 v2 : val) : iv_monad val :=
 
 Definition dispatch_div (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => if (z2 =? 0)%Z then throw Division_by_zero else pure (VInt (z1 / z2))
-  | VFloat q1, VFloat q2 => if (q2 =? 0)%Qc then throw Division_by_zero else pure (VFloat (q1 / q2))
+  | VInt z1, VInt z2 =>
+      if (z2 =? 0)%Z
+      then throw (Invalid_argument "division by zero" v2)
+      else pure (VInt (z1 / z2))
+  | VFloat q1, VFloat q2 =>
+      if (q2 =? 0)%Qc
+      then throw (Invalid_argument "division by zero" v2)
+      else pure (VFloat (q1 / q2))
   | _, _ => throw (Type_error "int * int | float * float" (VPair v1 v2))
   end.
 
 Definition dispatch_mod (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => if (z2 =? 0)%Z then throw Division_by_zero else pure (VInt (z1 mod z2))
+  | VInt z1, VInt z2 =>
+      if (z2 =? 0)%Z
+      then throw (Invalid_argument "division by zero" v2)
+      else pure (VInt (z1 mod z2))
   | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_pow (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_exponent else pure (VInt (z1 ^ z2))
-  | VFloat q, VInt z => if (z <? 0)%Z then throw Negative_exponent else pure (VFloat (q ^ Z.to_nat z))
-  | _, _ => throw (Type_error "int * int | float * int" (VPair v1 v2))
+  | VInt z1, VInt z2 =>
+      if (z2 <? 0)%Z
+      then throw (Invalid_argument "negative exponent" v2)
+      else pure (VInt (z1 ^ z2))
+  | VFloat q, VInt z =>
+      if (q =? 0)%Qc &&& (z <? 0)%Z
+      then throw (Invalid_argument "division by zero" v1)
+      else pure (VFloat (Qc_pow q z))
+  | _, _ => throw (Type_error "(int | float) * int" (VPair v1 v2))
   end.
 
 Definition dispatch_land (v1 v2 : val) : iv_monad val :=
@@ -107,28 +122,26 @@ Definition dispatch_lxor (v1 v2 : val) : iv_monad val :=
 
 Definition dispatch_shiftl (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftl z1 z2))
+  | VInt z1, VInt z2 =>
+      if (z2 <? 0)%Z
+      then throw (Invalid_argument "negative shift" v2)
+      else pure (VInt (Z.shiftl z1 z2))
   | _, _ => throw (Type_error "int * int" (VPair v1 v2))
   end.
 
 Definition dispatch_shiftr (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
-  | VInt z1, VInt z2 => if (z2 <? 0)%Z then throw Negative_arithmetic_shift else pure (VInt (Z.shiftr z1 z2))
+  | VInt z1, VInt z2 =>
+      if (z2 <? 0)%Z
+      then throw (Invalid_argument "negative shift" v2)
+      else pure (VInt (Z.shiftr z1 z2))
   | _, _ => throw (Type_error "int * int" (VPair v1 v2))
-  end.
-
-Fixpoint append_list (v1 v2 : val) : iv_monad val :=
-  match v1 with
-  | VNil => pure v2
-  | VCons v11 v12 => VCons v11 <$> append_list v12 v2
-  | _ => throw (Type_error "list" v1)
   end.
 
 Definition dispatch_append (v1 v2 : val) : iv_monad val :=
   match v1, v2 with
   | VString s1, VString s2 => pure (VString (s1 ++ s2))
-  | (VNil | VCons _ _), _ => append_list v1 v2
-  | _, _ => throw (Type_error "string * string | list * list" (VPair v1 v2))
+  | _, _ => throw (Type_error "string * string" (VPair v1 v2))
   end.
 
 Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
@@ -148,7 +161,12 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
       | Eq => compare_val v12 v22
       | _ => pure c
       end
-  | VTuple t1, VTuple t2 => compare_vals t1 t2
+  | VTuple vs1, VTuple vs2 =>
+      let* o := compare_vals vs1 vs2 in
+      match o with
+      | None => throw (Type_error "Ord 'a => 'a * 'a" (VPair v1 v2))
+      | Some c => pure c
+      end
   | VInl v1', VInl v2' => compare_val v1' v2'
   | VInr v1', VInr v2' => compare_val v1' v2'
   | VInl _, VInr _ => pure Lt
@@ -162,18 +180,18 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
       end
   | VNil, VCons _ _ => pure Lt
   | VCons _ _, VNil => pure Gt
-  | _, _ => throw (Type_error "'a ord => 'a * 'a" (VPair v1 v2))
+  | _, _ => throw (Type_error "Ord 'a => 'a * 'a" (VPair v1 v2))
   end
-with compare_vals (t1 t2 : vals) : iv_monad comparison :=
-  match t1, t2 with
-  | VsNil, VsNil => pure Eq
-  | VsCons v1 t1', VsCons v2 t2' =>
+with compare_vals (vs1 vs2 : vals) : iv_monad (option comparison) :=
+  match vs1, vs2 with
+  | VsNil, VsNil => pure (Some Eq)
+  | VsCons v1 vs1', VsCons v2 vs2' =>
       let* c := compare_val v1 v2 in
       match c with
-      | Eq => compare_vals t1' t2'
-      | _ => pure c
+      | Eq => compare_vals vs1' vs2'
+      | _ => pure (Some c)
       end
-  | _, _ => throw (Type_error "'a ord => 'a * 'a" (VPair (VTuple t1) (VTuple t2)))
+  | _, _ => pure None
   end.
 
 Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
@@ -190,38 +208,43 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
   | VPair v11 v12, VPair v21 v22 =>
       let* b := equal_val v11 v21 in
       if b then equal_val v12 v22 else pure false
-  | VTuple t1, VTuple t2 => equal_vals t1 t2
-  | VRecord r1, VRecord r2 => equal_ident_val_assocs r1 r2
+  | VTuple vs1, VTuple vs2 => equal_vals vs1 vs2
+  | VRecord r1, VRecord r2 => equal_record r1 r2
   | VInl v1', VInl v2' => equal_val v1' v2'
   | VInr v1', VInr v2' => equal_val v1' v2'
   | VInl _, VInr _ => pure false
   | VInr _, VInl _ => pure false
+  | VVariant l1 v1', VVariant l2 v2' => if ident_eqb l1 l2 then equal_val v1' v2' else pure false
+  | VEnum l1, VEnum l2 => pure (ident_eqb l1 l2)
   | VNil, VNil => pure true
   | VCons v11 v12, VCons v21 v22 =>
       let* b := equal_val v11 v21 in
       if b then equal_val v12 v22 else pure false
   | VNil, VCons _ _ => pure false
   | VCons _ _, VNil => pure false
-  | VVariant l1 v1', VVariant l2 v2' => if ident_eqb l1 l2 then equal_val v1' v2' else pure false
   | VRef l1, VRef l2 => pure (loc_eqb l1 l2)
   | VArray l1 z1, VArray l2 z2 => pure (loc_eqb l1 l2 &&& (z1 =? z2)%Z)
-  | _, _ => throw (Type_error "'a eq => 'a * 'a" (VPair v1 v2))
+  | _, _ =>
+      match val_to_applicable v1, val_to_applicable v2 with
+      | None, None => pure false
+      | _, _ => throw (Type_error "(Eq 'a, Eq 'b) => 'a * 'b" (VPair v1 v2))
+      end
   end
-with equal_vals (t1 t2 : vals) : iv_monad bool :=
-  match t1, t2 with
+with equal_vals (vs1 vs2 : vals) : iv_monad bool :=
+  match vs1, vs2 with
   | VsNil, VsNil => pure true
-  | VsCons v1 t1', VsCons v2 t2' =>
+  | VsCons v1 vs1', VsCons v2 vs2' =>
       let* b := equal_val v1 v2 in
-      if b then equal_vals t1' t2' else pure false
+      if b then equal_vals vs1' vs2' else pure false
   | _, _ => pure false
   end
-with equal_ident_val_assocs (r1 r2 : ident_val_assocs) : iv_monad bool :=
+with equal_record (r1 r2 : record) : iv_monad bool :=
   match r1, r2 with
-  | IVAsNil, IVAsNil => pure true
-  | IVAsCons l1 v1 r1', IVAsCons l2 v2 r2' =>
+  | RecordNil, RecordNil => pure true
+  | RecordCons l1 v1 r1', RecordCons l2 v2 r2' =>
       if ident_eqb l1 l2 then
         let* b := equal_val v1 v2 in
-        if b then equal_ident_val_assocs r1' r2' else pure false
+        if b then equal_record r1' r2' else pure false
       else pure false
   | _, _ => pure false
   end.

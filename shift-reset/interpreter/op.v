@@ -161,12 +161,7 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
       | Eq => compare_val v12 v22
       | _ => pure c
       end
-  | VTuple vs1, VTuple vs2 =>
-      let* o := compare_vals vs1 vs2 in
-      match o with
-      | None => throw (Type_error "Ord 'a => 'a * 'a" (VPair v1 v2))
-      | Some c => pure c
-      end
+  | VTuple vs1, VTuple vs2 => compare_vals vs1 vs2
   | VInl v1', VInl v2' => compare_val v1' v2'
   | VInr v1', VInr v2' => compare_val v1' v2'
   | VInl _, VInr _ => pure Lt
@@ -182,16 +177,17 @@ Fixpoint compare_val (v1 v2 : val) : iv_monad comparison :=
   | VCons _ _, VNil => pure Gt
   | _, _ => throw (Type_error "Ord 'a => 'a * 'a" (VPair v1 v2))
   end
-with compare_vals (vs1 vs2 : vals) : iv_monad (option comparison) :=
+with compare_vals (vs1 vs2 : vals) : iv_monad comparison :=
   match vs1, vs2 with
-  | VsNil, VsNil => pure (Some Eq)
+  | VsNil, VsNil => pure Eq
   | VsCons v1 vs1', VsCons v2 vs2' =>
       let* c := compare_val v1 v2 in
       match c with
       | Eq => compare_vals vs1' vs2'
-      | _ => pure (Some c)
+      | _ => pure c
       end
-  | _, _ => pure None
+  | VsNil, VsCons _ _ => pure Lt
+  | VsCons _ _, VsNil => pure Gt
   end.
 
 Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=

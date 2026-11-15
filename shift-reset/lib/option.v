@@ -24,6 +24,18 @@ Definition fold {A B} (z : B) (f : A -> B) (o : option A) : B :=
   | Some x => f x
   end.
 
+Definition is_none {A} (o : option A) : bool :=
+  match o with
+  | None => true
+  | Some _ => false
+  end.
+
+Definition is_some {A} (o : option A) : bool :=
+  match o with
+  | None => false
+  | Some _ => true
+  end.
+
 Lemma eq_dec :
   forall {A : Type}
          (A_eq_dec : forall (x y : A), {x = y} + {x <> y})

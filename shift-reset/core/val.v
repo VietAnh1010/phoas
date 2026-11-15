@@ -1,4 +1,5 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
+From shift_reset.lib Require option.
 From shift_reset.core Require Import syntax loc.
 
 Definition VBool (b : bool) : val :=
@@ -121,6 +122,9 @@ Definition val_to_applicable (v : val) : option applicable :=
   | VMKHandle mk cs e => Some (AMKHandle mk cs e)
   | _ => None
   end.
+
+Definition val_is_applicable (v : val) : bool :=
+  option.is_some (val_to_applicable v).
 
 Definition type_of_val (v : val) : string :=
   match v with

@@ -225,10 +225,9 @@ Fixpoint equal_val (v1 v2 : val) : iv_monad bool :=
   | VRef l1, VRef l2 => pure (loc_eqb l1 l2)
   | VArray l1 z1, VArray l2 z2 => pure (loc_eqb l1 l2 &&& (z1 =? z2)%Z)
   | _, _ =>
-      match val_to_applicable v1, val_to_applicable v2 with
-      | None, None => pure false
-      | _, _ => throw (Type_error "(Eq 'a, Eq 'b) => 'a * 'b" (VPair v1 v2))
-      end
+      if val_is_applicable v1 &&& val_is_applicable v2
+      then throw (Type_error "(Eq 'a | Eq 'b) => 'a * 'b" (VPair v1 v2))
+      else pure false
   end
 with equal_vals (vs1 vs2 : vals) : iv_monad bool :=
   match vs1, vs2 with

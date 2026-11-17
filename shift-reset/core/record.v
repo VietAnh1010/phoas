@@ -31,6 +31,17 @@ Fixpoint record_find (l : ident) (r : record) : option val :=
       end
   end.
 
+Fixpoint record_member (l : ident) (r : record) : bool :=
+  match r with
+  | RecordNil => false
+  | RecordCons l' _ r' =>
+      match ident_compare l l' with
+      | Lt => false
+      | Eq => true
+      | Gt => record_member l r'
+      end
+  end.
+
 Fixpoint record_remove (l : ident) (r : record) : record :=
   match r with
   | RecordNil => RecordNil

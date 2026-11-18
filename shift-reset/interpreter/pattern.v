@@ -52,7 +52,10 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : option e
   | PRecordRest p' => match_pattern p' (VRecord r) e
   | PRecordCons l p1 p2 =>
       let* v := record_find l r in
-      match_pattern p1 v e >>= match_record_pattern p2 (record_remove l r)
+      match match_pattern p1 v e with
+      | None => None
+      | Some e => match_record_pattern p2 (record_remove l r) e
+      end
   | PRecordConsPun l p' =>
       let* v := record_find l r in
       match_record_pattern p' (record_remove l r) (EnvCons l v e)

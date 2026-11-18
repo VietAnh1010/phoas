@@ -25,7 +25,7 @@ Class SeqRight (F : Type -> Type) : Type :=
 (** class Applicative f => Alternative f where *)
 
 Class Empty (F : Type -> Type) : Type :=
-  empty : forall {A}, A -> F A.
+  empty : forall {A}, F A.
 
 Class Combine (F : Type -> Type) : Type :=
   combine : forall {A}, F A -> F A -> F A.
@@ -106,7 +106,7 @@ Class Add (W : Type) (M : Type -> Type) : Type :=
 Class Accum (W : Type) (M : Type -> Type) : Type :=
   accum : forall {A}, (W -> A * W) -> M A.
 
-(** Derived functions, and notations *)
+(** Notations *)
 
 Declare Scope monad_scope.
 Delimit Scope monad_scope with monad.

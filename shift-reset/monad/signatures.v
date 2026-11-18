@@ -21,7 +21,7 @@ End Applicative.
 
 Module Type Alternative.
   Include Applicative.
-  Parameter empty : forall {A}, A -> t A.
+  Parameter empty : forall {A}, t A.
   Parameter combine : forall {A}, t A -> t A -> t A.
 End Alternative.
 

@@ -163,6 +163,9 @@ Fixpoint zip {R A B} (m1 : lr_monad R A) (m2 : lr_monad R B) : lr_monad R (A * B
 Definition ask {R} : lr_monad R R :=
   LRMonad (fun r => Cons r empty).
 
+Definition reader {R A} (f : R -> A) : lr_monad R A :=
+  LRMonad (fun r => Cons (f r) empty).
+
 Fixpoint local {R A} (f : R -> R) (m : lr_monad R A) : lr_monad R A :=
   LRMonad
     (fun r =>

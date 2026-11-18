@@ -90,6 +90,6 @@ Module MakeAccum (W : Monoid).
   Definition reader_to_accum {A} (m : reader.t W.t A) : accum.t W.t A :=
     Accum (fun w => (run_reader m w, W.empty)).
 
-  Definition accum_to_state {A} (m : accum W.t A) : state.t W.t A :=
+  Definition accum_to_state {A} (m : accum.t W.t A) : state.t W.t A :=
     State (fun w => let (x, w') := run_accum m w in (x, W.combine w w')).
 End MakeAccum.

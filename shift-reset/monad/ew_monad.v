@@ -133,6 +133,9 @@ Definition try {E W A} (m : ew_monad E W A) : ew_monad E W (E + A) :=
 Definition tell {E W} (w : W) : ew_monad E W unit :=
   EWMonad (inr tt, w).
 
+Definition writer {E W A} (m : A * W) : ew_monad E W A :=
+  EWMonad (let (x, w) := m in (inr x, w)).
+
 Definition listen {E W A} (m : ew_monad E W A) : ew_monad E W (A * W) :=
   EWMonad
     (let (m, w) := run_ew_monad m in

@@ -193,6 +193,12 @@ Fixpoint zip {E A B} (m1 : le_monad E A) (m2 : le_monad E B) : le_monad E (A * B
 Definition throw {E A} (e : E) : le_monad E A :=
   LEMonad (inl e).
 
+Definition except {E A} (m : E + A) : le_monad E A :=
+  LEMonad match m with
+    | inl e => inl e
+    | inr x => inr (Cons x empty)
+    end.
+
 Fixpoint catch {E A} (m : le_monad E A) (f : E -> le_monad E A) : le_monad E A :=
   LEMonad match run_le_monad m with
     | inl e => run_le_monad (f e)

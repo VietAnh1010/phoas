@@ -7,10 +7,10 @@ Arguments Accum {W A} _.
 Arguments run_accum {W A} _ _.
 
 Definition map {W A B} (f : A -> B) (m : accum W A) : accum W B :=
-  Accum (fun w => let (x, w) := run_accum m w in (f x, w)).
+  Accum (fun w => let (x, w') := run_accum m w in (f x, w')).
 
 Definition map_const {W A B} (x : B) (m : accum W A) : accum W B :=
-  Accum (fun w => let (_, w) := run_accum m w in (x, w)).
+  Accum (fun w => let (_, w') := run_accum m w in (x, w')).
 
 Module AccumNotations.
   Declare Scope accum_scope.

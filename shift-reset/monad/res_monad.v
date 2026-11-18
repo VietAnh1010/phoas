@@ -59,7 +59,7 @@ Definition seq_right {R E S A B} (m1 : res_monad R E S A) (m2 : res_monad R E S 
        let (m, s) := run_res_monad m1 r s in
        match m with
        | inl e => (inl e, s)
-       | inr x => run_res_monad m2 r s
+       | inr _ => run_res_monad m2 r s
        end).
 
 Definition bind {R E S A B} (m : res_monad R E S A) (f : A -> res_monad R E S B) : res_monad R E S B :=

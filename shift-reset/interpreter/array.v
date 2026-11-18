@@ -18,7 +18,7 @@ Fixpoint array_free_dealloc (n : nat) (l : loc) (h : iheap) : option iheap :=
   | O => Some h
   | S n' =>
       match iheap_dealloc l h with
-      | Some h' => array_free_dealloc n' (loc_succ l) h'
+      | Some h => array_free_dealloc n' (loc_succ l) h
       | None => None
       end
   end.

@@ -16,7 +16,7 @@ Fixpoint match_pattern (p : pattern) (v : val) (e : env) : option env :=
   | POr p1 p2, _ =>
       match match_pattern p1 v e with
       | None => match_pattern p2 v e
-      | Some e' => Some e'
+      | Some e => Some e
       end
   | PTt, VTt => Some e
   | PInt z1, VInt z2 => if (z1 =? z2)%Z then Some e else None
@@ -61,5 +61,5 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : option e
 Definition match_irrefutable_pattern (p : pattern) (v : val) (e : env) : iv_monad env :=
   match match_pattern p v e with
   | None => throw (Match_failure v)
-  | Some e' => pure e'
+  | Some e => pure e
   end.

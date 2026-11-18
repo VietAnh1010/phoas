@@ -17,22 +17,22 @@ Definition array_length (v : val) : ivh_monad val :=
   let+ '(Array _ z) := iv_monad_to_ivh_monad (unwrap_varray v) in VInt z.
 
 Definition tuple_length (v : val) : ivh_monad val :=
-  let+ t := iv_monad_to_ivh_monad (unwrap_vtuple v) in VInt (Z.of_nat (vals_length t)).
+  let+ '(Tuple vs) := iv_monad_to_ivh_monad (unwrap_vtuple v) in VInt (Z.of_nat (vals_length vs)).
 
 Definition array_free (v : val) : ivh_monad val :=
   let* '(Array l z) := iv_monad_to_ivh_monad (unwrap_varray v) in
   let* h := get in
   match array_free_dealloc (Z.to_nat z) l h with
-  | Some h' => VTt <$ put h'
-  | None => throw (Memory_error "array_free")
+  | Some h => VTt <$ put h
+  | None => throw (Memory_error v)
   end.
 
 Definition ref_free (v : val) : ivh_monad val :=
   let* l := iv_monad_to_ivh_monad (unwrap_vref v) in
   let* h := get in
   match iheap_dealloc l h with
-  | Some h' => VTt <$ put h'
-  | None => throw (Memory_error "ref_free")
+  | Some h => VTt <$ put h
+  | None => throw (Memory_error v)
   end.
 
 Definition int_to_string (v : val) : ivh_monad val :=
@@ -41,7 +41,7 @@ Definition int_to_string (v : val) : ivh_monad val :=
 Definition array_make (v : val) : ivh_monad val :=
   let* '(v1, v2) := iv_monad_to_ivh_monad (unwrap_vprod v) in
   let* z := iv_monad_to_ivh_monad (unwrap_vint v1) in
-  if z <? 0 then throw (Invalid_argument "array_make")
+  if z <? 0 then throw (Invalid_argument "negative size" v1)
   else state (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
 
 Definition string_get (v : val) : ivh_monad val :=
@@ -49,23 +49,23 @@ Definition string_get (v : val) : ivh_monad val :=
   let* s := iv_monad_to_ivh_monad (unwrap_vstring v1) in
   let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
   if i <? 0 then
-    throw (Invalid_argument "index out of bounds")
+    throw (Invalid_argument "index out of bounds" v2)
   else
     match String.get (Z.to_nat i) s with
     | Some a => pure (VChar a)
-    | None => throw (Invalid_argument "index out of bounds")
+    | None => throw (Invalid_argument "index out of bounds" v2)
     end.
 
 Definition tuple_get (v : val) : ivh_monad val :=
   let* '(v1, v2) := iv_monad_to_ivh_monad (unwrap_vprod v) in
-  let* t := iv_monad_to_ivh_monad (unwrap_vtuple v1) in
+  let* '(Tuple vs) := iv_monad_to_ivh_monad (unwrap_vtuple v1) in
   let* i := iv_monad_to_ivh_monad (unwrap_vint v2) in
   if i <? 0 then
-    throw (Invalid_argument "index out of bounds")
+    throw (Invalid_argument "index out of bounds" v2)
   else
-    match vals_get (Z.to_nat i) t with
-    | Some v => pure v
-    | None => throw (Invalid_argument "index out of bounds")
+    match vals_get (Z.to_nat i) vs with
+    | Some v' => pure v'
+    | None => throw (Invalid_argument "index out of bounds" v2)
     end.
 
 Definition prim : Type := val -> ivh_monad val.

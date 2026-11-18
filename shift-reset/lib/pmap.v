@@ -184,8 +184,11 @@ Definition ne_update {A} (i : positive) (f : option A -> option A) : pmap_ne A -
          end)
   in go i.
 
-Definition update {A} (i : positive) (f : option A -> option A) : pmap A -> pmap A :=
-  update_aux (fun i => ne_update i f) i f.
+Definition update {A} (i : positive) (f : option A -> option A) (mt : pmap A) : pmap A :=
+  match mt with
+  | PEmpty => option.fold PEmpty (singleton i) (f None)
+  | PNodes t => ne_update i f t
+  end.
 
 Definition ne_map {A B} (f : A -> B) : pmap_ne A -> pmap_ne B :=
   fix go t :=
@@ -259,8 +262,8 @@ Definition merge_aux {A B C} (go : positive -> pmap_ne A -> pmap_ne B -> pmap C)
   (f : positive -> option A -> option B -> option C) (mt1 : pmap A) (mt2 : pmap B) : pmap C :=
   match mt1, mt2 with
   | PEmpty, PEmpty => PEmpty
-  | PNodes t1, PEmpty => ne_filter_mapi_aux i (fun i x => f i (Some x) None) t1
-  | PEmpty, PNodes t2 => ne_filter_mapi_aux i (fun i x => f i None (Some x)) t2
+  | PNodes t, PEmpty => ne_filter_mapi_aux i (fun i' x => f i' (Some x) None) t
+  | PEmpty, PNodes t => ne_filter_mapi_aux i (fun i' x => f i' None (Some x)) t
   | PNodes t1, PNodes t2 => go i t1 t2
   end.
 
@@ -282,8 +285,13 @@ Definition ne_merge_aux {A B C} (i : positive) (f : positive -> option A -> opti
 Definition ne_merge {A B C} : (positive -> option A -> option B -> option C) -> pmap_ne A -> pmap_ne B -> pmap C :=
   ne_merge_aux 1.
 
-Definition merge {A B C} (f : positive -> option A -> option B -> option C) : pmap A -> pmap B -> pmap C :=
-  merge_aux (fun i => ne_merge_aux i f) 1 f.
+Definition merge {A B C} (f : positive -> option A -> option B -> option C) (mt1 : pmap A) (mt2 : pmap B) : pmap C :=
+  match mt1, mt2 with
+  | PEmpty, PEmpty => PEmpty
+  | PNodes t, PEmpty => ne_filter_mapi (fun i x => f i (Some x) None) t
+  | PEmpty, PNodes t => ne_filter_mapi (fun i x => f i None (Some x)) t
+  | PNodes t1, PNodes t2 => ne_merge f t1 t2
+  end.
 
 Fixpoint ne_cardinal_add {A} (t : pmap_ne A) (n : nat) : nat :=
   match t with

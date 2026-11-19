@@ -33,5 +33,5 @@ Definition irh_monad_to_ivh_monad {A} : irh_monad A -> ivh_monad A :=
 Definition iv_monad_to_ivh_monad {A} : iv_monad A -> ivh_monad A :=
   except_to_es_monad.
 
-Definition iv_monad_to_irh_monad {A} (m : except.t val A) : irh_monad A :=
+Definition iv_monad_to_irh_monad {A} (m : iv_monad A) : irh_monad A :=
   except_to_es_monad (except.with_except IRRaise m).

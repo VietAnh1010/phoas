@@ -4,7 +4,7 @@ From shift_reset.lib Require Import int.
 From shift_reset.core Require Import syntax ident vals.
 From shift_reset.monad Require except.
 From shift_reset.monad Require Import es_monad.
-From shift_reset.interpreter Require Import array error iheap imonad unwrap.
+From shift_reset.interpreter Require Import error iheap imonad unwrap.
 Import ESMonadNotations ListNotations.
 
 Local Open Scope Z_scope.
@@ -22,7 +22,7 @@ Definition tuple_length (v : val) : ivh_monad val :=
 Definition array_free (v : val) : ivh_monad val :=
   let* '(Array l z) := iv_monad_to_ivh_monad (unwrap_varray v) in
   let* h := get in
-  match array_free_dealloc (Z.to_nat z) l h with
+  match iheap_dealloc_n (Z.to_nat z) l h with
   | Some h => VTt <$ put h
   | None => throw (Memory_error v)
   end.
@@ -42,7 +42,7 @@ Definition array_make (v : val) : ivh_monad val :=
   let* '(v1, v2) := iv_monad_to_ivh_monad (unwrap_vprod v) in
   let* z := iv_monad_to_ivh_monad (unwrap_vint v1) in
   if z <? 0 then throw (Invalid_argument "negative size" v1)
-  else state (fun h => (VArray (iheap_next_loc h) z, array_make_alloc (Z.to_nat z) v2 h)).
+  else let+ l := state (iheap_alloc_n (Z.to_nat z) v2) in VArray l z.
 
 Definition string_get (v : val) : ivh_monad val :=
   let* '(v1, v2) := iv_monad_to_ivh_monad (unwrap_vprod v) in

@@ -6,26 +6,31 @@ Import ExceptNotations.
 
 Local Open Scope except_scope.
 
-Definition add_field (l : ident) (v : val) (r : record) : iv_monad record :=
-  if record_member l r
-  then throw (Invalid_argument "duplicate label" (VString (ident_car l)))
-  else pure (record_add l v r).
+Fixpoint add_field (l : ident) (v : val) (r : record) : iv_monad record :=
+  match r with
+  | RecordNil => pure (record_singleton l v)
+  | RecordCons l' v' r' =>
+      match ident_compare l l' with
+      | Lt => pure (RecordCons l v r)
+      | Eq => throw (Invalid_argument "duplicate label" (VString (ident_car l)))
+      | Gt => RecordCons l' v' <$> add_field l v r'
+      end
+  end.
 
-Fixpoint disjoint_union_record (r1 r2 : record) : iv_monad record :=
+Fixpoint extend_record (r1 : record) : record -> iv_monad record :=
   match r1 with
-  | RecordNil => pure r2
+  | RecordNil => pure
   | RecordCons l1 v1 r1' =>
-      let fix go r2 :=
+      fix go r2 :=
         match r2 with
         | RecordNil => pure r1
         | RecordCons l2 v2 r2' =>
             match ident_compare l1 l2 with
-            | Lt => RecordCons l1 v1 <$> disjoint_union_record r1' r2
-            | Eq => throw (Invalid_argument "duplicate label" (VString (ident_car l1)))
+            | Lt => RecordCons l1 v1 <$> extend_record r1' r2
+            | Eq => throw (Invalid_argument "duplicate label" (VString (ident_car l2)))
             | Gt => RecordCons l2 v2 <$> go r2'
             end
         end
-      in go r2
   end.
 
 Fixpoint update_record (r1 r2 : record) : iv_monad record :=

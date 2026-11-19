@@ -5,8 +5,8 @@ From shift_reset.interpreter Require Import error imonad.
 
 Definition unwrap_val {A} (f : val -> option A) (s : string) (v : val) : iv_monad A :=
   match f v with
-  | Some x => pure x
   | None => throw (Type_error s v)
+  | Some x => pure x
   end.
 
 Definition unwrap_vunit : val -> iv_monad unit :=

@@ -1,8 +1,8 @@
 From Stdlib Require Import Bool String ZArith.
-From shift_reset.core Require Import syntax ident env fix_mut_defs loc record vals.
+From shift_reset.core Require Import syntax env fix_mut_defs ident loc record vals.
 From shift_reset.monad Require Import es_monad.
 From shift_reset.interpreter Require op prim.
-From shift_reset.interpreter Require Import array error iheap imonad pattern record unwrap.
+From shift_reset.interpreter Require Import error iheap imonad pattern record unwrap.
 Import ESMonadNotations.
 
 Local Open Scope Z_scope.
@@ -27,7 +27,7 @@ Definition interpret_record_expr (self : expr_interpreter) (e : record_expr) (rh
     | ERecordRest e' =>
         let* v := self e' rho in
         let* r' := iv_monad_to_ivh_monad (unwrap_vrecord v) in
-        iv_monad_to_ivh_monad (disjoint_union_record r r')
+        iv_monad_to_ivh_monad (extend_record r r')
     | ERecordCons l e1 e2 =>
         let* v := self e1 rho in
         let* r := iv_monad_to_ivh_monad (add_field l v r) in
@@ -144,10 +144,11 @@ Definition interpret_expr (self : comp_interpreter) : expr -> env -> ivh_monad v
         VCons v <$> self' e2 rho
     | ERef e' =>
         let* v := self' e' rho in
-        state (fun h => (VRef (iheap_next_loc h), iheap_alloc v h))
+        VRef <$> state (iheap_alloc v)
     | EArray es =>
         let* vs := interpret_exprs self' es rho in
-        state (fun h => (VArray (iheap_next_loc h) (Z.of_nat (vals_length vs)), array_of_vals_alloc vs h))
+        let+ l := state (iheap_alloc_vals vs) in
+        VArray l (Z.of_nat (vals_length vs))
     | EGet e' =>
         let* v := self' e' rho in
         let* l := iv_monad_to_ivh_monad (unwrap_vref v) in
@@ -205,8 +206,8 @@ Fixpoint interpret_match_cases (self : comp_interpreter) (cs : match_cases) (rho
   | CasesNil => throw (IRRaise (Match_failure v))
   | CasesCons p c cs' =>
       match match_pattern p v rho with
-      | Some rho => self c rho k
       | None => interpret_match_cases self cs' rho k v
+      | Some rho => self c rho k
       end
   end.
 
@@ -215,8 +216,8 @@ Fixpoint interpret_try_cases (self : comp_interpreter) (cs : try_cases) (rho : e
   | CasesNil => throw (IRRaise v)
   | CasesCons p c cs' =>
       match match_pattern p v rho with
-      | Some rho => self c rho k
       | None => interpret_try_cases self cs' rho k v
+      | Some rho => self c rho k
       end
   end.
 
@@ -233,8 +234,8 @@ Fixpoint interpret_effect_cases (self : comp_interpreter) (cs : effect_cases) (r
   | EffectCasesNil => throw (IRPerform mk v1)
   | EffectCasesCons p b c cs' =>
       match match_pattern p v1 rho with
-      | Some rho => self c (with_binder b v2 rho) k
       | None => interpret_effect_cases self cs' rho k v1 v2 mk
+      | Some rho => self c (with_binder b v2 rho) k
       end
   end.
 
@@ -263,7 +264,7 @@ Definition unwind_try (self : comp_interpreter) (cs : try_cases) (rho : env) (k 
   end.
 
 Definition unwind_handle (self : comp_interpreter) (cs : handle_cases) (rho : env) (k : kont) (m : irequest + val) : irh_monad val :=
-  let 'HandleCases c cs' := cs in
+  let (c, cs') := cs in
   match m with
   | inr v => interpret_return_case self c rho k v
   | inl r =>
@@ -276,7 +277,7 @@ Definition unwind_handle (self : comp_interpreter) (cs : handle_cases) (rho : en
   end.
 
 Definition unwind_shallow_handle (self : comp_interpreter) (cs : handle_cases) (rho : env) (k : kont) (m : irequest + val) : irh_monad val :=
-  let 'HandleCases c cs' := cs in
+  let (c, cs') := cs in
   match m with
   | inr v => interpret_return_case self c rho k v
   | inl r =>
@@ -336,6 +337,28 @@ Definition invoke_metakont_append (self : comp_interpreter) (mk : metakont) (k :
       unwind_shallow_handle self cs rho (KAppend k' k) m >>= invoke_kont_append self k' k
   end.
 
+Definition dispatch_for (self : comp_interpreter) (b : binder) (d : direction_flag) (c : comp) (rho : env) (k : kont) (v1 v2 : val) : irh_monad val :=
+  match v1, v2 with
+  | VInt i1, VInt i2 =>
+      let e := EInt i2 in
+      let (f, z) :=
+        match d with
+        | Upto => (Z.succ, i2 - i1)
+        | Downto => (Z.pred, i1 - i2)
+        end
+      in
+      let fix go n i :=
+        match n with
+        | O => pure VTt
+        | S n' =>
+            let i' := f i in
+            let* _ := self c (with_binder b (VInt i) rho) (KConsSeq (CFor b (EInt i') d e c) rho k) in
+            go n' i'
+        end
+      in go (Z.to_nat (z + 1)) i1
+  | _, _ => throw (IRRaise (Type_error "int * int" (VPair v1 v2)))
+  end.
+
 Definition interpret_comp'_aux (self : comp_interpreter) : comp -> env -> kont -> irh_monad val :=
   fix self' c rho k :=
     match c with
@@ -385,28 +408,8 @@ Definition interpret_comp'_aux (self : comp_interpreter) : comp -> env -> kont -
           self c rho k
         else pure VTt
     | CFor b e1 d e2 c' =>
-        let* v1 := interpret_expr' self' e1 rho in
-        let* v2 := interpret_expr' self' e2 rho in
-        match v1, v2 with
-        | VInt i1, VInt i2 =>
-            let e := EInt i2 in
-            let (f, z) :=
-              match d with
-              | Upto => (Z.succ, i2 - i1)
-              | Downto => (Z.pred, i1 - i2)
-              end
-            in
-            let fix go n i :=
-              match n with
-              | O => pure VTt
-              | S n' =>
-                  let i' := f i in
-                  let* _ := self' c' (with_binder b (VInt i) rho) (KConsSeq (CFor b (EInt i') d e c') rho k) in
-                  go n' i'
-              end
-            in go (Z.to_nat (z + 1)) i1
-        | _, _ => throw (IRRaise (Type_error "int * int" (VPair v1 v2)))
-        end
+        let* v := interpret_expr' self' e1 rho in
+        interpret_expr' self' e2 rho >>= dispatch_for self' b d c' rho k v
     | CLetFun f p c1 c2 => self' c2 (EnvCons f (VFun p c1 rho) rho) k
     | CLetFix f p c1 c2 => self' c2 (EnvCons f (VFix f p c1 rho) rho) k
     | CLetFixMut ds c' => self' c' (with_fix_mut_defs ds rho) k

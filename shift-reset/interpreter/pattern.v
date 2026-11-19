@@ -1,6 +1,6 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
-From shift_reset.lib Require Import float.
 From shift_reset.lib Require option.
+From shift_reset.lib Require Import float.
 From shift_reset.core Require Import syntax ident record.
 From shift_reset.monad Require Import except.
 From shift_reset.interpreter Require Import error imonad.

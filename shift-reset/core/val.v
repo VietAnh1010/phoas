@@ -1,6 +1,9 @@
 From Stdlib Require Import Ascii String Qcanon ZArith.
 From shift_reset.lib Require option.
 From shift_reset.core Require Import syntax loc.
+Import option.OptionNotations.
+
+Local Open Scope option_scope.
 
 Definition VBool (b : bool) : val :=
   if b then VTrue else VFalse.
@@ -74,11 +77,23 @@ Definition val_to_prod (v : val) : option (val * val) :=
   | _ => None
   end.
 
+Definition val_to_prod_of {A B} (f : val -> option A) (g : val -> option B) (v : val) : option (A * B) :=
+  let* '(v1, v2) := val_to_prod v in
+  let* x := f v1 in
+  pair x <$> g v2.
+
 Definition val_to_sum (v : val) : option (val + val) :=
   match v with
   | VInl v' => Some (inl v')
   | VInr v' => Some (inr v')
   | _ => None
+  end.
+
+Definition val_to_sum_of {A B} (f : val -> option A) (g : val -> option B) (v : val) : option (A + B) :=
+  let* s := val_to_sum v in
+  match s with
+  | inl v' => inl <$> f v'
+  | inr v' => inr <$> g v'
   end.
 
 Definition val_to_variant (v : val) : option variant :=
@@ -90,6 +105,22 @@ Definition val_to_variant (v : val) : option variant :=
 Definition val_to_enum (v : val) : option enum :=
   match v with
   | VEnum l => Some (Enum l)
+  | _ => None
+  end.
+
+Fixpoint val_to_list (v : val) : option (list val) :=
+  match v with
+  | VNil => Some nil
+  | VCons v1 v2 => cons v1 <$> val_to_list v2
+  | _ => None
+  end.
+
+Fixpoint val_to_list_of {A} (f : val -> option A) (v : val) : option (list A) :=
+  match v with
+  | VNil => Some nil
+  | VCons v1 v2 =>
+      let* x := f v1 in
+      cons x <$> val_to_list_of f v2
   | _ => None
   end.
 

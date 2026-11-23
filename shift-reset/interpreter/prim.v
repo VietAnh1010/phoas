@@ -53,15 +53,15 @@ Definition tuple_get (v : val) : iv_monad val :=
      | Some v' => except.pure v'
      end)%except.
 
-Definition isolated_applier : Type := val -> val -> ivh_monad val.
-Definition prim : Type := isolated_applier -> val -> ivh_monad val.
+Definition applier_with_barrier : Type := val -> val -> ivh_monad val.
+Definition prim : Type := applier_with_barrier -> val -> ivh_monad val.
 Definition iv_prim : Type := val -> iv_monad val.
 Definition ivh_prim : Type := val -> ivh_monad val.
 
-Definition iv_prim_to_prim (f : iv_prim) (_ : isolated_applier) (v : val) : ivh_monad val :=
+Definition iv_prim_to_prim (f : iv_prim) (_ : applier_with_barrier) (v : val) : ivh_monad val :=
   iv_monad_to_ivh_monad (f v).
 
-Definition ivh_prim_to_prim (f : ivh_prim) (_ : isolated_applier) : val -> ivh_monad val :=
+Definition ivh_prim_to_prim (f : ivh_prim) (_ : applier_with_barrier) : val -> ivh_monad val :=
   f.
 
 Definition prim_registry : list (ident * prim) :=
@@ -72,7 +72,7 @@ Definition prim_registry : list (ident * prim) :=
    (Ident "array_make", ivh_prim_to_prim array_make);
    (Ident "tuple_get", iv_prim_to_prim tuple_get)].
 
-Definition dispatch_prim_aux (apply : isolated_applier) (l : ident) (v : val) : ivh_monad val :=
+Definition dispatch_prim_aux (apply : applier_with_barrier) (l : ident) (v : val) : ivh_monad val :=
   match list.assoc ident_eqb l prim_registry with
   | None => throw (Name_error (ident_car l))
   | Some f => f apply v

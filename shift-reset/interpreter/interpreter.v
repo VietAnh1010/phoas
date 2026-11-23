@@ -11,7 +11,7 @@ Local Open Scope lazy_bool_scope.
 
 Definition expr_interpreter : Type := expr -> env -> ivh_monad val.
 Definition comp_interpreter : Type := comp -> env -> kont -> irh_monad val.
-Definition isolated_comp_interpreter : Type := comp -> env -> ivh_monad val.
+Definition comp_interpreter_with_barrier : Type := comp -> env -> ivh_monad val.
 Definition prim_dispatcher : Type := ident -> val -> ivh_monad val.
 
 Fixpoint interpret_exprs (interpret : expr_interpreter) (es : exprs) (rho : env) : ivh_monad vals :=
@@ -68,7 +68,7 @@ Definition interpret_get_at (v1 v2 : val) : ivh_monad val :=
   | _ => throw (Type_error "array | string" v1)
   end.
 
-Definition interpret_expr (interpret : isolated_comp_interpreter) : expr -> env -> ivh_monad val :=
+Definition interpret_expr (interpret : comp_interpreter_with_barrier) : expr -> env -> ivh_monad val :=
   fix interpret' e rho :=
     match e with
     | EVar x =>
@@ -184,11 +184,11 @@ Definition interpret_expr (interpret : isolated_comp_interpreter) : expr -> env 
     | EBy c => interpret c rho
     end.
 
-Definition interpret_comp_isolated (interpret : comp_interpreter) (c : comp) (rho : env) : ivh_monad val :=
+Definition interpret_comp_with_barrier (interpret : comp_interpreter) (c : comp) (rho : env) : ivh_monad val :=
   irh_monad_to_ivh_monad (interpret c rho KNil).
 
 Definition interpret_expr' (interpret : comp_interpreter) (e : expr) (rho : env) : irh_monad val :=
-  ivh_monad_to_irh_monad (interpret_expr (interpret_comp_isolated interpret) e rho).
+  ivh_monad_to_irh_monad (interpret_expr (interpret_comp_with_barrier interpret) e rho).
 
 Definition with_binder (b : binder) (v : val) (rho : env) : env :=
   match b with
@@ -374,7 +374,8 @@ Definition interpret_for (interpret : comp_interpreter) (b : binder) (d : direct
     end
   in go (Z.to_nat (z + 1)) i1.
 
-Definition apply (interpret : comp_interpreter) (dispatch : prim_dispatcher) (k : kont) (v1 v2 : val) : irh_monad val :=
+Definition apply_val (interpret : comp_interpreter) (dispatch : prim_dispatcher) (k : kont)
+  (v1 v2 : val) : irh_monad val :=
   let* a := iv_monad_to_irh_monad (unwrap_applicable v1) in
   match a with
   | AFun p c rho =>
@@ -396,8 +397,9 @@ Definition apply (interpret : comp_interpreter) (dispatch : prim_dispatcher) (k 
   | AMKHandle mk cs rho => try (invoke_metakont interpret mk v2) >>= unwind_handle interpret cs rho k
   end.
 
-Definition apply_isolated (interpret : comp_interpreter) (dispatch : prim_dispatcher) (v1 v2 : val) : ivh_monad val :=
-  irh_monad_to_ivh_monad (apply interpret dispatch KNil v1 v2).
+Definition apply_val_with_barrier (interpret : comp_interpreter) (dispatch : prim_dispatcher)
+  (v1 v2 : val) : ivh_monad val :=
+  irh_monad_to_ivh_monad (apply_val interpret dispatch KNil v1 v2).
 
 Definition interpret_comp'_aux (interpret : comp_interpreter) (dispatch : prim_dispatcher) : comp -> env -> kont -> irh_monad val :=
   fix interpret' c rho k :=
@@ -405,7 +407,7 @@ Definition interpret_comp'_aux (interpret : comp_interpreter) (dispatch : prim_d
     | CReturn e => interpret_expr' interpret' e rho
     | CApp e1 e2 =>
         let* v := interpret_expr' interpret' e1 rho in
-        interpret_expr' interpret' e2 rho >>= apply interpret dispatch k v
+        interpret_expr' interpret' e2 rho >>= apply_val interpret dispatch k v
     | CSeq c1 c2 =>
         let* _ := interpret' c1 rho (KConsSeq c2 rho k) in
         interpret' c2 rho k
@@ -454,7 +456,7 @@ Fixpoint interpret_comp' (fuel : nat) (c : comp) (rho : env) (k : kont) : irh_mo
 with dispatch_prim (fuel : nat) (l : ident) (v : val) : ivh_monad val :=
   match fuel with
   | O => throw Out_of_fuel
-  | S fuel' => prim.dispatch_prim_aux (apply_isolated (interpret_comp' fuel') (dispatch_prim fuel')) l v
+  | S fuel' => prim.dispatch_prim_aux (apply_val_with_barrier (interpret_comp' fuel') (dispatch_prim fuel')) l v
   end.
 
 Definition interpret_comp (fuel : nat) (c : comp) (rho : env) (k : kont) : ivh_monad val :=

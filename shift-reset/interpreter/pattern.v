@@ -51,14 +51,11 @@ with match_record_pattern (p : record_pattern) (r : record) (e : env) : option e
       end
   | PRecordRest p' => match_pattern p' (VRecord r) e
   | PRecordCons l p1 p2 =>
-      let* v := record_find l r in
-      match match_pattern p1 v e with
-      | None => None
-      | Some e => match_record_pattern p2 (record_remove l r) e
-      end
+      let* '(v, r) := record_pop l r in
+      match_pattern p1 v e >>= match_record_pattern p2 r
   | PRecordConsPun l p' =>
-      let* v := record_find l r in
-      match_record_pattern p' (record_remove l r) (EnvCons l v e)
+      let* '(v, r) := record_pop l r in
+      match_record_pattern p' r (EnvCons l v e)
   end.
 
 Definition match_irrefutable_pattern (p : pattern) (v : val) (e : env) : iv_monad env :=

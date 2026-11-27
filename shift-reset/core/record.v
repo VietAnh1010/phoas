@@ -1,4 +1,8 @@
+From shift_reset.lib Require option.
 From shift_reset.core Require Import syntax ident.
+Import option.OptionNotations.
+
+Local Open Scope option_scope.
 
 Definition record_singleton (l : ident) (v : val) : record :=
   RecordCons l v RecordNil.
@@ -50,5 +54,16 @@ Fixpoint record_remove (l : ident) (r : record) : record :=
       | Lt => r
       | Eq => r'
       | Gt => RecordCons l' v (record_remove l r')
+      end
+  end.
+
+Fixpoint record_pop (l : ident) (r : record) : option (val * record) :=
+  match r with
+  | RecordNil => None
+  | RecordCons l' v r' =>
+      match ident_compare l l' with
+      | Lt => None
+      | Eq => Some (v, r')
+      | Gt => let+ '(v', r') := record_pop l r' in (v', RecordCons l' v r')
       end
   end.

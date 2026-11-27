@@ -6,6 +6,9 @@ Record iheap : Type := IHeap { iheap_car : gmap.t loc val; iheap_next_loc : loc 
 Definition iheap_empty : iheap :=
   IHeap gmap.empty loc_one.
 
+Definition iheap_set_car (m : gmap.t loc val) (h : iheap) : iheap :=
+  IHeap m (iheap_next_loc h).
+
 Definition iheap_alloc (v : val) (h : iheap) : loc * iheap :=
   let (m, l) := h in (l, IHeap (LocMap.add l v m) (loc_succ l)).
 

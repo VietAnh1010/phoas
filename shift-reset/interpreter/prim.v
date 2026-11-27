@@ -64,13 +64,18 @@ Definition iv_prim_to_prim (f : iv_prim) (_ : val_applier_with_barrier) (v : val
 Definition ivh_prim_to_prim (f : ivh_prim) (_ : val_applier_with_barrier) : val -> ivh_monad val :=
   f.
 
+Definition atomically (apply : val_applier_with_barrier) (v : val) : ivh_monad val :=
+  let* m := gets iheap_car in
+  catch (apply v VTt) (fun v' => modify (iheap_set_car m) *> throw v').
+
 Definition prim_registry : list (ident * prim) :=
   [(Ident "int_to_string", iv_prim_to_prim int_to_string);
    (Ident "tuple_length", iv_prim_to_prim tuple_length);
    (Ident "ref_free", ivh_prim_to_prim ref_free);
    (Ident "array_free", ivh_prim_to_prim array_free);
    (Ident "array_make", ivh_prim_to_prim array_make);
-   (Ident "tuple_get", iv_prim_to_prim tuple_get)].
+   (Ident "tuple_get", iv_prim_to_prim tuple_get);
+   (Ident "atomically", atomically)].
 
 Definition dispatch_prim_aux (apply : val_applier_with_barrier) (l : ident) (v : val) : ivh_monad val :=
   match list.assoc ident_eqb l prim_registry with

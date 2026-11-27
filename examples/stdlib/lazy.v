@@ -17,13 +17,17 @@ Example Lazy :=
        end
      in
      let "map" ("f", "t") :=
-       "make" (fun () => let "r" := "get" "t" in "f" "r")
+       "make" (fun () => let "a" := "get" "t" in "f" "a")
      in
      let "bind" ("t", "f") :=
-       "make" (fun () => let "r" := "get" "t" in let "r" := "f" "r" in "get" "r")
+       "make"
+         (fun () =>
+            let "a" := "get" "t" in
+            let "r" := "f" "a" in
+            "get" "r")
      in
-     `{ "make"
-      ; "pure"
+     `{ "pure"
+      ; "make"
       ; "get"
       ; "map"
       ; "bind" } }>.

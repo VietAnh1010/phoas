@@ -1,34 +1,35 @@
 From Stdlib Require Import String.
 From shift_reset.core Require Import syntax syntax_notation coerce.
 
-Open Scope string_scope.
-Open Scope term_scope.
+Local Open Scope string_scope.
+Local Open Scope term_scope.
 
 (** Require Lazy. *)
 Example PersistentQueue :=
   <{ let "empty" :=
-       let "f" := "Lazy".`"pure" (Inl ()) in
+       let "f" := "Lazy".`"pure" `"Nil" in
        `("f", [], "f")
      in
      let "is_empty" `("f", _, _) :=
        match by ("Lazy".`"get" "f") with
-       | Inl _ => true
-       | Inr _ => false
+       | `"Nil" => true
+       | `"Cons" _ => false
        end
      in
      let fix "rotate" `("f", "y" :: "r", "s") :=
-       let "s" := "Lazy".`"pure" (Inr ("y", "s")) in
+       let "s" := "Lazy".`"pure" (`"Cons" ("y", "s")) in
        match by ("Lazy".`"get" "f") with
-       | Inl _ => "s"
-       | Inr ("x", "f") => "Lazy".`"make" (fun _ => Inr ("x", by ("rotate" `("f", "r", "s"))))
+       | `"Nil" => "s"
+       | `"Cons" ("x", "f'") =>
+           "Lazy".`"make" (fun () => `"Cons" ("x", by ("rotate" `("f'", "r", "s"))))
        end
      in
      let "exec" `("f", "r", "s") :=
        match by ("Lazy".`"get" "s") with
-       | Inl _ =>
-           let "f" := "rotate" "q" in
+       | `"Nil" =>
+           let "f" := "rotate" `("f", "r", "s") in
            `("f", [], "f")
-       | Inr "p" => `("f", "r", snd "p")
+       | `"Cons" (_, "s'") => `("f", "r", "s'")
        end
      in
      let "snoc" (`("f", "r", "s"), "x") :=
@@ -36,20 +37,20 @@ Example PersistentQueue :=
      in
      let "ne_head" `("f", _, _) :=
        match by ("Lazy".`"get" "f") with
-       | Inl _ => raise (`"Empty" ())
-       | Inr ("x", _) => "x"
+       | `"Nil" => raise `"Empty"
+       | `"Cons" ("x", _) => "x"
        end
      in
      let "ne_tail" `("f", "r", "s") :=
        match by ("Lazy".`"get" "f") with
-       | Inl _ => raise (`"Empty" ())
-       | Inr (_, "f") => "exec" `("f", "r", "s")
+       | `"Nil" => raise `"Empty"
+       | `"Cons" (_, "f'") => "exec" `("f'", "r", "s")
        end
      in
      let "ne_uncons" `("f", "r", "s") :=
        match by ("Lazy".`"get" "f") with
-       | Inl _ => raise (`"Empty" ())
-       | Inr ("x", "f") => ("x", by ("exec" `("f", "r", "s")))
+       | `"Nil" => raise `"Empty"
+       | `"Cons" ("x", "f'") => ("x", by ("exec" `("f'", "r", "s")))
        end
      in
      `{ "empty"

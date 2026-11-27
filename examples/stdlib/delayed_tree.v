@@ -5,12 +5,12 @@ Local Open Scope string_scope.
 Local Open Scope term_scope.
 
 Example DelayedTree :=
-  <{ let "fold" `("f", "z", "t") :=
-       let fix "go" "t" _ :=
+  <{ let "fold" `("z", "f", "t") :=
+       let fix "go" "t" () :=
          let "t" := "t" () in
          match "t" with
-         | Inl _ => "z"
-         | Inr `("x", "t1", "t2") => "f" `("x", by ("go" "t1"), by ("go" "t2"))
+         | `"Leaf" => "z"
+         | `"Node" `("x", "t1", "t2") => "f" `("x", by ("go" "t1"), by ("go" "t2"))
          end
        in
        "go" "t"
@@ -19,20 +19,20 @@ Example DelayedTree :=
        let fix "go" "t" :=
          let "t" := "t" () in
          match "t" with
-         | Inl _ => ()
-         | Inr `("x", "t1", "t2") => "f" "x"; "go" "t1"; "go" "t2"
+         | `"Leaf" => ()
+         | `"Node" `("x", "t1", "t2") => "f" "x"; "go" "t1"; "go" "t2"
          end
        in
        "go" "t"
      in
      let "map" ("f", "t") :=
-       let fix "go" "t" _ :=
+       let fix "go" "t" () :=
          let "t" := "t" () in
          match "t" with
-         | Inl _ => Inl ()
-         | Inr `("x", "t1", "t2") =>
+         | `"Leaf" => `"Leaf"
+         | `"Node" `("x", "t1", "t2") =>
              let "y" := "f" "x" in
-             Inr `("y", by ("go" "t1"), by ("go" "t2"))
+             `"Node" `("y", by ("go" "t1"), by ("go" "t2"))
          end
        in
        "go" "t"

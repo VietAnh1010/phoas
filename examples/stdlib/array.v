@@ -17,21 +17,17 @@ Example Array :=
      let "map" ("f", "a") :=
        let "l" := length "a" in
        let "r" := %"array_make" ("l", ()) in
-       let _ :=
-         for "i" from 0 upto ("l" - 1) do
-           let "x" := "f" "a".["i"] in
-           "r".["i"] <- "x"
-       in
+       (for "i" from 0 upto ("l" - 1) do
+          let "x" := "f" "a".["i"] in
+          "r".["i"] <- "x");
        "r"
      in
      let "mapi" ("f", "a") :=
        let "l" := length "a" in
        let "r" := %"array_make" ("l", ()) in
-       let _ :=
-         for "i" from 0 upto ("l" - 1) do
-           let "x" := "f" ("i", "a".["i"]) in
-           "r".["i"] <- "x"
-       in
+       (for "i" from 0 upto ("l" - 1) do
+          let "x" := "f" ("i", "a".["i"]) in
+          "r".["i"] <- "x");
        "r"
      in
      let "map_inplace" ("f", "a") :=

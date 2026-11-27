@@ -11,16 +11,16 @@ Example Lazy :=
        match !"t" with
        | `"Delayed" "g" =>
            let "a" := "g" () in
-           let _ := "t" <- `"Evaluated" "a" in
+           "t" <- `"Evaluated" "a";
            "a"
        | `"Evaluated" "a" => "a"
        end
      in
      let "map" ("f", "t") :=
-       "make" (fun _ => let "r" := "get" "t" in "f" "r")
+       "make" (fun () => let "r" := "get" "t" in "f" "r")
      in
      let "bind" ("t", "f") :=
-       "make" (fun _ => let "r" := "get" "t" in let "r" := "f" "r" in "get" "r")
+       "make" (fun () => let "r" := "get" "t" in let "r" := "f" "r" in "get" "r")
      in
      `{ "make"
       ; "pure"

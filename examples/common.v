@@ -1,8 +1,8 @@
 From Stdlib Require Import List String ZArith.
-From shift_reset.lib Require Import option sum.
-From shift_reset.core Require Import syntax syntax_notation ident val.
+From shift_reset.lib Require Import sum.
+From shift_reset.core Require Import syntax syntax_notation val.
 From shift_reset.interpreter Require Import interpreter error.
-Import ListNotations OptionNotations SumNotations.
+Import ListNotations SumNotations.
 
 Local Open Scope Z_scope.
 Local Open Scope term_scope.
@@ -25,33 +25,21 @@ Fixpoint list_to_expr {A} (f : A -> expr) (xs : list A) : expr :=
 Definition list_int_to_expr : list Z -> expr :=
   list_to_expr EInt.
 
-Fixpoint deep_val_to_list {A} (f : val -> option A) (v : val) : option (list A) :=
-  match v with
-  | VNil => Some []
-  | VCons v1 v2 =>
-      let* x := f v1 in
-      cons x <$> deep_val_to_list f v2
-  | _ => None
-  end%option.
-
 Definition val_to_list_int : val -> option (list Z) :=
-  deep_val_to_list val_to_int.
+  val_to_list_of val_to_int.
 
-Definition val_to_prod_int_int (v : val) : option (Z * Z) :=
-  match v with
-  | VPair (VInt z1) (VInt z2) => Some (z1, z2)
-  | _ => None
+Definition val_to_prod_int_int : val -> option (Z * Z) :=
+  val_to_prod_of val_to_int val_to_int.
+
+Definition eval_comp_to_list_of {A} (f : val -> option A) (fuel : nat) (c : comp) : val + list A :=
+  let* v := eval_comp fuel c in
+  match val_to_list_of f v with
+  | None => inl (Failure "eval_comp_to_list_of")
+  | Some xs => inr xs
   end.
 
-Definition deep_eval_comp_to_list {A} (f : val -> option A) (fuel : nat) (t : comp) : val + list A :=
-  let* v := eval_comp fuel t in
-  match deep_val_to_list f v with
-  | None => inl (Failure "deep_eval_comp_to_list")
-  | Some xs => inr xs
-  end%sum.
-
 Definition eval_comp_to_list_int : nat -> comp -> val + list Z :=
-  deep_eval_comp_to_list val_to_int.
+  eval_comp_to_list_of val_to_int.
 
 Definition eval_comp_to_list_prod_int_int : nat -> comp -> val + list (Z * Z) :=
-  deep_eval_comp_to_list val_to_prod_int_int.
+  eval_comp_to_list_of val_to_prod_int_int.

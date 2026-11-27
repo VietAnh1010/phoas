@@ -14,20 +14,20 @@ Example List :=
      in
      let "ne_head" "xs" :=
        match "xs" with
-       | [] => raise (`"Empty" ())
+       | [] => raise `"Empty"
        | "x" :: _ => "x"
        end
      in
      let "ne_tail" "xs" :=
        match "xs" with
-       | [] => raise (`"Empty" ())
+       | [] => raise `"Empty"
        | _ :: "xs'" => "xs'"
        end
      in
      let "ne_uncons" "xs" :=
        match "xs" with
-       | [] => raise (`"Empty" ())
-       | "x" :: "xs" => ("x", "xs")
+       | [] => raise `"Empty"
+       | "x" :: "xs'" => ("x", "xs'")
        end
      in
      let "iter" ("f", "xs") :=
@@ -55,8 +55,8 @@ Example List :=
          match "xs" with
          | [] => "acc"
          | "x" :: "xs'" =>
-             let "acc'" := "f" ("acc", "x") in
-             "go" ("acc'", "xs'")
+             let "acc" := "f" ("acc", "x") in
+             "go" ("acc", "xs'")
          end
        in
        "go" ("z", "xs")
@@ -94,7 +94,7 @@ Example List :=
          | "x" :: "xs'" =>
              let "o" := "f" "x" in
              match "o" with
-             | Inl _ => "go" "xs'"
+             | Inl () => "go" "xs'"
              | Inr "y" =>
                  let "r" := "go" "xs'" in
                  "y" :: "r"
@@ -112,15 +112,13 @@ Example List :=
        in
        "go" "xs"
      in
-     let "reverse" "xs" :=
-       let fix "go" ("acc", "xs") :=
-         match "xs" with
-         | [] => "acc"
-         | "x" :: "xs'" => "go" ("x" :: "acc", "xs'")
-         end
-       in
-       "go" ([], "xs")
+     let fix "reverse_append" ("xs", "ys") :=
+       match "xs" with
+       | [] => "ys"
+       | "x" :: "xs'" => "reverse_append" ("xs'", "x" :: "ys")
+       end
      in
+     let "reverse" "xs" := "reverse_append" ("xs", []) in
      let "length" "xs" :=
        let fix "go" ("acc", "xs") :=
          match "xs" with
@@ -128,24 +126,32 @@ Example List :=
          | _ :: "xs'" => "go" ("acc" + 1, "xs'")
          end
        in
-       "go" "xs"
+       "go" (0, "xs")
      in
      let "map2" `("f", "xs", "ys") :=
-       let fix "go" "args" :=
-         match "args" with
-         | "x" :: "xs", "y" :: "ys" =>
-             let "z" := "f" ("x", "y") in
-             let "r" := "go" ("xs", "ys") in
-             "z" :: "r"
-         | _ => []
+       let fix "go" ("xs", "ys") :=
+         match "xs" with
+         | [] => []
+         | "x" :: "xs'" =>
+             match "ys" with
+             | [] => []
+             | "y" :: "ys'" =>
+                 let "z" := "f" ("x", "y") in
+                 let "r" := "go" ("xs'", "ys'") in
+                 "z" :: "r"
+             end
          end
        in
        "go" ("xs", "ys")
      in
-     let fix "zip" "args" :=
-       match "args" with
-       | "x" :: "xs", "y" :: "ys" => ("x", "y") :: by ("zip" ("xs", "ys"))
-       | _ => []
+     let fix "zip" ("xs", "ys") :=
+       match "xs" with
+       | [] => []
+       | "x" :: "xs'" =>
+           match "ys" with
+           | [] => []
+           | "y" :: "ys'" => ("x", "y") :: by ("zip" ("xs'", "ys'"))
+           end
        end
      in
      `{ "is_empty"
@@ -159,6 +165,7 @@ Example List :=
       ; "filter"
       ; "filter_map"
       ; "append"
+      ; "reverse_append"
       ; "reverse"
       ; "length"
       ; "map2"

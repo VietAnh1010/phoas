@@ -41,7 +41,7 @@ Notation "'true'" := PTrue (in custom pattern' at level 0) : term_scope.
 Notation "'false'" := PFalse (in custom pattern' at level 0) : term_scope.
 
 Notation "''' s" :=
-  (PString s) (in custom pattern' at level 2, s constr at level 0) : term_scope.
+  (PString s) (in custom pattern' at level 10, s constr at level 0) : term_scope.
 
 Notation "p1 , p2" :=
   (PPair p1 p2) (in custom pattern' at level 65, p1 custom pattern', p2 custom pattern', left associativity) : term_scope.
@@ -63,10 +63,10 @@ Notation "'Inr' p" :=
   (PInr p) (in custom pattern' at level 17, p custom pattern' at level 10) : term_scope.
 
 Notation "` l p" :=
-  (PVariant l p) (in custom pattern' at level 17, l constr at level 0, p custom pattern' at level 10) : term_scope.
+  (PVariant l p) (in custom pattern' at level 10, l constr at level 0, p custom pattern' at level 10) : term_scope.
 
 Notation "` l" :=
-  (PEnum l) (in custom pattern' at level 17, l constr at level 0) : term_scope.
+  (PEnum l) (in custom pattern' at level 10, l constr at level 0) : term_scope.
 
 Notation "[ ]" := PNil (in custom pattern' at level 0) : term_scope.
 
@@ -247,7 +247,7 @@ Notation "'true'" := ETrue (in custom term at level 0) : term_scope.
 Notation "'false'" := EFalse (in custom term at level 0) : term_scope.
 
 Notation "''' s" :=
-  (EString s) (in custom term at level 2, s constr at level 0) : term_scope.
+  (EString s) (in custom term at level 10, s constr at level 0) : term_scope.
 
 Notation "e1 && e2" :=
   (EAnd e1 e2) (in custom term at level 51, e1 custom term, e2 custom term, right associativity) : term_scope.
@@ -334,10 +334,10 @@ Notation "'Inr' e" :=
   (EInr e) (in custom term at level 17, e custom term at level 10) : term_scope.
 
 Notation "` l e" :=
-  (EVariant l e) (in custom term at level 17, l constr at level 0, e custom term at level 10) : term_scope.
+  (EVariant l e) (in custom term at level 10, l constr at level 0, e custom term at level 10) : term_scope.
 
 Notation "` l" :=
-  (EEnum l) (in custom term at level 17, l constr at level 0) : term_scope.
+  (EEnum l) (in custom term at level 10, l constr at level 0) : term_scope.
 
 Notation "[ ]" := ENil (in custom term at level 0) : term_scope.
 
@@ -442,7 +442,7 @@ Notation "e1 <> e2" :=
   (EBinOp BinOpNeq e1 e2) (in custom term at level 50, e1 custom term, e2 custom term, left associativity) : term_scope.
 
 Notation "% l" :=
-  (EPrim l) (in custom term at level 2, l constr at level 0) : term_scope.
+  (EPrim l) (in custom term at level 10, l constr at level 0) : term_scope.
 
 Notation "'by' c" :=
   (EBy c) (in custom term at level 17, c custom term at level 10) : term_scope.

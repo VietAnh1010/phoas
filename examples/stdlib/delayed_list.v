@@ -6,42 +6,46 @@ Local Open Scope string_scope.
 Local Open Scope term_scope.
 
 Example DelayedList :=
-  <{ let "empty" _ := Inl () in
+  <{ let "empty" () := `"Nil" in
      let fix "take_aux" ("n", "xs") :=
        if "n" = 0 then "empty"
        else
-         fun _ =>
+         fun () =>
            let "xs" := "xs" () in
            match "xs" with
-           | Inl _ => Inl ()
-           | Inr ("x", "xs'") => Inr ("x", by ("take_aux" ("n" - 1, "xs'")))
+           | `"Nil" => `"Nil"
+           | `"Cons" ("x", "xs'") => `"Cons" ("x", by ("take_aux" ("n" - 1, "xs'")))
            end
      in
-     let "take" "args" :=
-       if fst "args" < 0 then raise (`"Invalid_argument" '"DelayedList.take")
-       else "take_aux" "args"
+     let "take" ("n", "xs") :=
+       if "n" < 0 then raise (`"Invalid_argument" ('"DelayedList.take", "n"))
+       else "take_aux" ("n", "xs")
      in
      let "map" ("f", "xs") :=
-       let fix "go" "xs" _ :=
+       let fix "go" "xs" () :=
          let "xs" := "xs" () in
          match "xs" with
-         | Inl _ => Inl ()
-         | Inr ("x", "xs'") =>
+         | `"Nil" => `"Nil"
+         | `"Cons" ("x", "xs'") =>
              let "y" := "f" "x" in
-             Inr ("y", by ("go" "xs'"))
+             `"Cons" ("y", by ("go" "xs'"))
          end
        in
        "go" "xs"
      in
      let "map2" `("f", "xs", "ys") :=
-       let fix "go" ("xs", "ys") _ :=
+       let fix "go" ("xs", "ys") () :=
          let "xs" := "xs" () in
-         let "ys" := "ys" () in
-         match "xs", "ys" with
-         | Inr ("x", "xs'"), Inr ("y", "ys'") =>
-             let "z" := "f" ("x", "y") in
-             Inr ("z", by ("go" ("xs'", "ys'")))
-         | _ => Inl ()
+         match "xs" with
+         | `"Nil" => `"Nil"
+         | `"Cons" ("x", "xs'") =>
+             let "ys" := "ys" () in
+             match "ys" with
+             | `"Nil" => `"Nil"
+             | `"Cons" ("y", "ys'") =>
+                 let "z" := "f" ("x", "y") in
+                 `"Cons" ("z", by ("go" ("xs'", "ys'")))
+             end
          end
        in
        "go" ("xs", "ys")
@@ -50,8 +54,8 @@ Example DelayedList :=
        let fix "go" "xs" :=
          let "xs" := "xs" () in
          match "xs" with
-         | Inl _ => ()
-         | Inr ("x", "xs'") => "f" "x"; "go" "xs'"
+         | `"Nil" => ()
+         | `"Cons" ("x", "xs'") => "f" "x"; "go" "xs'"
          end
        in
        "go" "xs"
@@ -59,8 +63,8 @@ Example DelayedList :=
      let fix "to_list" "xs" :=
        let "xs" := "xs" () in
        match "xs" with
-       | Inl _ => []
-       | Inr ("x", "xs'") =>
+       | `"Nil" => []
+       | `"Cons" ("x", "xs'") =>
            let "r" := "to_list" "xs'" in
            "x" :: "r"
        end
